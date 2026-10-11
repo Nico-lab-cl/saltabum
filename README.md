@@ -16,6 +16,15 @@ Landing page de Saltabum. **Astro 7 + Tailwind v4**, desplegada en **Cloudflare 
 | SEO            | meta/OG/canonical, JSON-LD, sitemap.xml, robots.txt                                           |
 | Diseño         | **`src/design/`** ← aquí va lo de Claude Design (ver `src/design/README.md`)                  |
 
+## Documentación del negocio
+
+| Documento                                                      | Para qué                                                                             |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| [docs/investigacion-negocio.md](docs/investigacion-negocio.md) | Resumen curado: mercado, competencia, clientes, UX, marketing, operación             |
+| [docs/prompt-claude-design.md](docs/prompt-claude-design.md)   | Prompt para crear el sistema de diseño en Claude Design                              |
+| [docs/notebooklm/](docs/notebooklm/README.md)                  | Informes completos del cuaderno NotebookLM "Industria juegos inflables" (65 fuentes) |
+| [docs/referencias/](docs/referencias)                          | Logo anterior (descartado, solo como referencia de lo que no repetir)                |
+
 ## Estructura
 
 ```
