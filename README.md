@@ -78,18 +78,30 @@ priorizar WhatsApp.
 
 ## Despliegue
 
-Manual (primera vez):
+Automático con **Cloudflare Workers Builds** (dashboard → Workers & Pages → `saltabum` → Settings → Build),
+conectado al repo de GitHub, rama `main`:
+
+| Campo                       | Valor                |
+| --------------------------- | -------------------- |
+| Build command               | `npm run build`      |
+| Deploy command              | `npx wrangler deploy` |
+| Root directory              | `/`                  |
+| Build variables and secrets | todas las `PUBLIC_*` |
+
+`npm run build` genera `dist/server/wrangler.json` y `.wrangler/deploy/config.json`, que es lo que lee
+`wrangler deploy`. Sin el build, wrangler falla con "Missing entry-point to Worker script".
+
+Las `PUBLIC_*` se incrustan al compilar, así que van en las **variables de build**; los secretos del Worker
+(`TURNSTILE_SECRET_KEY`, etc.) van en Settings → Variables and Secrets (o con `wrangler secret put`).
+
+`.github/workflows/ci.yml` solo verifica (`check` + `build`) en cada push y PR; no despliega.
+
+Manual, desde tu computador:
 
 ```bash
 npx wrangler login
 npm run deploy
 ```
-
-Automático: `.github/workflows/deploy.yml` despliega en cada push a `main` cuando el repo esté en GitHub.
-Configurar en GitHub → Settings → Secrets and variables → Actions:
-
-- Secrets: `CLOUDFLARE_API_TOKEN` (plantilla "Edit Cloudflare Workers"), `CLOUDFLARE_ACCOUNT_ID`
-- Variables: todas las `PUBLIC_*`
 
 El dominio `saltabum.cl` y `www.saltabum.cl` se asocian solos al Worker (ver `routes` en `wrangler.jsonc`).
 Recomendado: regla de redirección en Cloudflare `www.saltabum.cl/*` → `https://saltabum.cl/$1` (301).
