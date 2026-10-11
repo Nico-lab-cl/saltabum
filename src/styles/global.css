@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+/*
+ * Tokens de diseño (colores, tipografías, radios...).
+ * Reemplazar con los que entregue Claude Design. Ejemplo:
+ *
+ * @theme {
+ *   --color-brand: #ff5a1f;
+ *   --font-display: "Nombre Fuente", sans-serif;
+ * }
+ */

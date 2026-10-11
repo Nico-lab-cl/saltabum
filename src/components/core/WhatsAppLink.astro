@@ -1,0 +1,26 @@
+---
+// Link a WhatsApp con tracking de conversión incluido. Sin estilos propios:
+// el diseño se pasa por `class` y el contenido por <slot />.
+//   <WhatsAppLink placement="hero" class="btn">Escríbenos</WhatsAppLink>
+// Si el diseño usa su propio <a>, basta con agregarle data-track="whatsapp".
+import { whatsappUrl } from "@/lib/whatsapp";
+
+interface Props {
+  /** Dónde está el botón (hero, header, flotante...). Se reporta como parámetro del evento. */
+  placement: string;
+  message?: string;
+  class?: string;
+}
+const { placement, message, class: className } = Astro.props;
+---
+
+<a
+  href={whatsappUrl(message)}
+  target="_blank"
+  rel="noopener"
+  data-track="whatsapp"
+  data-track-placement={placement}
+  class={className}
+>
+  <slot>WhatsApp</slot>
+</a>

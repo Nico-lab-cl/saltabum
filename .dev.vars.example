@@ -1,0 +1,14 @@
+# Secretos para desarrollo local (wrangler / astro dev). Copia como .dev.vars.
+# En producción se cargan con:  npx wrangler secret put NOMBRE
+
+# Turnstile secret de PRUEBA (siempre aprueba). En producción usa la real.
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+
+# Meta Conversions API — Events Manager → Configuración → Generar token de acceso
+META_CAPI_ACCESS_TOKEN=
+# Opcional: código de "Probar eventos" para ver los eventos server-side en Events Manager
+META_CAPI_TEST_EVENT_CODE=
+
+# Tu CRM propio: URL que recibe los leads (POST JSON) y secreto compartido para firmar (HMAC-SHA256)
+CRM_WEBHOOK_URL=
+CRM_WEBHOOK_SECRET=

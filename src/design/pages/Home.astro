@@ -1,0 +1,45 @@
+---
+// PLACEHOLDER — reemplazar completo con el diseño de Claude Design.
+// Muestra la forma mínima de conectar WhatsApp y el formulario (ver src/design/README.md).
+import Turnstile from "@/components/core/Turnstile.astro";
+import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
+---
+
+<main class="mx-auto max-w-2xl space-y-10 p-6">
+  <section>
+    <h1 class="text-4xl font-bold">Saltabum</h1>
+    <p class="mt-2 text-neutral-600">Placeholder: aquí va el diseño de la landing.</p>
+    <WhatsAppLink placement="hero" class="mt-4 inline-block rounded-lg bg-green-600 px-4 py-2 text-white">
+      Escríbenos por WhatsApp
+    </WhatsAppLink>
+  </section>
+
+  <section id="contacto">
+    <h2 class="text-2xl font-semibold">Contacto</h2>
+    <form data-lead-form="contacto" class="group mt-4 grid gap-3">
+      <input name="nombre" required placeholder="Nombre" class="rounded border p-2" />
+      <input name="telefono" type="tel" placeholder="Teléfono" class="rounded border p-2" />
+      <input name="email" type="email" placeholder="Email" class="rounded border p-2" />
+      <textarea name="mensaje" placeholder="Mensaje" class="rounded border p-2"></textarea>
+      <input name="website" hidden tabindex="-1" autocomplete="off" />
+      <Turnstile />
+      <button
+        type="submit"
+        class="rounded bg-neutral-900 p-2 text-white group-data-[state=sending]:opacity-50"
+      >
+        Enviar
+      </button>
+      <p data-lead-message class="text-sm" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <footer class="border-t pt-4 text-sm text-neutral-500">
+    <a href="/politica-de-privacidad" class="underline">
+      Política de privacidad
+    </a>{" "}
+    ·
+    <button type="button" data-consent-open class="underline">
+      Configurar cookies
+    </button>
+  </footer>
+</main>

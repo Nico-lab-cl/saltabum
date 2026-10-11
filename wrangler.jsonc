@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "saltabum",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  // Dominio propio (la zona saltabum.cl ya está en Cloudflare).
+  "routes": [
+    { "pattern": "saltabum.cl", "custom_domain": true },
+    { "pattern": "www.saltabum.cl", "custom_domain": true },
+  ],
+  // Secretos (NO van aquí): ver README → "Secretos".
+}

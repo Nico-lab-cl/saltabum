@@ -1,0 +1,89 @@
+---
+// Carga Google (Ads + GA4) con Consent Mode v2, Meta Pixel y Microsoft Clarity.
+// Todos arrancan en "denied" hasta que el usuario acepta el banner de cookies.
+// Un tag sin ID configurado en .env simplemente no se carga.
+import {
+  PUBLIC_CLARITY_ID,
+  PUBLIC_GA4_ID,
+  PUBLIC_GOOGLE_ADS_ID,
+  PUBLIC_META_PIXEL_ID,
+} from "astro:env/client";
+
+const adsId = PUBLIC_GOOGLE_ADS_ID ?? "";
+const ga4Id = PUBLIC_GA4_ID ?? "";
+const metaPixelId = PUBLIC_META_PIXEL_ID ?? "";
+const clarityId = PUBLIC_CLARITY_ID ?? "";
+const gtagId = adsId || ga4Id;
+---
+
+<script is:inline define:vars={{ adsId, ga4Id, metaPixelId, clarityId, gtagId }}>
+  var consent = "denied";
+  try {
+    if (localStorage.getItem("sb_consent") === "granted") consent = "granted";
+  } catch (e) {}
+
+  // ---- Google: Consent Mode v2 (siempre se define, aunque no haya IDs) ----
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () {
+    window.dataLayer.push(arguments);
+  };
+  gtag("consent", "default", {
+    ad_storage: consent,
+    ad_user_data: consent,
+    ad_personalization: consent,
+    analytics_storage: consent,
+    wait_for_update: 500,
+  });
+  gtag("set", "url_passthrough", true);
+  gtag("set", "ads_data_redaction", true);
+
+  if (gtagId) {
+    gtag("js", new Date());
+    if (adsId) gtag("config", adsId, { allow_enhanced_conversions: true });
+    if (ga4Id) gtag("config", ga4Id);
+    var gs = document.createElement("script");
+    gs.async = true;
+    gs.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(gtagId);
+    document.head.appendChild(gs);
+  }
+
+  // ---- Meta Pixel ----
+  if (metaPixelId) {
+    !(function (f, b, e, v, n, t, s) {
+      if (f.fbq) return;
+      n = f.fbq = function () {
+        n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+      };
+      if (!f._fbq) f._fbq = n;
+      n.push = n;
+      n.loaded = !0;
+      n.version = "2.0";
+      n.queue = [];
+      t = b.createElement(e);
+      t.async = !0;
+      t.src = v;
+      s = b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t, s);
+    })(window, document, "script", "https://connect.facebook.net/en_US/fbevents.js");
+    fbq("consent", consent === "granted" ? "grant" : "revoke");
+    fbq("init", metaPixelId);
+    fbq("track", "PageView");
+  }
+
+  // ---- Microsoft Clarity ----
+  if (clarityId) {
+    (function (c, l, a, r, i, t, y) {
+      c[a] =
+        c[a] ||
+        function () {
+          (c[a].q = c[a].q || []).push(arguments);
+        };
+      t = l.createElement(r);
+      t.async = 1;
+      t.src = "https://www.clarity.ms/tag/" + i;
+      y = l.getElementsByTagName(r)[0];
+      y.parentNode.insertBefore(t, y);
+    })(window, document, "clarity", "script", clarityId);
+    clarity("consentv2", { ad_Storage: consent, analytics_Storage: consent });
+  }
+</script>

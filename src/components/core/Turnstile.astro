@@ -1,0 +1,23 @@
+---
+// Widget antispam de Cloudflare. Va DENTRO del <form data-lead-form>.
+// Agrega automáticamente el campo "cf-turnstile-response" que lee lead-form.ts.
+import { PUBLIC_TURNSTILE_SITE_KEY } from "astro:env/client";
+
+interface Props {
+  theme?: "light" | "dark" | "auto";
+  class?: string;
+}
+const { theme = "auto", class: className } = Astro.props;
+---
+
+{PUBLIC_TURNSTILE_SITE_KEY && (
+  <>
+    <div
+      class:list={["cf-turnstile", className]}
+      data-sitekey={PUBLIC_TURNSTILE_SITE_KEY}
+      data-theme={theme}
+      data-language="es"
+    />
+    <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+  </>
+)}

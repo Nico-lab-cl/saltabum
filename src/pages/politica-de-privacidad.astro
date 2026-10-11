@@ -1,0 +1,65 @@
+---
+// PLANTILLA — debe revisarla un abogado antes de publicar. Base: Ley 19.628 y Ley 21.719 (Chile).
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { SITE } from "@/config/site";
+const { legal } = SITE;
+---
+
+<BaseLayout title="Política de privacidad" description="Cómo Saltabum trata tus datos personales y cookies.">
+  <main class="mx-auto max-w-3xl space-y-4 p-6">
+    <h1 class="text-3xl font-bold">Política de privacidad y cookies</h1>
+
+    <h2 class="text-xl font-semibold">1. Responsable</h2>
+    <p>
+      {legal.razonSocial}, RUT {legal.rut}, con domicilio en {legal.direccion}, es responsable del tratamiento
+      de los datos personales recogidos en {SITE.url}. Contacto: {legal.emailPrivacidad}.
+    </p>
+
+    <h2 class="text-xl font-semibold">2. Datos que recogemos</h2>
+    <p>
+      Los datos que nos entregas en el formulario de contacto (nombre, teléfono, email y mensaje) y datos de
+      navegación (dirección IP, dispositivo, páginas visitadas y origen de la visita).
+    </p>
+
+    <h2 class="text-xl font-semibold">3. Finalidad y base de licitud</h2>
+    <p>
+      Responder tus consultas y enviarte información comercial que solicites (base: tu consentimiento y la
+      ejecución de medidas precontractuales). Medir el sitio y la eficacia de nuestra publicidad (base: tu
+      consentimiento mediante el banner de cookies).
+    </p>
+
+    <h2 class="text-xl font-semibold">4. Cookies y tecnologías de terceros</h2>
+    <p>Solo si las aceptas, usamos:</p>
+    <ul class="list-disc pl-6">
+      <li>Google Analytics y Google Ads (Google LLC): medición y publicidad.</li>
+      <li>
+        Píxel de Meta y Conversions API (Meta Platforms Inc.): medición y publicidad en Facebook e Instagram.
+      </li>
+      <li>Microsoft Clarity (Microsoft Corp.): mapas de calor y grabaciones anónimas de sesión.</li>
+    </ul>
+    <p>
+      Puedes cambiar tu decisión en cualquier momento:
+      <button type="button" data-consent-open class="underline">
+        configurar cookies
+      </button>
+    </p>
+
+    <h2 class="text-xl font-semibold">5. Destinatarios y transferencias</h2>
+    <p>
+      Los proveedores anteriores pueden tratar datos fuera de Chile. Nuestro sitio se aloja en Cloudflare. No
+      vendemos tus datos.
+    </p>
+
+    <h2 class="text-xl font-semibold">6. Tus derechos</h2>
+    <p>
+      Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, portabilidad y bloqueo
+      escribiendo a {legal.emailPrivacidad}.
+    </p>
+
+    <h2 class="text-xl font-semibold">7. Conservación</h2>
+    <p>
+      Conservamos los datos de contacto mientras sean necesarios para la finalidad indicada. TODO: definir
+      plazo.
+    </p>
+  </main>
+</BaseLayout>

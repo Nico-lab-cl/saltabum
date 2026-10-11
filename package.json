@@ -1,0 +1,39 @@
+{
+  "name": "saltabum",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sitio web de Saltabum (saltabum.cl) — Astro + Cloudflare Workers",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro build && wrangler dev",
+    "check": "astro check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "deploy": "astro build && wrangler deploy",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^14.3.4",
+    "@astrojs/sitemap": "^3.7.4",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.3.8",
+    "tailwindcss": "^4.3.3",
+    "zod": "^4.6.6"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "prettier": "^3.9.10",
+    "prettier-plugin-astro": "^1.1.1",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.149.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261006.1": true
+  }
+}

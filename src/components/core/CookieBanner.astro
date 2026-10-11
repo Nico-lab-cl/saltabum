@@ -1,0 +1,61 @@
+---
+// Banner de consentimiento. Funcional y con estilo neutro: Claude Design puede reemplazar
+// el markup/clases libremente mientras conserve los atributos data-consent-*.
+// Cualquier elemento con [data-consent-open] (ej. link "Configurar cookies" en el footer) lo reabre.
+---
+
+<div
+  data-consent-banner
+  hidden
+  role="dialog"
+  aria-live="polite"
+  aria-label="Preferencias de cookies"
+  class="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-xl rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-800 shadow-lg"
+>
+  <p>
+    Usamos cookies propias y de terceros (Google, Meta y Microsoft) para medir el uso del sitio y mostrarte
+    publicidad relevante. Puedes aceptarlas o rechazarlas. Más información en nuestra
+    <a href="/politica-de-privacidad" class="underline">
+      política de privacidad
+    </a>
+  </p>
+  <div class="mt-3 flex flex-wrap gap-2">
+    <button
+      type="button"
+      data-consent-accept
+      class="rounded-lg bg-neutral-900 px-4 py-2 font-medium text-white"
+    >
+      Aceptar
+    </button>
+    <button
+      type="button"
+      data-consent-reject
+      class="rounded-lg border border-neutral-300 px-4 py-2 font-medium"
+    >
+      Rechazar
+    </button>
+  </div>
+</div>
+
+<script>
+  import { getConsent, setConsent } from "@/lib/client/consent";
+
+  const banner = document.querySelector<HTMLElement>("[data-consent-banner]");
+  if (banner) {
+    if (getConsent() === null) banner.hidden = false;
+    banner.querySelector("[data-consent-accept]")?.addEventListener("click", () => {
+      setConsent("granted");
+      banner.hidden = true;
+    });
+    banner.querySelector("[data-consent-reject]")?.addEventListener("click", () => {
+      setConsent("denied");
+      banner.hidden = true;
+    });
+    document.addEventListener("click", (e) => {
+      if ((e.target as Element | null)?.closest("[data-consent-open]")) {
+        e.preventDefault();
+        banner.hidden = false;
+      }
+    });
+  }
+</script>
