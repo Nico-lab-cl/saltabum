@@ -1,0 +1,36 @@
+---
+import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
+import Wordmark from "../components/Wordmark.astro";
+---
+
+<footer class="bg-noche text-crema pb-28 lg:pb-0">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-7 px-4 pt-10 lg:flex-row lg:gap-12 lg:px-10 lg:pt-16 lg:pb-10">
+    <div class="flex flex-col items-start lg:flex-[1.4]">
+      <Wordmark negativo class="text-[44px] lg:text-[60px]" />
+      <p class="mt-3.5 max-w-[320px] text-sm leading-5 lg:text-[15px] lg:leading-[22px]">
+        Juegos inflables y entretenciones por 4 horas, con despacho, montaje y retiro. Desde Valparaíso.
+      </p>
+    </div>
+    <div class="lg:flex-1">
+      <h2 class="text-sol mb-2.5 text-xs font-extrabold tracking-[1.2px] uppercase">Comunas</h2>
+      <p class="text-[15px] leading-6 lg:leading-7">Valparaíso · Viña del Mar · Concón · Quilpué · Villa Alemana · Limache · Olmué</p>
+    </div>
+    <div class="lg:flex-1">
+      <h2 class="text-sol mb-1.5 text-xs font-extrabold tracking-[1.2px] uppercase">Contacto</h2>
+      <ul class="text-[15px]">
+        <li><WhatsAppLink placement="footer" class="text-crema inline-flex min-h-11 items-center underline">WhatsApp</WhatsAppLink></li>
+        <li><a href="mailto:hola@saltabum.cl" class="text-crema inline-flex min-h-11 items-center underline">hola@saltabum.cl</a></li>
+        <li class="flex gap-4">
+          <a href="#instagram" class="text-crema inline-flex min-h-11 items-center underline">Instagram</a>
+          <a href="#facebook" class="text-crema inline-flex min-h-11 items-center underline">Facebook</a>
+          <a href="#tiktok" class="text-crema inline-flex min-h-11 items-center underline">TikTok</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-crema/25 mx-auto flex max-w-[1320px] flex-wrap items-center gap-x-5 border-t px-4 py-3 text-sm lg:px-10 lg:py-5">
+    <a href="/politica-de-privacidad" class="text-crema inline-flex min-h-11 items-center underline">Política de privacidad</a>
+    <button type="button" data-consent-open class="text-crema min-h-11 cursor-pointer underline">Configurar cookies</button>
+    <span class="w-full opacity-85 lg:ml-auto lg:w-auto">© 2026 Saltabum y Entretenciones · Valparaíso, Chile</span>
+  </div>
+</footer>

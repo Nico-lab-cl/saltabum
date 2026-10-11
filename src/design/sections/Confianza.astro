@@ -1,0 +1,34 @@
+---
+import Icon from "../components/Icon.astro";
+import Lobes from "../components/Lobes.astro";
+
+const SELLOS = [
+  { icon: "sanitizado", bg: "bg-celeste", titulo: "Equipos sanitizados", texto: "Limpios y desinfectados antes de cada evento." },
+  { icon: "anclaje", bg: "bg-verde", titulo: "Anclaje seguro", texto: "Cada juego queda fijado al piso, siempre." },
+  { icon: "puntual", bg: "bg-sol", titulo: "Llegamos puntuales", texto: "Te avisamos cuando vamos en camino." },
+  { icon: "lluvia", bg: "bg-rosa", titulo: "¿Llueve? Reprogramamos", texto: "Sin perder tu abono." },
+] as const;
+---
+
+<Lobes color="#2F8FEA" side="top" />
+<section aria-labelledby="confianza-titulo" class="bg-azul">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-4 px-4 pt-6 pb-8 lg:flex-row lg:items-center lg:gap-8 lg:px-10 lg:py-11">
+    <h2 id="confianza-titulo" class="font-display text-[26px] leading-[30px] font-semibold lg:flex-1 lg:text-4xl lg:leading-10">
+      La diversión de siempre, con la seriedad que nadie más ofrece
+    </h2>
+    <ul class="grid grid-cols-2 gap-3 lg:flex-[3] lg:grid-cols-4 lg:gap-4">
+      {
+        SELLOS.map((s) => (
+          <li class="border-noche bg-crema flex flex-col gap-1.5 rounded-[20px] border-2 p-3.5 lg:gap-2 lg:p-4.5">
+            <span class:list={["border-noche flex size-10 items-center justify-center rounded-full border-2 lg:size-12", s.bg]}>
+              <Icon name={s.icon} size={22} />
+            </span>
+            <strong class="text-[15px] leading-5 font-extrabold lg:text-[17px] lg:leading-[22px]">{s.titulo}</strong>
+            <span class="text-noche-suave text-[13px] leading-[18px] lg:text-[15px] lg:leading-[21px]">{s.texto}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+<Lobes color="#2F8FEA" side="bottom" />

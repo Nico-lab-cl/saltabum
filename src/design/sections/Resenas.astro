@@ -1,0 +1,35 @@
+---
+import { RESENAS } from "../data";
+
+const ESTILO = [
+  "bg-sol -rotate-[1.5deg]",
+  "bg-celeste rotate-1",
+  "bg-rosa -rotate-[0.5deg]",
+];
+---
+
+<section aria-labelledby="resenas-titulo" class="mx-auto flex max-w-[1320px] flex-col gap-4 py-10 lg:flex-row lg:items-center lg:gap-10 lg:px-10 lg:py-20">
+  <div class="px-4 lg:flex-1 lg:px-0">
+    <h2 id="resenas-titulo" class="font-display text-[32px] leading-9 font-semibold lg:text-5xl lg:leading-[52px]">Lo dicen los papás</h2>
+    <p class="text-noche-suave mt-1.5 flex items-baseline gap-2">
+      <span class="font-display text-noche text-2xl font-bold lg:text-[56px] lg:leading-[60px]">4,9</span> de 5 · [N] reseñas en Google
+    </p>
+    <a href="https://g.page/r/saltabum" target="_blank" rel="noopener" class="text-azul-texto hidden min-h-11 items-center font-extrabold lg:inline-flex">
+      Ver todas en Google →
+    </a>
+  </div>
+  <ul class="sin-scrollbar flex snap-x gap-3.5 overflow-x-auto px-4 py-2 lg:grid lg:flex-[3] lg:grid-cols-3 lg:gap-5 lg:overflow-visible lg:px-0">
+    {
+      RESENAS.map((r, i) => (
+        <li class:list={["border-noche shadow-pop flex w-[270px] shrink-0 snap-start flex-col gap-2.5 rounded-[20px] border-2 p-4 lg:min-h-[220px] lg:w-auto lg:rounded-3xl lg:p-5.5 lg:shadow-[0_5px_0_var(--color-noche)]", ESTILO[i]]}>
+          <p aria-label="5 de 5 estrellas" class="text-lg tracking-[2px]">★★★★★</p>
+          <blockquote class="text-[15px] leading-[22px] lg:text-base lg:leading-6">{r.texto}</blockquote>
+          <p class="mt-auto text-sm"><strong class="font-extrabold">{r.nombre}</strong> · {r.comuna}</p>
+        </li>
+      ))
+    }
+  </ul>
+  <a href="https://g.page/r/saltabum" target="_blank" rel="noopener" class="text-azul-texto mx-4 inline-flex min-h-11 items-center font-extrabold lg:hidden">
+    Ver todas en Google
+  </a>
+</section>

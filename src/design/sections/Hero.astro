@@ -1,0 +1,106 @@
+---
+import { Image } from "astro:assets";
+import foto from "../assets/megatobogan-arcoiris.webp";
+import { PRODUCTO } from "../data";
+import Icon from "../components/Icon.astro";
+import WaButton from "../components/WaButton.astro";
+
+const SELLOS = [
+  { icon: "sanitizado", label: "Sanitizado" },
+  { icon: "puntual", label: "Puntual" },
+  { icon: "anclaje", label: "Anclado al piso" },
+] as const;
+---
+
+<section id="inicio" class="relative">
+  <div
+    class="mx-auto flex max-w-[1320px] flex-col gap-4 px-4 pt-6 pb-10 lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:pt-14 lg:pb-22"
+  >
+    <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-5">
+      <ul class="flex flex-wrap gap-1.5 lg:gap-2">
+        {
+          SELLOS.map((s) => (
+            <li class="border-noche bg-blanco inline-flex items-center gap-1 rounded-full border-2 py-0.5 pr-2.5 pl-1.5 text-[11px] leading-[18px] font-extrabold tracking-[1px] uppercase lg:gap-1.5 lg:py-1 lg:pr-3 lg:pl-2 lg:text-xs">
+              <Icon name={s.icon} size={14} strokeWidth={2.6} />
+              {s.label}
+            </li>
+          ))
+        }
+      </ul>
+
+      <h1 class="font-display text-[44px] leading-[1.05] font-semibold tracking-tight lg:text-[clamp(44px,5.4vw,76px)] lg:leading-[1.03]">
+        ¡A <span class="px-0.5 shadow-[inset_0_-0.26em_0_var(--color-sol)]">saltar</span> se ha dicho!
+      </h1>
+      <p class="max-w-[520px] text-lg leading-[26px] lg:text-[21px] lg:leading-[31px]">
+        Inflables desde <strong class="font-extrabold">$40.000 por 4 horas</strong>. Tú pones la torta; nosotros
+        llegamos, montamos, anclamos y retiramos.
+      </p>
+
+      <div class="order-last flex flex-col gap-3 sm:flex-row lg:order-none lg:mt-1 lg:gap-3.5">
+        <WaButton placement="hero" size="l">Consultar disponibilidad por WhatsApp</WaButton>
+        <a
+          href="#juegos"
+          class="bounce border-noche bg-blanco text-noche inline-flex min-h-12 items-center justify-center rounded-full border-2 px-7 font-extrabold no-underline lg:min-h-15 lg:text-lg"
+        >
+          Ver juegos y precios
+        </a>
+      </div>
+
+      <dl
+        class="order-last flex flex-wrap items-center justify-center gap-x-5 gap-y-3 lg:order-none lg:mt-2 lg:justify-start lg:border-t-2 lg:border-dashed lg:border-noche/20 lg:pt-5"
+      >
+        <div class="flex items-center gap-2">
+          <dt class="font-display text-2xl font-bold lg:text-[34px]">4,9</dt>
+          <dd class="text-noche-suave text-sm leading-[18px]"><span class="text-noche tracking-[2px]">★★★★★</span><br />en Google</dd>
+        </div>
+        <div class="flex items-center gap-2">
+          <dt class="font-display text-2xl font-bold lg:text-[34px]">+[N]</dt>
+          <dd class="text-noche-suave text-sm leading-[18px]">cumpleaños en<br />la Quinta Región</dd>
+        </div>
+        <div class="hidden items-center gap-2 lg:flex">
+          <dt class="font-display text-[34px] font-bold">10–15</dt>
+          <dd class="text-noche-suave text-sm leading-[18px]">minutos de<br />montaje</dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="my-5 flex min-w-0 justify-center lg:my-0 lg:flex-1">
+      <div class="relative mx-2 mt-2 mb-6 w-full max-w-[500px] lg:mr-10">
+        <div aria-hidden="true" class="bg-sol border-noche absolute inset-[28px_-18px_-22px_22px] rounded-[40px] border-2 lg:inset-[28px_-26px_-26px_28px] lg:rounded-[48px]"></div>
+        <div aria-hidden="true" class="bg-rosa border-noche absolute top-14 -left-5 z-10 size-9 rounded-full border-2 lg:top-20 lg:-left-8 lg:size-12"></div>
+        <div aria-hidden="true" class="bg-celeste border-noche absolute -top-5 right-8 z-10 size-12 rounded-full border-2 lg:-top-8 lg:size-16"></div>
+        <div aria-hidden="true" class="bg-verde border-noche absolute -bottom-10 left-14 z-10 size-6 rounded-full border-2 lg:size-7"></div>
+
+        <div class="border-noche bg-blanco relative aspect-[5/6] overflow-hidden rounded-[28px] border-2 lg:aspect-[4/5] lg:rounded-[36px]">
+          <Image
+            src={foto}
+            alt={`${PRODUCTO.nombre}: inflable rojo, amarillo, azul y verde con tobogán, túneles y arcos`}
+            widths={[400, 600, 900]}
+            sizes="(min-width: 1024px) 500px, 92vw"
+            loading="eager"
+            fetchpriority="high"
+            class="size-full object-cover object-[50%_51%]"
+          />
+          <span class="bg-noche text-crema absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold tracking-[1px] uppercase lg:top-4 lg:left-4 lg:text-xs">
+            Foto real · nuestro juego
+          </span>
+          <a
+            href="#juegos"
+            class="border-noche bg-crema text-noche absolute bottom-3 left-3 rounded-xl border-2 px-3 py-1.5 text-[13px] leading-4 font-bold no-underline lg:bottom-4 lg:left-4 lg:rounded-2xl lg:px-3.5 lg:py-2.5 lg:text-[15px] lg:leading-5 lg:font-extrabold"
+          >
+            {PRODUCTO.nombre} →<br />
+            <span class="text-noche-suave font-semibold">{PRODUCTO.edad} · {PRODUCTO.base}</span>
+          </a>
+        </div>
+
+        <div
+          class="border-noche bg-celeste shadow-pop absolute -right-2 -bottom-7 z-20 flex size-28 -rotate-10 flex-col items-center justify-center rounded-full border-2 text-center lg:top-[46%] lg:-right-10 lg:bottom-auto lg:size-33 lg:-rotate-12"
+        >
+          <span class="text-[13px] leading-[14px] font-extrabold lg:text-sm">desde</span>
+          <span class="font-display text-[26px] leading-7 font-bold lg:text-[30px] lg:leading-8">$40.000</span>
+          <span class="text-[13px] leading-[14px] font-extrabold lg:text-sm">4 horas</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

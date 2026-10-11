@@ -1,0 +1,80 @@
+---
+import Turnstile from "@/components/core/Turnstile.astro";
+import { COMUNAS } from "../data";
+import Icon from "../components/Icon.astro";
+import WaButton from "../components/WaButton.astro";
+
+const input =
+  "border-noche bg-blanco text-noche placeholder:text-noche-suave/70 min-h-12 w-full min-w-0 rounded-xl border-2 px-3.5 lg:min-h-13 group-data-[state=sending]:bg-arena group-data-[state=sending]:opacity-80";
+---
+
+<section id="contacto" aria-labelledby="contacto-titulo" class="border-noche bg-arena border-t-2">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-11 lg:flex-row lg:items-start lg:gap-14 lg:px-10 lg:py-20">
+    <div class="flex flex-col gap-4 lg:flex-1 lg:gap-4.5">
+      <h2 id="contacto-titulo" class="font-display text-[32px] leading-9 font-semibold lg:text-5xl lg:leading-[52px]">¿Lo reservamos?</h2>
+      <p class="text-noche-suave">Lo más rápido es WhatsApp. Si prefieres, déjanos tus datos y te escribimos hoy mismo.</p>
+      <WaButton placement="contacto" size="l" class="lg:self-start">Escribir por WhatsApp</WaButton>
+      <ul class="mt-2 hidden flex-col gap-2.5 lg:flex">
+        <li class="flex items-center gap-2.5"><Icon name="puntual" size={22} />Respondemos de [09:00 a 21:00], todos los días</li>
+        <li class="flex items-center gap-2.5"><Icon name="despacho" size={22} />Base en Valparaíso, despacho a 7 comunas</li>
+        <li class="flex items-center gap-2.5"><Icon name="lluvia" size={22} />Si llueve, reprogramamos sin costo</li>
+      </ul>
+      <p aria-hidden="true" class="text-noche-suave flex items-center gap-3 text-sm font-bold lg:hidden">
+        <span class="border-noche/30 flex-1 border-t-2 border-dashed"></span>o con el formulario<span class="border-noche/30 flex-1 border-t-2 border-dashed"></span>
+      </p>
+    </div>
+
+    <form
+      data-lead-form="contacto"
+      class="group border-noche bg-blanco grid grid-cols-2 gap-3.5 rounded-[20px] border-2 px-4 py-5 lg:flex-[1.4] lg:gap-4.5 lg:rounded-[28px] lg:p-8 lg:shadow-pop-l"
+    >
+      <label class="col-span-2 flex flex-col gap-1.5 font-bold lg:col-span-1">
+        Nombre
+        <input name="nombre" required autocomplete="name" placeholder="Ej.: Camila Rojas" class={input} />
+      </label>
+      <label class="col-span-2 flex flex-col gap-1.5 font-bold lg:col-span-1">
+        Teléfono
+        <input name="telefono" type="tel" required autocomplete="tel" inputmode="tel" placeholder="+56 9 1234 5678" class={input} />
+      </label>
+      <label class="col-span-2 flex flex-col gap-1.5 font-bold">
+        <span>Email <span class="text-noche-suave font-normal">(opcional)</span></span>
+        <input name="email" type="email" autocomplete="email" placeholder="tu@correo.cl" class={input} />
+      </label>
+      <label class="flex flex-col gap-1.5 font-bold">
+        Comuna
+        <select name="extra.comuna" class={input}>
+          {COMUNAS.map((c) => <option>{c.nombre}</option>)}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1.5 font-bold">
+        Fecha del evento
+        <input name="extra.fecha" type="date" class={input} />
+      </label>
+      <label class="col-span-2 flex flex-col gap-1.5 font-bold">
+        Mensaje
+        <textarea name="mensaje" rows="3" placeholder="¿Qué juego te interesa? ¿Cuántos niños?" class={`${input} resize-y py-3`}></textarea>
+      </label>
+      <input name="website" hidden tabindex="-1" autocomplete="off" />
+
+      <div class="col-span-2 flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+        <div class="min-h-[65px] w-[300px] max-w-full">
+          <Turnstile theme="light" />
+        </div>
+        <button
+          type="submit"
+          class="bounce bg-rojo-texto border-noche shadow-pop min-h-13 cursor-pointer rounded-full border-2 px-8 text-[17px] font-extrabold text-white group-data-[state=sending]:pointer-events-none group-data-[state=sending]:opacity-75 lg:min-h-14 lg:text-lg"
+        >
+          <span class="group-data-[state=sending]:hidden">Enviar consulta</span>
+          <span class="hidden group-data-[state=sending]:inline">Enviando…</span>
+        </button>
+      </div>
+      <p
+        data-lead-message
+        aria-live="polite"
+        class="text-noche-suave col-span-2 rounded-xl text-sm group-data-[state=error]:border-2 group-data-[state=error]:border-rojo-texto group-data-[state=error]:bg-rojo-suave group-data-[state=error]:px-3.5 group-data-[state=error]:py-3 group-data-[state=error]:font-bold group-data-[state=error]:text-rojo-texto group-data-[state=success]:border-2 group-data-[state=success]:border-noche group-data-[state=success]:bg-verde-burbuja group-data-[state=success]:px-3.5 group-data-[state=success]:py-3 group-data-[state=success]:font-bold group-data-[state=success]:text-noche lg:text-[15px]"
+      >
+        Te respondemos el mismo día.
+      </p>
+    </form>
+  </div>
+</section>

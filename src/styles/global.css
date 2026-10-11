@@ -1,11 +1,110 @@
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Figtree:wght@400;600;700;800&display=swap");
 @import "tailwindcss";
 
 /*
- * Tokens de diseño (colores, tipografías, radios...).
- * Reemplazar con los que entregue Claude Design. Ejemplo:
- *
- * @theme {
- *   --color-brand: #ff5a1f;
- *   --font-display: "Nombre Fuente", sans-serif;
- * }
+ * Tokens del sistema de diseño «Saltabum y Entretenciones» (v3).
+ * Los marcados como «propuesto» aún no están en el sistema; se suman en la Fase 3.
  */
+@theme {
+  /* Multicolor de marca: formas, fondos y detalles. Nunca como texto chico. */
+  --color-rojo: #f0462d;
+  --color-naranja: #ff8a1f;
+  --color-sol: #ffc23a;
+  --color-verde: #2db866;
+  --color-azul: #2f8fea;
+  --color-morado: #8e5be8;
+  --color-rosa: #ff6fae;
+  --color-celeste: #7fd3f7;
+
+  /* Texto */
+  --color-rojo-texto: #c9361a;
+  --color-azul-texto: #1f6fc2;
+  --color-morado-texto: #7046d6;
+  --color-noche: #1f2a5c;
+  --color-noche-suave: #545c7e;
+
+  /* Fondos */
+  --color-crema: #fff6ea;
+  --color-arena: #f3e6d3;
+
+  /* Línea Pastel */
+  --color-moca: #b89b86;
+  --color-rosa-empolvado: #e7c1ba;
+  --color-salvia: #afbfa6;
+
+  /* Propuestos */
+  --color-blanco: #ffffff;
+  --color-verde-burbuja: #d5f1e0;
+  --color-rojo-suave: #fce0da;
+
+  --font-display: "Fredoka", "Figtree", system-ui, sans-serif;
+  --font-sans: "Figtree", system-ui, sans-serif;
+
+  --radius-s: 12px;
+  --radius-m: 20px;
+  --radius-l: 28px; /* propuesto */
+
+  /* Sombras planas con el contorno noche (propuestas) */
+  --shadow-pop-s: 0 2px 0 var(--color-noche);
+  --shadow-pop: 0 4px 0 var(--color-noche);
+  --shadow-pop-l: 0 6px 0 var(--color-noche);
+  --shadow-sol: 0 3px 0 var(--color-sol);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 88px;
+  }
+  body {
+    background: var(--color-crema);
+    color: var(--color-noche);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-azul-texto);
+    outline-offset: 3px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+/* Rebote (squash and stretch) en botones y tarjetas. */
+@utility bounce {
+  transition:
+    transform 0.18s cubic-bezier(0.3, 1.6, 0.5, 1),
+    box-shadow 0.18s;
+  &:hover {
+    transform: scale(1.03, 0.97);
+  }
+  &:active {
+    transform: scale(0.96, 1.04);
+    box-shadow: 0 1px 0 var(--color-noche);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:hover,
+    &:active {
+      transform: none;
+    }
+  }
+}
+
+/* Letras del wordmark: contorno noche por fuera del relleno. */
+@utility letra {
+  display: inline-block;
+  font-weight: 700;
+  -webkit-text-stroke: 0.06em var(--color-noche);
+  paint-order: stroke fill;
+}
+
+@utility sin-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

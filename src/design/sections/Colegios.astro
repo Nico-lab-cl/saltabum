@@ -1,0 +1,50 @@
+---
+import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
+
+const MENSAJE = "Hola, quiero cotizar juegos para un evento de colegio o empresa. Vengo de saltabum.cl";
+
+const DATOS = [
+  { valor: "+[N]", texto: "niños por jornada" },
+  { valor: "Monitores", texto: "a cargo de cada juego" },
+  { valor: "Anclaje", texto: "certificado y revisado" },
+  { valor: "Factura", texto: "y orden de compra" },
+];
+---
+
+<section id="colegios" aria-labelledby="colegios-titulo" class="bg-noche text-crema">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-6 px-4 py-11 lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:py-20">
+    <div class="lg:flex-1">
+      <p class="text-sol text-xs font-extrabold tracking-[1.2px] uppercase">Colegios · Empresas · Municipios</p>
+      <h2 id="colegios-titulo" class="font-display mt-2 text-[30px] leading-[34px] font-semibold lg:mt-2.5 lg:text-5xl lg:leading-[52px]">
+        Eventos grandes, con la seriedad que piden
+      </h2>
+      <p class="mt-3 max-w-[480px] lg:mt-4">
+        Fiestas de fin de año, aniversarios y días de la familia. Cotizamos con orden de compra y coordinamos con tu equipo.
+      </p>
+      <WhatsAppLink
+        placement="colegios"
+        message={MENSAJE}
+        class="bounce bg-sol text-noche border-crema mt-6 hidden min-h-14 items-center rounded-full border-2 px-7.5 text-lg font-extrabold no-underline lg:inline-flex"
+      >
+        Cotizar evento
+      </WhatsAppLink>
+    </div>
+    <dl class="grid grid-cols-2 gap-2.5 lg:flex-1 lg:gap-4">
+      {
+        DATOS.map((d) => (
+          <div class="border-crema/50 rounded-2xl border-2 p-3 lg:rounded-[20px] lg:p-5">
+            <dt class="font-display text-sol text-2xl leading-7 font-semibold lg:text-4xl lg:leading-10">{d.valor}</dt>
+            <dd class="text-sm leading-5 lg:text-base">{d.texto}</dd>
+          </div>
+        ))
+      }
+    </dl>
+    <WhatsAppLink
+      placement="colegios"
+      message={MENSAJE}
+      class="bounce bg-sol text-noche border-crema flex min-h-13 items-center justify-center rounded-full border-2 text-[17px] font-extrabold no-underline lg:hidden"
+    >
+      Cotizar evento
+    </WhatsAppLink>
+  </div>
+</section>

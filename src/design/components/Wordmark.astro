@@ -1,0 +1,40 @@
+---
+// Wordmark provisional (el logo final está en revisión): «Saltabum» con letras que rebotan
+// y la cinta «y entretenciones». `negativo` = versión sobre fondo noche.
+interface Props {
+  negativo?: boolean;
+  class?: string;
+}
+const { negativo = false, class: className } = Astro.props;
+
+const LETRAS = [
+  { l: "S", c: "text-rojo", t: "translate-y-[0.03em] -rotate-6" },
+  { l: "a", c: "text-sol", t: "-translate-y-[0.07em] rotate-4" },
+  { l: "l", c: "text-verde", t: "translate-y-[0.06em] -rotate-3" },
+  { l: "t", c: "text-azul", t: "-translate-y-[0.1em] rotate-5" },
+  { l: "a", c: "text-morado", t: "translate-y-[0.03em] -rotate-4" },
+  { l: "b", c: "text-naranja", t: "-translate-y-[0.07em] rotate-3" },
+  { l: "u", c: "text-rosa", t: "translate-y-[0.06em] -rotate-5" },
+  { l: "m", c: "text-celeste", t: "-translate-y-[0.03em] rotate-4" },
+];
+---
+
+<span class:list={["inline-flex flex-col items-start leading-none", className]}>
+  <span class="font-display tracking-wide" aria-hidden="true">
+    {
+      LETRAS.map(({ l, c, t }) => (
+        <span class:list={["letra", c, t, negativo && "[-webkit-text-stroke-color:var(--color-crema)]"]}>{l}</span>
+      ))
+    }
+  </span>
+  <span
+    class:list={[
+      "bg-morado text-crema mt-0.5 rounded-full border-[1.5px] px-2 text-[0.3em] leading-[1.4] font-extrabold",
+      negativo ? "border-crema" : "border-noche",
+    ]}
+    aria-hidden="true"
+  >
+    y entretenciones
+  </span>
+  <span class="sr-only">Saltabum y Entretenciones</span>
+</span>

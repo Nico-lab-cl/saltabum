@@ -1,0 +1,37 @@
+---
+// Barra fija inferior (solo mobile). Se esconde mientras el formulario de contacto está en pantalla.
+import { PUBLIC_WHATSAPP_NUMBER } from "astro:env/client";
+import Icon from "../components/Icon.astro";
+import WaButton from "../components/WaButton.astro";
+
+const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
+---
+
+<nav
+  aria-label="Contacto rápido"
+  data-sticky-bar
+  class="border-noche bg-crema fixed inset-x-0 bottom-0 z-30 flex gap-2.5 border-t-2 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] transition-transform duration-200 data-[oculta]:translate-y-full motion-reduce:transition-none lg:hidden"
+>
+  <WaButton placement="sticky" size="m" class="flex-1">WhatsApp</WaButton>
+  {
+    telefono && (
+      <a
+        href={`tel:+${telefono}`}
+        class="bounce border-noche bg-blanco text-noche inline-flex min-h-13 items-center gap-1.5 rounded-full border-2 px-4.5 font-extrabold no-underline"
+      >
+        <Icon name="telefono" size={20} />
+        Llamar
+      </a>
+    )
+  }
+</nav>
+
+<script>
+  const bar = document.querySelector<HTMLElement>("[data-sticky-bar]");
+  const form = document.querySelector("[data-lead-form]");
+  if (bar && form) {
+    new IntersectionObserver(([entry]) => bar.toggleAttribute("data-oculta", entry.isIntersecting), {
+      threshold: 0.15,
+    }).observe(form);
+  }
+</script>

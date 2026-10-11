@@ -1,0 +1,82 @@
+---
+import { PUBLIC_WHATSAPP_NUMBER } from "astro:env/client";
+import Icon from "../components/Icon.astro";
+import WaButton from "../components/WaButton.astro";
+import Wordmark from "../components/Wordmark.astro";
+
+const NAV = [
+  { href: "#juegos", label: "Juegos" },
+  { href: "#como", label: "Cómo funciona" },
+  { href: "#despacho", label: "Despacho" },
+  { href: "#combos", label: "Combos" },
+  { href: "#colegios", label: "Colegios y empresas" },
+  { href: "#preguntas", label: "Preguntas" },
+];
+const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
+---
+
+<header class="border-noche bg-crema sticky top-0 z-40 border-b-2">
+  <div class="mx-auto flex max-w-[1320px] items-center gap-6 px-4 py-2.5 lg:px-10 lg:py-3.5">
+    <a href="#inicio" class="no-underline" aria-label="Saltabum y Entretenciones, inicio">
+      <Wordmark class="text-[27px] lg:text-[34px]" />
+    </a>
+
+    <nav aria-label="Principal" class="hidden flex-1 justify-center gap-6 xl:flex">
+      {
+        NAV.map((item) => (
+          <a
+            href={item.href}
+            class="text-noche hover:border-sol border-b-[3px] border-transparent py-2.5 font-bold no-underline"
+          >
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="ml-auto flex items-center gap-2 lg:gap-3 xl:ml-0">
+      {
+        telefono && (
+          <a href={`tel:+${telefono}`} class="text-noche hidden min-h-11 items-center gap-1.5 font-extrabold no-underline xl:inline-flex">
+            <Icon name="telefono" size={20} />
+            Llamar
+          </a>
+        )
+      }
+      <WaButton placement="header" size="s" class="max-lg:hidden">WhatsApp</WaButton>
+      <WaButton placement="header" size="s" icon={false} class="size-11 !px-0 lg:hidden">
+        <span class="sr-only">Escríbenos por WhatsApp</span>
+        <Icon name="whatsapp" size={22} />
+      </WaButton>
+
+      <details class="group relative xl:hidden">
+        <summary
+          class="border-noche bg-blanco flex size-11 cursor-pointer list-none items-center justify-center rounded-full border-2 [&::-webkit-details-marker]:hidden"
+          aria-label="Abrir menú"
+        >
+          <Icon name="menu" size={22} strokeWidth={2.4} class="group-open:hidden" />
+          <Icon name="cerrar" size={22} strokeWidth={2.4} class="hidden group-open:block" />
+        </summary>
+        <nav
+          aria-label="Principal"
+          class="border-noche bg-crema shadow-pop absolute top-14 right-0 flex w-64 flex-col rounded-[20px] border-2 p-2"
+        >
+          {
+            NAV.map((item) => (
+              <a href={item.href} class="text-noche hover:bg-arena rounded-xl px-4 py-3 font-bold no-underline">
+                {item.label}
+              </a>
+            ))
+          }
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>
+
+<script>
+  // Cierra el menú mobile al elegir una sección.
+  document.querySelectorAll<HTMLDetailsElement>("header details").forEach((menu) => {
+    menu.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => (menu.open = false)));
+  });
+</script>

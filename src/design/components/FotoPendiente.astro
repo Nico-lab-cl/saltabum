@@ -1,0 +1,19 @@
+---
+// Espacio para una foto real que aún no tenemos. Nunca reemplazar por stock ni renders.
+interface Props {
+  texto: string;
+  class?: string;
+}
+const { texto, class: className } = Astro.props;
+---
+
+<div
+  role="img"
+  aria-label={`Foto pendiente: ${texto}`}
+  class:list={[
+    "bg-arena text-noche-suave flex items-center justify-center p-3 text-center text-[11px] leading-tight font-extrabold tracking-[1px] uppercase",
+    className,
+  ]}
+>
+  Foto real<br />{texto}
+</div>
