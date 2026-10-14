@@ -9,6 +9,9 @@ export const PRODUCTO = {
   precio: "$[XX.XXX]",
 };
 
+// Precio base de los inflables (bloque de 4 horas).
+export const DESDE = "$40.000";
+
 export type Comuna = {
   nombre: string;
   zonas: string;
@@ -43,7 +46,7 @@ export const CHAT = [
   {
     paso: 1,
     yo: true,
-    titulo: "Eliges el juego",
+    titulo: "Nos escribes con tu comuna y fecha",
     texto: mensajeWhatsapp(PRODUCTO.nombre, "Concón", "el sábado 14"),
     hora: "19:42",
   },
@@ -58,7 +61,7 @@ export const CHAT = [
   {
     paso: 3,
     yo: false,
-    titulo: "Llegamos y anclamos",
+    titulo: "Llegamos, montamos y anclamos",
     texto:
       "Vamos en camino. Llegamos entre 10:00 y 10:15. Necesitamos un enchufe a menos de 15 m y el patio despejado.",
     hora: "Sáb 09:40",
@@ -66,7 +69,7 @@ export const CHAT = [
   {
     paso: 4,
     yo: false,
-    titulo: "4 horas y retiramos",
+    titulo: "4 horas de saltos y retiramos",
     texto: "Pasamos a retirar a las 14:15. ¡Gracias por saltar con nosotros!",
     hora: "Sáb 13:50",
   },
@@ -81,14 +84,14 @@ export const FAQS = [
   { q: "¿Cuánta luz consume?", a: "Menos de $2.000 por evento. Necesitamos un enchufe a menos de 15 m." },
   {
     q: "¿Cuánto espacio necesito?",
-    a: `Cada juego indica su espacio. El ${PRODUCTO.nombre} mide ${PRODUCTO.base} y ${PRODUCTO.alto} de alto; necesita ${PRODUCTO.espacioLibre} libres.`,
+    a: `El ${PRODUCTO.nombre} mide ${PRODUCTO.base} y ${PRODUCTO.alto} de alto; necesita ${PRODUCTO.espacioLibre} libres.`,
   },
   {
     q: "¿Cómo se ancla?",
-    a: "[Estacas en pasto o sacos de lastre en piso duro]. Nunca dejamos un juego sin anclar.",
+    a: "[Estacas en pasto o sacos de lastre en piso duro]. Nunca dejamos el juego sin anclar.",
   },
   { q: "¿Cuánto demora el montaje?", a: "Entre 10 y 15 minutos. Llegamos antes de la hora de inicio." },
-  { q: "¿Emiten factura?", a: "Sí, para colegios, empresas y particulares que la necesiten." },
+  { q: "¿Emiten factura?", a: "Sí, para municipalidades, juntas de vecinos, colegios, empresas y particulares." },
 ];
 
 export const RESENAS = [

@@ -1,0 +1,90 @@
+---
+// «¿Cabe en mi patio?»: esquema visto desde arriba, a escala (7,5 m dentro de 8,5 m).
+import { PRODUCTO } from "../data";
+import Icon from "../components/Icon.astro";
+import ImagenPendiente from "../components/ImagenPendiente.astro";
+import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
+
+const MENSAJE = `Hola, quiero saber si el ${PRODUCTO.nombre} cabe en mi patio. Les mando una foto. Vengo de saltabum.cl`;
+const REQUISITOS = [
+  `Pasto o piso firme y parejo, sin ramas ni techos bajo los ${PRODUCTO.alto}.`,
+  "Un enchufe a menos de 15 m. Consume menos de $2.000 por evento.",
+  "Un acceso por donde entrar con el juego enrollado.",
+];
+---
+
+<section id="patio" aria-labelledby="patio-titulo" class="border-noche bg-celeste border-b-2">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:py-20">
+    <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-6">
+      <div>
+        <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Medidas</p>
+        <h2 id="patio-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
+          ¿Cabe en mi patio?
+        </h2>
+        <p class="mt-2 lg:mt-3 lg:text-lg">Mide el espacio despejado. Si tienes {PRODUCTO.espacioLibre} libres, cabe.</p>
+      </div>
+
+      <ul class="order-2 flex flex-col gap-2.5 font-semibold lg:order-none">
+        {
+          REQUISITOS.map((texto) => (
+            <li class="flex items-start gap-2.5">
+              <span class="border-noche bg-blanco flex size-7 shrink-0 items-center justify-center rounded-full border-2">
+                <Icon name="check" size={16} strokeWidth={3.2} />
+              </span>
+              {texto}
+            </li>
+          ))
+        }
+      </ul>
+
+      <ImagenPendiente
+        n={5}
+        ratio="3:2"
+        texto="El juego en un patio de casa mediano, con la casa de fondo como escala"
+        class="bg-blanco order-3 aspect-[3/2] rounded-[20px] lg:order-none"
+      />
+
+      <WhatsAppLink
+        placement="patio"
+        message={MENSAJE}
+        class="bounce border-noche bg-blanco text-noche shadow-pop order-4 inline-flex min-h-13 items-center justify-center rounded-full border-2 px-5 text-center leading-[21px] font-extrabold no-underline lg:order-none lg:self-start"
+      >
+        ¿Dudas? Mándanos una foto de tu patio
+      </WhatsAppLink>
+    </div>
+
+    <div class="order-1 lg:order-none lg:min-w-0 lg:flex-1">
+      <div
+        role="img"
+        aria-label={`Esquema visto desde arriba: el juego mide ${PRODUCTO.base} y necesita ${PRODUCTO.espacioLibre} de espacio libre`}
+        class="border-noche bg-blanco mx-auto flex max-w-[520px] flex-col gap-3 rounded-[28px] border-2 p-3.5 lg:p-5 lg:shadow-pop-l"
+      >
+        <div class="border-noche bg-crema flex aspect-square rounded-[20px] border-2 border-dashed p-[5.9%]">
+          <div class="border-noche bg-sol flex flex-1 flex-col overflow-hidden rounded-2xl border-2">
+            <div class="border-noche bg-verde h-[14%] border-b-2"></div>
+            <div class="flex flex-1 flex-col items-center justify-center gap-0.5 p-2 text-center">
+              <span class="text-xs font-extrabold tracking-[1px] uppercase">Megatobogán</span>
+              <span class="font-display text-[34px] leading-[38px] font-bold lg:text-5xl lg:leading-[52px]">{PRODUCTO.base}</span>
+              <span class="text-sm font-bold lg:text-base">{PRODUCTO.alto} de alto</span>
+            </div>
+            <div class="border-noche grid h-[22%] grid-cols-3 border-t-2">
+              <div class="border-noche bg-rojo border-r-2"></div>
+              <div class="border-noche flex items-center justify-center border-r-2 text-xs font-extrabold">Tobogán</div>
+              <div class="bg-azul"></div>
+            </div>
+          </div>
+        </div>
+        <ul class="flex flex-col gap-1.5 text-sm leading-5">
+          <li class="flex items-center gap-2">
+            <span aria-hidden="true" class="border-noche bg-crema h-3.5 w-5.5 shrink-0 rounded border-2 border-dashed"></span>
+            <span>Espacio libre necesario: <strong class="font-extrabold">{PRODUCTO.espacioLibre}</strong></span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span aria-hidden="true" class="border-noche bg-sol h-3.5 w-5.5 shrink-0 rounded border-2"></span>
+            <span>Juego inflado: <strong class="font-extrabold">{PRODUCTO.base}</strong></span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>

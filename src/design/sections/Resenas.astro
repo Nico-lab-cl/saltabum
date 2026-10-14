@@ -1,35 +1,72 @@
 ---
+// Reseñas de Google. Con RESENAS vacío se muestra el estado sin reseñas (enlace a Google).
 import { RESENAS } from "../data";
 
-const ESTILO = [
-  "bg-sol -rotate-[1.5deg]",
-  "bg-celeste rotate-1",
-  "bg-rosa -rotate-[0.5deg]",
-];
+const GOOGLE = "https://g.page/r/saltabum";
+const hay = RESENAS.length > 0;
 ---
 
-<section aria-labelledby="resenas-titulo" class="mx-auto flex max-w-[1320px] flex-col gap-4 py-10 lg:flex-row lg:items-center lg:gap-10 lg:px-10 lg:py-20">
-  <div class="px-4 lg:flex-1 lg:px-0">
-    <h2 id="resenas-titulo" class="font-display text-[32px] leading-9 font-semibold lg:text-5xl lg:leading-[52px]">Lo dicen los papás</h2>
-    <p class="text-noche-suave mt-1.5 flex items-baseline gap-2">
-      <span class="font-display text-noche text-2xl font-bold lg:text-[56px] lg:leading-[60px]">4,9</span> de 5 · [N] reseñas en Google
-    </p>
-    <a href="https://g.page/r/saltabum" target="_blank" rel="noopener" class="text-azul-texto hidden min-h-11 items-center font-extrabold lg:inline-flex">
-      Ver todas en Google →
-    </a>
-  </div>
-  <ul class="sin-scrollbar flex snap-x gap-3.5 overflow-x-auto px-4 py-2 lg:grid lg:flex-[3] lg:grid-cols-3 lg:gap-5 lg:overflow-visible lg:px-0">
+<section id="resenas" aria-labelledby="resenas-titulo" class="border-noche bg-blanco border-b-2">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-4.5 px-4 py-10 lg:gap-8 lg:px-10 lg:py-20">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <p class="text-rojo-texto text-xs font-extrabold tracking-[1.2px] uppercase">Reseñas de Google</p>
+        <h2 id="resenas-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
+          Lo que cuentan nuestros clientes
+        </h2>
+      </div>
+      {
+        hay && (
+          <p class="border-noche bg-crema flex items-center gap-3 rounded-[20px] border-2 px-4 py-3">
+            <span class="font-display text-[40px] leading-[44px] font-bold">[N,N]</span>
+            <span class="text-sm leading-[19px]">
+              <span aria-hidden="true" class="text-base tracking-[2px]">★★★★★</span>
+              <br />
+              [N] reseñas en Google
+            </span>
+          </p>
+        )
+      }
+    </div>
+
     {
-      RESENAS.map((r, i) => (
-        <li class:list={["border-noche shadow-pop flex w-[270px] shrink-0 snap-start flex-col gap-2.5 rounded-[20px] border-2 p-4 lg:min-h-[220px] lg:w-auto lg:rounded-3xl lg:p-5.5 lg:shadow-[0_5px_0_var(--color-noche)]", ESTILO[i]]}>
-          <p aria-label="5 de 5 estrellas" class="text-lg tracking-[2px]">★★★★★</p>
-          <blockquote class="text-[15px] leading-[22px] lg:text-base lg:leading-6">{r.texto}</blockquote>
-          <p class="mt-auto text-sm"><strong class="font-extrabold">{r.nombre}</strong> · {r.comuna}</p>
-        </li>
-      ))
+      hay ? (
+        <>
+          <ul class="flex flex-col gap-3.5 lg:grid lg:grid-cols-3 lg:gap-5">
+            {RESENAS.map((r) => (
+              <li class="border-noche bg-crema shadow-pop flex flex-col gap-2.5 rounded-[20px] border-2 p-4 lg:min-h-[200px] lg:rounded-3xl lg:p-5.5">
+                <blockquote class="leading-6">{r.texto}</blockquote>
+                <p class="mt-auto text-sm">
+                  <strong class="font-extrabold">{r.nombre}</strong> <span class="text-noche-suave">· {r.comuna}</span>
+                </p>
+              </li>
+            ))}
+          </ul>
+          <a
+            href={GOOGLE}
+            target="_blank"
+            rel="noopener"
+            class="bounce border-noche bg-blanco text-noche inline-flex min-h-12 items-center justify-center rounded-full border-2 px-5 font-extrabold no-underline lg:self-start"
+          >
+            Ver todas las reseñas en Google
+          </a>
+        </>
+      ) : (
+        <div class="border-noche bg-crema flex flex-col gap-3 rounded-[20px] border-2 px-4 py-5 lg:flex-row lg:items-center lg:gap-8 lg:rounded-3xl lg:p-7">
+          <div class="lg:flex-1">
+            <p class="font-display text-[22px] leading-7 font-semibold lg:text-3xl lg:leading-9">Estamos juntando nuestras primeras reseñas</p>
+            <p class="text-noche-suave mt-2">Si ya saltaste con nosotros, cuéntanos cómo estuvo. Y si quieres ver nuestro perfil, está en Google.</p>
+          </div>
+          <a
+            href={GOOGLE}
+            target="_blank"
+            rel="noopener"
+            class="bounce border-noche bg-sol text-noche shadow-pop inline-flex min-h-12 items-center justify-center rounded-full border-2 px-6 font-extrabold no-underline"
+          >
+            Ver Saltabum en Google
+          </a>
+        </div>
+      )
     }
-  </ul>
-  <a href="https://g.page/r/saltabum" target="_blank" rel="noopener" class="text-azul-texto mx-4 inline-flex min-h-11 items-center font-extrabold lg:hidden">
-    Ver todas en Google
-  </a>
+  </div>
 </section>

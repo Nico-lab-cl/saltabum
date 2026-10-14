@@ -1,33 +1,36 @@
 ---
-// Línea Pastel / Primera Infancia: aquí el multicolor se apaga.
-import FotoPendiente from "../components/FotoPendiente.astro";
+// Línea Primera Infancia: plaza blanda y piscina de pelotas en colores suaves (moca, rosa empolvado, salvia).
+import ImagenPendiente from "../components/ImagenPendiente.astro";
+import WaButton from "../components/WaButton.astro";
+
+const MENSAJE = "Hola, quiero consultar la plaza blanda y piscina de pelotas para un primer cumpleaños. Vengo de saltabum.cl";
 ---
 
-<section aria-labelledby="pastel-titulo" class="mx-auto max-w-[1320px] px-4 pt-10 lg:px-10 lg:pt-20">
-  <div class="bg-rosa-empolvado relative flex flex-col gap-4 overflow-hidden rounded-[28px] px-5 py-7 lg:flex-row lg:items-center lg:gap-10 lg:rounded-[40px] lg:p-12">
-    <div aria-hidden="true" class="bg-salvia absolute -top-9 -right-9 size-32 rounded-full lg:top-auto lg:right-auto lg:-bottom-15 lg:-left-15 lg:size-50"></div>
-    <div aria-hidden="true" class="bg-moca absolute top-13 right-15 size-8 rounded-full lg:top-auto lg:right-auto lg:bottom-10 lg:left-40 lg:size-10"></div>
-    <div class="relative flex flex-col gap-3.5 lg:flex-1 lg:gap-4">
-      <p class="bg-crema self-start rounded-full px-3 py-1 text-xs font-extrabold tracking-[1.2px] uppercase">Línea Pastel · Primera infancia</p>
-      <h2 id="pastel-titulo" class="font-display max-w-[260px] text-[30px] leading-[34px] font-semibold lg:max-w-none lg:text-5xl lg:leading-[52px]">
+<section id="primera-infancia" aria-labelledby="pastel-titulo" class="border-noche bg-rosa-empolvado border-b-2">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:py-20">
+    <div class="flex flex-col gap-4 lg:flex-1">
+      <p class="bg-crema self-start rounded-full px-3 py-1 text-xs font-extrabold tracking-[1.2px] uppercase">Primera infancia · 1 a 4 años</p>
+      <h2 id="pastel-titulo" class="font-display text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
         Su primer cumpleaños, para la foto
       </h2>
-      <p class="max-w-[440px]">
-        Plaza blanda y piscina de pelotas en moca, rosa empolvado y salvia. Para guaguas de 1 a 4 años y un evento que
-        combine con tu decoración.
+      <p class="max-w-[480px] lg:text-lg">
+        Plaza blanda y piscina de pelotas en moca, rosa empolvado y salvia: segura para guaguas de 1 a 4 años y en colores que
+        combinan con tu decoración.
       </p>
-      <ul class="hidden flex-wrap gap-2 lg:flex">
-        <li class="bg-moca rounded-full px-3.5 py-1.5 font-bold">Plaza blanda</li>
-        <li class="bg-salvia rounded-full px-3.5 py-1.5 font-bold">Piscina de pelotas</li>
+      <ul class="flex flex-wrap gap-2">
+        <li class="bg-moca border-noche rounded-full border-2 px-3.5 py-1.5 font-bold">Plaza blanda</li>
+        <li class="bg-salvia border-noche rounded-full border-2 px-3.5 py-1.5 font-bold">Piscina de pelotas</li>
+        <li class="bg-crema border-noche rounded-full border-2 px-3.5 py-1.5 font-bold">Desde $[XX.XXX] · 4 horas</li>
       </ul>
-      <FotoPendiente texto="plaza blanda pastel armada" class="bg-crema h-50 rounded-[20px] lg:hidden" />
-      <a
-        href="#contacto"
-        class="bounce bg-noche text-crema inline-flex min-h-12 items-center justify-center rounded-full px-6 font-extrabold no-underline lg:min-h-13 lg:self-start"
-      >
-        Ver Línea Pastel · desde $[XX.XXX]
-      </a>
+      <WaButton placement="primera-infancia" size="l" message={MENSAJE} class="text-center leading-[22px] lg:self-start">
+        Consultar primera infancia
+      </WaButton>
     </div>
-    <FotoPendiente texto="plaza blanda y piscina de pelotas pastel, decoración armada" class="bg-crema relative min-h-[340px] rounded-[28px] max-lg:hidden lg:flex-1" />
+    <ImagenPendiente
+      n={14}
+      ratio="4:3"
+      texto="Plaza blanda y piscina de pelotas en moca, rosa empolvado y salvia, armadas para un primer cumpleaños"
+      class="bg-crema aspect-[4/3] rounded-[28px] lg:flex-1"
+    />
   </div>
 </section>

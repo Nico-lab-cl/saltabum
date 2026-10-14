@@ -16,7 +16,21 @@ export default defineConfig({
   }),
   // No usamos sesiones: evita que el adaptador cree un KV namespace innecesario.
   session: false,
-  integrations: [sitemap()],
+  // Sitemap: https://saltabum.cl/sitemap-index.xml (declarado en public/robots.txt). La landing pesa más que las páginas
+  // legales; `lastmod` es la fecha del build, así Google sabe cuándo volver a rastrear.
+  integrations: [
+    sitemap({
+      serialize(item) {
+        const esLegal = item.url.includes("/politica-de-privacidad");
+        return {
+          ...item,
+          lastmod: new Date().toISOString(),
+          changefreq: esLegal ? "yearly" : "weekly",
+          priority: esLegal ? 0.3 : 1.0,
+        };
+      },
+    }),
+  ],
   vite: {
     plugins: [tailwindcss()],
   },

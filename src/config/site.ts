@@ -4,8 +4,9 @@ export const SITE = {
   url: "https://saltabum.cl",
   locale: "es_CL",
   lang: "es-CL",
-  defaultTitle: "Saltabum",
-  defaultDescription: "TODO: descripción de Saltabum para buscadores (150-160 caracteres).",
+  defaultTitle: "Saltabum · Arriendo de juegos inflables en Valparaíso",
+  defaultDescription:
+    "Arriendo de juegos inflables en la Región de Valparaíso desde $40.000 por 4 horas, con montaje, anclaje y retiro. Cumpleaños, empresas, colegios y municipios.",
   defaultOgImage: "/og-default.jpg",
   // Mensaje prellenado al abrir WhatsApp desde el sitio
   whatsappDefaultMessage: "¡Hola Saltabum! Quiero más información.",

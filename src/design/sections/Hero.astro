@@ -1,106 +1,93 @@
 ---
-import { Image } from "astro:assets";
-import foto from "../assets/megatobogan-arcoiris.webp";
-import { PRODUCTO } from "../data";
-import Icon from "../components/Icon.astro";
+// Hero con foto de fondo a sangre del Megatobogán sobre pasto (imagen referencial, 3840 px). Recorte horizontal en desktop y vertical en
+// mobile, servidos en AVIF con respaldo WebP y en varios anchos para que cada pantalla baje solo lo que necesita.
+import { getImage } from "astro:assets";
+import fondo from "../assets/hero-megatobogan.jpg";
+import fondoMovil from "../assets/hero-megatobogan-movil.jpg";
+import { DESDE, PRODUCTO } from "../data";
 import WaButton from "../components/WaButton.astro";
 
-const SELLOS = [
-  { icon: "sanitizado", label: "Sanitizado" },
-  { icon: "puntual", label: "Puntual" },
-  { icon: "anclaje", label: "Anclado al piso" },
-] as const;
+const ANCHOS = [1024, 1440, 1920, 2560, 3840];
+const ANCHOS_MOVIL = [480, 720, 1080];
+const [avif, webp, avifMovil, webpMovil] = await Promise.all([
+  getImage({ src: fondo, widths: ANCHOS, format: "avif", quality: 55 }),
+  getImage({ src: fondo, widths: ANCHOS, format: "webp", quality: 72 }),
+  getImage({ src: fondoMovil, widths: ANCHOS_MOVIL, format: "avif", quality: 55 }),
+  getImage({ src: fondoMovil, widths: ANCHOS_MOVIL, format: "webp", quality: 72 }),
+]);
 ---
 
-<section id="inicio" class="relative">
+<section id="inicio" class="bg-noche text-crema relative isolate overflow-hidden">
+  <picture>
+    <source media="(min-width: 1024px)" srcset={avif.srcSet.attribute} sizes="100vw" type="image/avif" />
+    <source media="(min-width: 1024px)" srcset={webp.srcSet.attribute} sizes="100vw" type="image/webp" />
+    <source srcset={avifMovil.srcSet.attribute} sizes="100vw" type="image/avif" />
+    <img
+      src={webpMovil.src}
+      srcset={webpMovil.srcSet.attribute}
+      sizes="100vw"
+      width="1080"
+      height="1920"
+      alt={`${PRODUCTO.nombre} instalado sobre pasto, con niños tirándose por el tobogán`}
+      loading="eager"
+      fetchpriority="high"
+      decoding="async"
+      class="absolute inset-0 -z-20 size-full object-cover object-[50%_60%] lg:object-[70%_50%]"
+    />
+  </picture>
+  <!-- Capa noche para que el texto se lea sobre la foto: arriba en mobile, a la izquierda en desktop. -->
   <div
-    class="mx-auto flex max-w-[1320px] flex-col gap-4 px-4 pt-6 pb-10 lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:pt-14 lg:pb-22"
-  >
-    <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-5">
-      <ul class="flex flex-wrap gap-1.5 lg:gap-2">
-        {
-          SELLOS.map((s) => (
-            <li class="border-noche bg-blanco inline-flex items-center gap-1 rounded-full border-2 py-0.5 pr-2.5 pl-1.5 text-[11px] leading-[18px] font-extrabold tracking-[1px] uppercase lg:gap-1.5 lg:py-1 lg:pr-3 lg:pl-2 lg:text-xs">
-              <Icon name={s.icon} size={14} strokeWidth={2.6} />
-              {s.label}
-            </li>
-          ))
-        }
-      </ul>
+    aria-hidden="true"
+    class="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgb(31_42_92/0.88)_0%,rgb(31_42_92/0.68)_50%,rgb(31_42_92/0.4)_100%)] lg:bg-[linear-gradient(90deg,rgb(31_42_92/0.9)_0%,rgb(31_42_92/0.7)_38%,rgb(31_42_92/0)_70%)]"
+  ></div>
 
-      <h1 class="font-display text-[44px] leading-[1.05] font-semibold tracking-tight lg:text-[clamp(44px,5.4vw,76px)] lg:leading-[1.03]">
-        ¡A <span class="px-0.5 shadow-[inset_0_-0.26em_0_var(--color-sol)]">saltar</span> se ha dicho!
+  <div class="mx-auto flex min-h-[620px] max-w-[1320px] flex-col justify-center gap-5 px-4 pt-10 pb-12 lg:min-h-[min(760px,82vh)] lg:px-10 lg:py-20">
+    <div class="flex max-w-[640px] flex-col gap-5">
+      <h1 class="font-display text-[44px] leading-[1.05] font-semibold tracking-tight lg:text-[clamp(52px,5.6vw,80px)] lg:leading-[1.02]">
+        ¡A <span class="text-sol">saltar</span> se ha dicho!
       </h1>
-      <p class="max-w-[520px] text-lg leading-[26px] lg:text-[21px] lg:leading-[31px]">
-        Inflables desde <strong class="font-extrabold">$40.000 por 4 horas</strong>. Tú pones la torta; nosotros
-        llegamos, montamos, anclamos y retiramos.
+      <p class="text-lg leading-[26px] lg:text-[21px] lg:leading-[31px]">
+        Arriendo de juegos inflables <strong class="font-extrabold">desde {DESDE} por 4 horas</strong>, con montaje, anclaje y
+        retiro incluidos. Tú organizas el evento; nosotros llevamos la diversión.
       </p>
 
-      <div class="order-last flex flex-col gap-3 sm:flex-row lg:order-none lg:mt-1 lg:gap-3.5">
-        <WaButton placement="hero" size="l">Consultar disponibilidad por WhatsApp</WaButton>
+      <div class="flex flex-col gap-3 sm:flex-row lg:mt-1 lg:gap-3.5">
+        <WaButton placement="hero" size="l" class="text-center leading-[22px]">Consultar disponibilidad por WhatsApp</WaButton>
         <a
-          href="#juegos"
-          class="bounce border-noche bg-blanco text-noche inline-flex min-h-12 items-center justify-center rounded-full border-2 px-7 font-extrabold no-underline lg:min-h-15 lg:text-lg"
+          href="#megatobogan"
+          class="bounce border-crema text-crema hover:bg-crema hover:text-noche inline-flex min-h-12 items-center justify-center rounded-full border-2 px-7 font-extrabold whitespace-nowrap no-underline lg:min-h-15 lg:text-lg"
         >
-          Ver juegos y precios
+          Ver inflables y precios
         </a>
       </div>
 
-      <dl
-        class="order-last flex flex-wrap items-center justify-center gap-x-5 gap-y-3 lg:order-none lg:mt-2 lg:justify-start lg:border-t-2 lg:border-dashed lg:border-noche/20 lg:pt-5"
-      >
-        <div class="flex items-center gap-2">
-          <dt class="font-display text-2xl font-bold lg:text-[34px]">4,9</dt>
-          <dd class="text-noche-suave text-sm leading-[18px]"><span class="text-noche tracking-[2px]">★★★★★</span><br />en Google</dd>
+      <dl class="border-crema/30 mt-1 grid grid-cols-3 gap-2.5 border-t-2 border-dashed pt-4 lg:mt-2 lg:pt-5">
+        <div class="flex flex-col gap-0.5">
+          <dt class="font-display text-2xl leading-7 font-bold lg:text-[34px] lg:leading-10">[N,N]</dt>
+          <dd class="text-[13px] leading-[17px] lg:text-sm">nota en Google ([N] reseñas)</dd>
         </div>
-        <div class="flex items-center gap-2">
-          <dt class="font-display text-2xl font-bold lg:text-[34px]">+[N]</dt>
-          <dd class="text-noche-suave text-sm leading-[18px]">cumpleaños en<br />la Quinta Región</dd>
+        <div class="flex flex-col gap-0.5">
+          <dt class="font-display text-2xl leading-7 font-bold lg:text-[34px] lg:leading-10">+[N]</dt>
+          <dd class="text-[13px] leading-[17px] lg:text-sm">eventos en la Región de Valparaíso</dd>
         </div>
-        <div class="hidden items-center gap-2 lg:flex">
-          <dt class="font-display text-[34px] font-bold">10–15</dt>
-          <dd class="text-noche-suave text-sm leading-[18px]">minutos de<br />montaje</dd>
+        <div class="flex flex-col gap-0.5">
+          <dt class="font-display text-2xl leading-7 font-bold lg:text-[34px] lg:leading-10">10–15</dt>
+          <dd class="text-[13px] leading-[17px] lg:text-sm">minutos de montaje</dd>
         </div>
       </dl>
     </div>
-
-    <div class="my-5 flex min-w-0 justify-center lg:my-0 lg:flex-1">
-      <div class="relative mx-2 mt-2 mb-6 w-full max-w-[500px] lg:mr-10">
-        <div aria-hidden="true" class="bg-sol border-noche absolute inset-[28px_-18px_-22px_22px] rounded-[40px] border-2 lg:inset-[28px_-26px_-26px_28px] lg:rounded-[48px]"></div>
-        <div aria-hidden="true" class="bg-rosa border-noche absolute top-14 -left-5 z-10 size-9 rounded-full border-2 lg:top-20 lg:-left-8 lg:size-12"></div>
-        <div aria-hidden="true" class="bg-celeste border-noche absolute -top-5 right-8 z-10 size-12 rounded-full border-2 lg:-top-8 lg:size-16"></div>
-        <div aria-hidden="true" class="bg-verde border-noche absolute -bottom-10 left-14 z-10 size-6 rounded-full border-2 lg:size-7"></div>
-
-        <div class="border-noche bg-blanco relative aspect-[5/6] overflow-hidden rounded-[28px] border-2 lg:aspect-[4/5] lg:rounded-[36px]">
-          <Image
-            src={foto}
-            alt={`${PRODUCTO.nombre}: inflable rojo, amarillo, azul y verde con tobogán, túneles y arcos`}
-            widths={[400, 600, 900]}
-            sizes="(min-width: 1024px) 500px, 92vw"
-            loading="eager"
-            fetchpriority="high"
-            class="size-full object-cover object-[50%_51%]"
-          />
-          <span class="bg-noche text-crema absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold tracking-[1px] uppercase lg:top-4 lg:left-4 lg:text-xs">
-            Foto real · nuestro juego
-          </span>
-          <a
-            href="#juegos"
-            class="border-noche bg-crema text-noche absolute bottom-3 left-3 rounded-xl border-2 px-3 py-1.5 text-[13px] leading-4 font-bold no-underline lg:bottom-4 lg:left-4 lg:rounded-2xl lg:px-3.5 lg:py-2.5 lg:text-[15px] lg:leading-5 lg:font-extrabold"
-          >
-            {PRODUCTO.nombre} →<br />
-            <span class="text-noche-suave font-semibold">{PRODUCTO.edad} · {PRODUCTO.base}</span>
-          </a>
-        </div>
-
-        <div
-          class="border-noche bg-celeste shadow-pop absolute -right-2 -bottom-7 z-20 flex size-28 -rotate-10 flex-col items-center justify-center rounded-full border-2 text-center lg:top-[46%] lg:-right-10 lg:bottom-auto lg:size-33 lg:-rotate-12"
-        >
-          <span class="text-[13px] leading-[14px] font-extrabold lg:text-sm">desde</span>
-          <span class="font-display text-[26px] leading-7 font-bold lg:text-[30px] lg:leading-8">$40.000</span>
-          <span class="text-[13px] leading-[14px] font-extrabold lg:text-sm">4 horas</span>
-        </div>
-      </div>
-    </div>
   </div>
+
+  <div
+    class="border-noche bg-celeste text-noche shadow-pop absolute right-6 bottom-8 hidden size-33 -rotate-12 flex-col items-center justify-center rounded-full border-2 text-center lg:flex xl:right-16"
+  >
+    <span class="text-sm leading-[15px] font-extrabold">desde</span>
+    <span class="font-display text-[28px] leading-8 font-bold">{DESDE}</span>
+    <span class="text-sm leading-[15px] font-extrabold">4 horas</span>
+  </div>
+
+  <span class="bg-crema/90 text-noche-suave absolute bottom-3 left-4 rounded-full px-2.5 py-0.5 text-[11px] font-bold lg:left-10">
+    Imagen referencial
+  </span>
 </section>
+

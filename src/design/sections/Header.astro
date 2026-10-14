@@ -5,20 +5,21 @@ import WaButton from "../components/WaButton.astro";
 import Wordmark from "../components/Wordmark.astro";
 
 const NAV = [
-  { href: "#juegos", label: "Juegos" },
+  { href: "#megatobogan", label: "El Megatobogán" },
+  { href: "#primera-infancia", label: "Primera infancia" },
+  { href: "#combos", label: "Combos" },
   { href: "#como", label: "Cómo funciona" },
   { href: "#despacho", label: "Despacho" },
-  { href: "#combos", label: "Combos" },
-  { href: "#colegios", label: "Colegios y empresas" },
+  { href: "#eventos", label: "Municipios y eventos" },
   { href: "#preguntas", label: "Preguntas" },
 ];
 const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
 ---
 
-<header class="border-noche bg-crema sticky top-0 z-40 border-b-2">
+<header class="border-noche bg-noche text-crema sticky top-0 z-40 border-b-2">
   <div class="mx-auto flex max-w-[1320px] items-center gap-6 px-4 py-2.5 lg:px-10 lg:py-3.5">
     <a href="#inicio" class="no-underline" aria-label="Saltabum y Entretenciones, inicio">
-      <Wordmark class="text-[27px] lg:text-[34px]" />
+      <Wordmark negativo class="text-[27px] lg:text-[34px]" />
     </a>
 
     <nav aria-label="Principal" class="hidden flex-1 justify-center gap-6 xl:flex">
@@ -26,7 +27,7 @@ const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
         NAV.map((item) => (
           <a
             href={item.href}
-            class="text-noche hover:border-sol border-b-[3px] border-transparent py-2.5 font-bold no-underline"
+            class="text-crema hover:border-sol border-b-[3px] border-transparent py-2.5 font-bold no-underline"
           >
             {item.label}
           </a>
@@ -37,7 +38,7 @@ const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
     <div class="ml-auto flex items-center gap-2 lg:gap-3 xl:ml-0">
       {
         telefono && (
-          <a href={`tel:+${telefono}`} class="text-noche hidden min-h-11 items-center gap-1.5 font-extrabold no-underline xl:inline-flex">
+          <a href={`tel:+${telefono}`} class="text-crema hidden min-h-11 items-center gap-1.5 font-extrabold no-underline xl:inline-flex">
             <Icon name="telefono" size={20} />
             Llamar
           </a>
@@ -51,7 +52,7 @@ const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
 
       <details class="group relative xl:hidden">
         <summary
-          class="border-noche bg-blanco flex size-11 cursor-pointer list-none items-center justify-center rounded-full border-2 [&::-webkit-details-marker]:hidden"
+          class="border-crema bg-noche text-crema flex size-11 cursor-pointer list-none items-center justify-center rounded-full border-2 [&::-webkit-details-marker]:hidden"
           aria-label="Abrir menú"
         >
           <Icon name="menu" size={22} strokeWidth={2.4} class="group-open:hidden" />

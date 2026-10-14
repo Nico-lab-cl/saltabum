@@ -1,0 +1,109 @@
+---
+// Ficha del producto único (reemplaza al catálogo). La foto real es siempre la imagen principal.
+import { Image } from "astro:assets";
+import foto from "../assets/megatobogan-arcoiris.webp";
+import { PRODUCTO } from "../data";
+import Icon from "../components/Icon.astro";
+import ImagenPendiente from "../components/ImagenPendiente.astro";
+import WaButton from "../components/WaButton.astro";
+
+const GALERIA = [
+  { n: 2, texto: "Vista frontal completa, sin gente" },
+  { n: 3, texto: "Tobogán con un niño bajando" },
+  { n: 4, texto: "Túneles y arcos" },
+];
+const DATOS = [
+  { label: "Edad", valor: PRODUCTO.edad },
+  { label: "Base", valor: PRODUCTO.base },
+  { label: "Alto", valor: PRODUCTO.alto },
+  { label: "Espacio libre", valor: PRODUCTO.espacioLibre },
+  { label: "Enchufe", valor: "A menos de 15 m" },
+  { label: "Montaje", valor: "10 a 15 minutos" },
+];
+const INCLUYE = [
+  "Despacho gratis en Valparaíso y Viña del Mar",
+  "Montaje y anclaje al piso",
+  "Retiro al terminar las 4 horas",
+  "Reservas con $10.000 de abono",
+];
+---
+
+<section id="megatobogan" aria-labelledby="ficha-titulo" class="border-noche bg-blanco border-b-2">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:flex-row lg:items-start lg:gap-14 lg:px-10 lg:py-20">
+    <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-3">
+      <div class="lg:hidden">
+        <p class="text-rojo-texto text-xs font-extrabold tracking-[1.2px] uppercase">Inflable destacado</p>
+        <h2 class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold" aria-hidden="true">{PRODUCTO.nombre}</h2>
+        <p class="text-noche-suave mt-2">Rojo, amarillo, azul y verde, con tobogán, túneles y arcos. Para niños de {PRODUCTO.edad}.</p>
+      </div>
+
+      <div class="flex flex-col gap-2.5 lg:gap-3">
+        <div class="border-noche bg-blanco relative aspect-[4/5] overflow-hidden rounded-[28px] border-2 lg:aspect-square lg:rounded-[36px]">
+          <Image
+            src={foto}
+            alt={`${PRODUCTO.nombre}: inflable rojo, amarillo, azul y verde con tobogán, túneles y arcos`}
+            widths={[400, 700, 1000]}
+            sizes="(min-width: 1024px) 600px, 92vw"
+            loading="lazy"
+            class="size-full object-cover object-[50%_51%] lg:object-contain"
+          />
+          <span class="bg-noche text-crema absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-[11px] leading-[18px] font-extrabold tracking-[1px] uppercase lg:top-4 lg:left-4 lg:text-xs">
+            Foto real · nuestro juego
+          </span>
+        </div>
+        <ul class="grid grid-cols-3 gap-2 lg:gap-3">
+          {
+            GALERIA.map((g) => (
+              <li>
+                <ImagenPendiente n={g.n} ratio="1:1" texto={g.texto} class="bg-arena aspect-square rounded-xl !p-2 text-[13px] lg:rounded-[20px] lg:text-base" />
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+
+    <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-6">
+      <div class="hidden lg:block">
+        <p class="text-rojo-texto text-xs font-extrabold tracking-[1.2px] uppercase">Inflable destacado</p>
+        <h2 id="ficha-titulo" class="font-display mt-1.5 text-5xl leading-[52px] font-semibold">{PRODUCTO.nombre}</h2>
+        <p class="text-noche-suave mt-3 max-w-[520px] text-lg">
+          Rojo, amarillo, azul y verde, con tobogán, túneles y arcos. Para niños de {PRODUCTO.edad}.
+        </p>
+      </div>
+
+      <dl class="grid grid-cols-2 gap-2 lg:grid-cols-3 lg:gap-3">
+        {
+          DATOS.map((d) => (
+            <div class="border-noche bg-crema rounded-xl border-2 px-3 py-2.5 lg:rounded-2xl lg:px-4 lg:py-3">
+              <dt class="text-noche-suave text-xs font-extrabold tracking-[1px] uppercase">{d.label}</dt>
+              <dd class="font-display mt-0.5 text-xl leading-[26px] font-semibold">{d.valor}</dd>
+            </div>
+          ))
+        }
+      </dl>
+
+      <div class="border-noche bg-sol shadow-pop-l flex flex-col gap-3.5 rounded-[28px] border-2 px-4 py-5 lg:gap-4 lg:p-7">
+        <div>
+          <p class="text-[13px] leading-[18px] font-extrabold tracking-[1px] uppercase">Arriendo por 4 horas</p>
+          <p class="font-display mt-0.5 text-[56px] leading-[60px] font-bold lg:text-[68px] lg:leading-[72px]">{PRODUCTO.precio}</p>
+        </div>
+        <ul class="flex flex-col gap-2 font-semibold">
+          {
+            INCLUYE.map((texto) => (
+              <li class="flex items-start gap-2">
+                <Icon name="check" size={22} strokeWidth={3} class="mt-px shrink-0" />
+                {texto}
+              </li>
+            ))
+          }
+        </ul>
+        <WaButton placement="ficha" size="l" class="text-center leading-[22px]">Consultar disponibilidad por WhatsApp</WaButton>
+        <p class="text-sm leading-5">
+          Concón, Quilpué y Villa Alemana: +$5.000 de despacho.
+          <a href="#despacho" class="text-noche font-extrabold underline">Ver tu comuna</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

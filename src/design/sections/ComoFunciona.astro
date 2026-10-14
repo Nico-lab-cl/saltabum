@@ -1,61 +1,54 @@
 ---
 import { CHAT } from "../data";
+import ImagenPendiente from "../components/ImagenPendiente.astro";
+
+// Imagen que acompaña a cada paso (los pasos 1 y 2 se cuentan solo con el chat).
+const IMAGENES: Record<number, { n: number; texto: string }> = {
+  3: { n: 6, texto: "Dos personas del equipo montando y anclando el juego" },
+  4: { n: 7, texto: "Una persona limpiando y sanitizando la superficie del juego" },
+};
 ---
 
-<section id="como" aria-labelledby="como-titulo" class="border-noche bg-arena border-y-2">
-  <div class="mx-auto flex max-w-[1320px] flex-col gap-6 px-4 py-10 lg:flex-row lg:items-center lg:gap-16 lg:px-10 lg:py-20">
-    <div class="min-w-0 lg:flex-1">
+<section id="como" aria-labelledby="como-titulo" class="border-noche bg-arena border-b-2">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:gap-10 lg:px-10 lg:py-20">
+    <div>
       <p class="text-azul-texto text-xs font-extrabold tracking-[1.2px] uppercase">Cómo funciona</p>
-      <h2 id="como-titulo" class="font-display mt-1.5 text-[32px] leading-9 font-semibold lg:text-5xl lg:leading-[52px]">
+      <h2 id="como-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
         Se reserva en un chat
       </h2>
       <p class="text-noche-suave mt-2 max-w-[460px] lg:mt-3">
-        Sin formularios eternos ni PDF de precios. Así se ve un cumpleaños con Saltabum, de principio a fin.
+        Reservas desde la web en minutos: sin formularios complicados, sin PDF de precios ni letra chica. Así es un evento con Saltabum, de principio a fin.
       </p>
-      <ol class="mt-7 hidden grid-cols-2 gap-4 lg:grid">
-        {
-          CHAT.map((m) => (
-            <li class="flex items-start gap-3">
-              <span class="bg-azul border-noche font-display flex size-11 shrink-0 items-center justify-center rounded-full border-2 text-[22px] font-bold">
-                {m.paso}
-              </span>
-              <strong class="pt-2 font-extrabold">{m.titulo}</strong>
-            </li>
-          ))
-        }
-      </ol>
     </div>
 
-    <div class="flex min-w-0 justify-center lg:flex-1">
-      <div class="border-noche bg-crema shadow-pop flex w-full max-w-[480px] flex-col gap-3 rounded-3xl border-2 px-3 py-4 lg:rotate-1 lg:gap-3.5 lg:rounded-[28px] lg:px-4 lg:py-4.5 lg:shadow-pop-l">
-        <div class="border-noche/20 flex items-center gap-2.5 border-b-2 border-dashed pb-3">
-          <span class="bg-sol border-noche font-display flex size-10 items-center justify-center rounded-full border-2 font-bold" aria-hidden="true">S</span>
-          <p class="text-sm leading-[18px]"><strong class="font-extrabold">Saltabum</strong><br /><span class="text-noche-suave">responde en minutos</span></p>
-        </div>
-        <ol class="flex flex-col gap-3">
-          {
-            CHAT.map((m) => (
-              <li class:list={["flex items-end gap-2", m.yo && "flex-row-reverse"]}>
-                <span class="bg-azul border-noche font-display flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-[15px] font-bold lg:size-7.5">
-                  {m.paso}
-                </span>
-                <div
-                  class:list={[
-                    "border-noche max-w-[260px] border-2 px-3 py-2.5 text-[15px] leading-[21px] lg:max-w-[340px] lg:px-3.5 lg:leading-[22px]",
-                    m.yo ? "bg-verde-burbuja rounded-[18px_18px_4px_18px]" : "bg-blanco rounded-[18px_18px_18px_4px]",
-                  ]}
-                >
-                  <span class="text-noche-suave mb-0.5 block text-[11px] leading-[14px] font-extrabold tracking-[1px] uppercase lg:hidden">
-                    {m.titulo}
-                  </span>
-                  {m.texto}
-                  <span class="text-noche-suave mt-1 block text-right text-[11px] leading-[14px]">{m.hora}</span>
-                </div>
-              </li>
-            ))
-          }
-        </ol>
-      </div>
-    </div>
+    <ol class="flex flex-col gap-6 lg:grid lg:grid-cols-4 lg:gap-6">
+      {
+        CHAT.map((m) => (
+          <li class="flex flex-col gap-2.5 lg:gap-3.5">
+            <div class="flex items-center gap-2.5">
+              <span class="bg-azul border-noche font-display flex size-10 shrink-0 items-center justify-center rounded-full border-2 text-xl font-bold">
+                {m.paso}
+              </span>
+              <strong class="font-display text-[21px] leading-[26px] font-semibold">{m.titulo}</strong>
+            </div>
+            {IMAGENES[m.paso] && (
+              <ImagenPendiente n={IMAGENES[m.paso].n} ratio="4:3" texto={IMAGENES[m.paso].texto} class="bg-crema aspect-[4/3] rounded-[20px]" />
+            )}
+            <div
+              class:list={[
+                "border-noche max-w-[290px] border-2 px-3 py-2.5 text-[15px] leading-[21px] lg:max-w-none",
+                m.yo ? "bg-verde-burbuja self-end rounded-[18px_18px_4px_18px]" : "bg-blanco self-start rounded-[18px_18px_18px_4px]",
+              ]}
+            >
+              {m.texto}
+              <span class="text-noche-suave mt-1 block text-right text-[11px] leading-[14px]">{m.hora}</span>
+            </div>
+            {m.paso === 4 && (
+              <p class="text-noche-suave text-sm leading-5">De vuelta en la bodega lo limpiamos y sanitizamos para el próximo evento.</p>
+            )}
+          </li>
+        ))
+      }
+    </ol>
   </div>
 </section>

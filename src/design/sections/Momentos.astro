@@ -1,0 +1,45 @@
+---
+// Franja de imágenes de ambiente: el juego en distintos tipos de evento. Scroll manual, sin carrusel automático.
+import ImagenPendiente from "../components/ImagenPendiente.astro";
+
+const TIRA = [
+  { n: 8, texto: "Cumpleaños en el patio de una casa" },
+  { n: 12, texto: "Junta de vecinos en la plaza del barrio" },
+  { n: 13, texto: "Torneo en una cancha de fútbol, tenis o pádel" },
+  { n: 9, texto: "Día del alumno en un colegio" },
+];
+---
+
+<section aria-labelledby="momentos-titulo" class="border-noche bg-sol border-b-2">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-4 py-10 lg:gap-7 lg:px-10 lg:py-20">
+    <div class="px-4 lg:px-0">
+      <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Momentos</p>
+      <h2 id="momentos-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
+        Un juego para cualquier evento
+      </h2>
+      <p class="mt-2 max-w-[560px] lg:mt-3 lg:text-lg">
+        Cumpleaños, empresas, colegios, municipios, juntas de vecinos y canchas de fútbol, tenis o pádel. Nos adaptamos al tuyo.
+      </p>
+    </div>
+    <div class="flex flex-col gap-4 lg:flex-row lg:gap-5">
+      <ImagenPendiente
+        n={11}
+        ratio="3:2"
+        texto="Evento municipal en una plaza: el juego con familias y gente de todas las edades alrededor"
+        class="bg-crema aspect-[3/2] border-x-0 lg:flex-[3] lg:rounded-[28px] lg:border-x-2"
+      />
+      <ul
+        aria-label="Más tipos de evento"
+        class="sin-scrollbar flex snap-x gap-2.5 overflow-x-auto px-4 lg:grid lg:flex-[2] lg:grid-cols-2 lg:gap-5 lg:overflow-visible lg:px-0"
+      >
+        {
+          TIRA.map((t) => (
+            <li class="w-[150px] shrink-0 snap-start lg:w-auto">
+              <ImagenPendiente n={t.n} ratio="1:1" texto={t.texto} class="bg-crema aspect-square rounded-[20px] !p-2.5 text-sm lg:aspect-auto lg:h-full" />
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>

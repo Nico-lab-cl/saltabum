@@ -1,50 +1,50 @@
 ---
-import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
+// Eventos institucionales y comunitarios: empresas, colegios, municipalidades, juntas de vecinos y canchas deportivas.
+import ImagenPendiente from "../components/ImagenPendiente.astro";
+import WaButton from "../components/WaButton.astro";
 
-const MENSAJE = "Hola, quiero cotizar juegos para un evento de colegio o empresa. Vengo de saltabum.cl";
+const MENSAJE = "Hola, quiero cotizar inflables para un evento (empresa, colegio, municipalidad, junta de vecinos o cancha deportiva). Vengo de saltabum.cl";
 
 const DATOS = [
-  { valor: "+[N]", texto: "niños por jornada" },
-  { valor: "Monitores", texto: "a cargo de cada juego" },
-  { valor: "Anclaje", texto: "certificado y revisado" },
-  { valor: "Factura", texto: "y orden de compra" },
+  { titulo: "[N] niños por turno", texto: "Organizamos los turnos para que nadie se quede sin saltar, aunque llegue mucha gente." },
+  { titulo: "Anclado en pasto, tierra o cemento", texto: "[Estacas en pasto o sacos de lastre en piso duro]." },
+  { titulo: "Factura y orden de compra", texto: "Cotización formal para empresas, colegios, municipalidades, juntas de vecinos y clubes." },
+  { titulo: "Listo en 10 a 15 minutos", texto: "Llegamos antes de que empiece el evento y retiramos al terminar." },
 ];
 ---
 
-<section id="colegios" aria-labelledby="colegios-titulo" class="bg-noche text-crema">
-  <div class="mx-auto flex max-w-[1320px] flex-col gap-6 px-4 py-11 lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:py-20">
-    <div class="lg:flex-1">
-      <p class="text-sol text-xs font-extrabold tracking-[1.2px] uppercase">Colegios · Empresas · Municipios</p>
-      <h2 id="colegios-titulo" class="font-display mt-2 text-[30px] leading-[34px] font-semibold lg:mt-2.5 lg:text-5xl lg:leading-[52px]">
-        Eventos grandes, con la seriedad que piden
-      </h2>
-      <p class="mt-3 max-w-[480px] lg:mt-4">
-        Fiestas de fin de año, aniversarios y días de la familia. Cotizamos con orden de compra y coordinamos con tu equipo.
-      </p>
-      <WhatsAppLink
-        placement="colegios"
-        message={MENSAJE}
-        class="bounce bg-sol text-noche border-crema mt-6 hidden min-h-14 items-center rounded-full border-2 px-7.5 text-lg font-extrabold no-underline lg:inline-flex"
-      >
-        Cotizar evento
-      </WhatsAppLink>
+<section id="eventos" aria-labelledby="eventos-titulo" class="border-noche bg-verde-burbuja border-b-2">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-5 pb-10 lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:py-20">
+    <ImagenPendiente
+      n={9}
+      ratio="3:2"
+      texto="El juego en un evento comunitario al aire libre, con niños haciendo fila y familias alrededor"
+      class="bg-crema aspect-[3/2] border-x-0 border-t-0 lg:flex-1 lg:rounded-[28px] lg:border-2"
+    />
+    <div class="flex flex-col gap-4.5 px-4 lg:flex-1 lg:px-0">
+      <div>
+        <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Empresas, colegios y municipios</p>
+        <h2 id="eventos-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
+          Eventos de todo tamaño
+        </h2>
+        <p class="mt-2 lg:mt-3">
+          Fiestas de fin de año, aniversarios y días de la familia de empresas; actividades de colegios; eventos municipales y de
+          juntas de vecinos; y torneos en canchas de fútbol, tenis o pádel. Llevamos los inflables donde esté tu evento.
+        </p>
+      </div>
+      <dl class="flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:gap-3">
+        {
+          DATOS.map((d) => (
+            <div class="border-noche bg-blanco rounded-xl border-2 px-3.5 py-3">
+              <dt class="font-extrabold">{d.titulo}</dt>
+              <dd class="text-noche-suave mt-0.5 text-[15px] leading-[21px]">{d.texto}</dd>
+            </div>
+          ))
+        }
+      </dl>
+      <WaButton placement="colegios" size="l" message={MENSAJE} class="text-center leading-[22px] lg:self-start">
+        Cotizar para mi evento
+      </WaButton>
     </div>
-    <dl class="grid grid-cols-2 gap-2.5 lg:flex-1 lg:gap-4">
-      {
-        DATOS.map((d) => (
-          <div class="border-crema/50 rounded-2xl border-2 p-3 lg:rounded-[20px] lg:p-5">
-            <dt class="font-display text-sol text-2xl leading-7 font-semibold lg:text-4xl lg:leading-10">{d.valor}</dt>
-            <dd class="text-sm leading-5 lg:text-base">{d.texto}</dd>
-          </div>
-        ))
-      }
-    </dl>
-    <WhatsAppLink
-      placement="colegios"
-      message={MENSAJE}
-      class="bounce bg-sol text-noche border-crema flex min-h-13 items-center justify-center rounded-full border-2 text-[17px] font-extrabold no-underline lg:hidden"
-    >
-      Cotizar evento
-    </WhatsAppLink>
   </div>
 </section>
