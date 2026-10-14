@@ -1,0 +1,70 @@
+---
+// /arriendo-inflables-eventos-empresas/ — pillar B2B y comunidad: empresas, colegios, municipios, vecinos y canchas.
+import fotoLateral from "../assets/megatobogan-lateral.jpg";
+import { DESDE, DESDE_HORAS, PRODUCTO } from "../data";
+import type { Pregunta } from "../seo";
+import CtaFinal from "../components/CtaFinal.astro";
+import HeroInterior from "../components/HeroInterior.astro";
+import Icon from "../components/Icon.astro";
+import ListaPreguntas from "../components/ListaPreguntas.astro";
+import Seccion from "../components/Seccion.astro";
+import PaginaSeo, { type Miga } from "../layouts/PaginaSeo.astro";
+
+interface Props {
+  migas: Miga[];
+  preguntas: Pregunta[];
+}
+const { migas, preguntas } = Astro.props;
+const MENSAJE = "Hola, quiero cotizar juegos inflables para un evento. Vengo de saltabum.cl";
+
+const PUBLICOS = [
+  { icon: "capacidad", t: "Empresas", d: "Fiestas de fin de año, aniversarios y días de la familia. Cotización formal, orden de compra y factura" },
+  { icon: "edad", t: "Colegios y jardines", d: "Día del alumno, kermesses y actividades recreativas, con turnos por curso y factura" },
+  { icon: "anclaje", t: "Municipios y juntas de vecinos", d: "Fiestas de barrio, plazas y operativos comunitarios con montaje rápido y seguro" },
+  { icon: "alto", t: "Eventos deportivos", d: "Torneos y jornadas en canchas de fútbol, tenis o pádel, con el inflable para los más chicos" },
+] as const;
+---
+
+<PaginaSeo migas={migas}>
+  <HeroInterior
+    eyebrow="Empresas, colegios y municipios"
+    titulo="Arriendo de juegos inflables para eventos y empresas"
+    bajada={`Juegos inflables para eventos de empresa, colegios, municipios y juntas de vecinos en la V Región, desde ${DESDE} por ${DESDE_HORAS}, con factura y orden de compra`}
+    imagen={fotoLateral}
+    alt={`${PRODUCTO.nombre} instalado sobre pasto para un evento al aire libre`}
+    placement="eventos-hero"
+    mensaje={MENSAJE}
+  />
+
+  <Seccion titulo="Juegos inflables para cada tipo de evento" fondo="blanco">
+    <ul class="grid gap-4 sm:grid-cols-2">
+      {
+        PUBLICOS.map((p) => (
+          <li class="border-noche bg-crema flex gap-4 rounded-[24px] border-2 p-5">
+            <span class="border-noche bg-sol flex size-12 shrink-0 items-center justify-center rounded-full border-2">
+              <Icon name={p.icon} size={24} />
+            </span>
+            <div>
+              <h3 class="font-display text-xl leading-7 font-semibold">{p.t}</h3>
+              <p class="text-noche-suave mt-1">{p.d}</p>
+            </div>
+          </li>
+        ))
+      }
+    </ul>
+  </Seccion>
+
+  <Seccion titulo="Seguridad y orden en eventos con mucha gente" fondo="verde">
+    <ul class="grid gap-3 lg:grid-cols-3">
+      <li class="border-noche bg-blanco rounded-[20px] border-2 p-5"><strong class="font-extrabold">[N] niños por turno</strong><p class="text-noche-suave mt-1">Organizamos turnos para que todos salten sin aglomeraciones</p></li>
+      <li class="border-noche bg-blanco rounded-[20px] border-2 p-5"><strong class="font-extrabold">Anclaje en pasto, tierra o cemento</strong><p class="text-noche-suave mt-1">Estacas en pasto y sacos de lastre en piso duro, siempre</p></li>
+      <li class="border-noche bg-blanco rounded-[20px] border-2 p-5"><strong class="font-extrabold">Montaje antes del evento</strong><p class="text-noche-suave mt-1">Llegamos con tiempo y lo dejamos listo en 10 a 15 minutos</p></li>
+    </ul>
+  </Seccion>
+
+  <Seccion titulo="Preguntas de empresas e instituciones" fondo="crema">
+    <ListaPreguntas preguntas={preguntas} grupo="faq-eventos" />
+  </Seccion>
+
+  <CtaFinal titulo="Cotiza tu evento" placement="eventos-cta" mensaje={MENSAJE} />
+</PaginaSeo>

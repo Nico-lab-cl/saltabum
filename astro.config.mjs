@@ -21,14 +21,20 @@ export default defineConfig({
   integrations: [
     sitemap({
       filter: (page) => !page.includes("/admin"),
+      // Prioridad según el tipo de página (portada > pillars > catálogo, producto y comunas > preguntas > legal).
       serialize(item) {
-        const esLegal = item.url.includes("/politica-de-privacidad");
-        return {
-          ...item,
-          lastmod: new Date().toISOString(),
-          changefreq: esLegal ? ChangeFreqEnum.YEARLY : ChangeFreqEnum.WEEKLY,
-          priority: esLegal ? 0.3 : 1.0,
-        };
+        const ruta = new URL(item.url).pathname;
+        const [prioridad, frecuencia] =
+          ruta === "/"
+            ? [1.0, ChangeFreqEnum.WEEKLY]
+            : ["/arriendo-juegos-inflables-cumpleanos/", "/precios-arriendo-juegos-inflables/", "/arriendo-inflables-eventos-empresas/"].includes(ruta)
+              ? [0.9, ChangeFreqEnum.WEEKLY]
+              : ruta.startsWith("/inflables/") || ruta.startsWith("/juegos-inflables-")
+                ? [0.8, ChangeFreqEnum.WEEKLY]
+                : ruta === "/preguntas-frecuentes/"
+                  ? [0.7, ChangeFreqEnum.MONTHLY]
+                  : [0.3, ChangeFreqEnum.YEARLY];
+        return { ...item, lastmod: new Date().toISOString(), changefreq: frecuencia, priority: prioridad };
       },
     }),
   ],

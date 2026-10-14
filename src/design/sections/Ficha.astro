@@ -1,17 +1,31 @@
 ---
-// Ficha del producto único (reemplaza al catálogo). La foto real es siempre la imagen principal.
-import { Image } from "astro:assets";
-import foto from "../assets/megatobogan-arcoiris.webp";
-import { PRODUCTO } from "../data";
+// Ficha del Megatobogán: galería (las miniaturas cambian la foto grande), datos, precio y botón de WhatsApp.
+import { getImage } from "astro:assets";
+import fotoReal from "../assets/megatobogan-arcoiris.webp";
+import fotoFrente from "../assets/megatobogan-frente.jpg";
+import fotoFrenteIzq from "../assets/megatobogan-frente-izq.jpg";
+import fotoDerecha from "../assets/megatobogan-derecha.jpg";
+import fotoLateral from "../assets/megatobogan-lateral.jpg";
+import { DESDE_HORAS, HORA_EXTRA, PRODUCTO } from "../data";
 import Icon from "../components/Icon.astro";
-import ImagenPendiente from "../components/ImagenPendiente.astro";
 import WaButton from "../components/WaButton.astro";
+import { RUTAS } from "../seo";
 
-const GALERIA = [
-  { n: 2, texto: "Vista frontal completa, sin gente" },
-  { n: 3, texto: "Tobogán con un niño bajando" },
-  { n: 4, texto: "Túneles y arcos" },
+const FOTOS = [
+  { src: fotoFrenteIzq, alt: `${PRODUCTO.nombre} visto de frente y a la izquierda sobre pasto, con sus dos pistas de tobogán y túneles` },
+  { src: fotoFrente, alt: `Vista frontal del ${PRODUCTO.nombre} con las dos pistas de tobogán, los túneles redondos y los arcos verdes` },
+  { src: fotoDerecha, alt: `Costado derecho del ${PRODUCTO.nombre} con el bloque de techo verde y la entrada para trepar` },
+  { src: fotoLateral, alt: `Vista lateral del ${PRODUCTO.nombre} con la baranda azul y el muro con túnel` },
+  { src: fotoReal, alt: `Foto real del ${PRODUCTO.nombre} armado`, real: true },
 ];
+const GALERIA = await Promise.all(
+  FOTOS.map(async (f) => ({
+    ...f,
+    grande: await getImage({ src: f.src, widths: [480, 800, 1200], format: "webp", quality: 82 }),
+    mini: await getImage({ src: f.src, width: 240, format: "webp", quality: 70 }),
+  })),
+);
+const principal = GALERIA[0];
 const DATOS = [
   { label: "Edad", valor: PRODUCTO.edad },
   { label: "Base", valor: PRODUCTO.base },
@@ -23,7 +37,8 @@ const DATOS = [
 const INCLUYE = [
   "Despacho gratis en Valparaíso y Viña del Mar",
   "Montaje y anclaje al piso",
-  "Retiro al terminar las 4 horas",
+  "Retiro al terminar el arriendo",
+  `Hora adicional ${HORA_EXTRA}`,
   "Reservas con $10.000 de abono",
 ];
 ---
@@ -38,24 +53,40 @@ const INCLUYE = [
       </div>
 
       <div class="flex flex-col gap-2.5 lg:gap-3">
-        <div class="border-noche bg-blanco relative aspect-[4/5] overflow-hidden rounded-[28px] border-2 lg:aspect-square lg:rounded-[36px]">
-          <Image
-            src={foto}
-            alt={`${PRODUCTO.nombre}: inflable rojo, amarillo, azul y verde con tobogán, túneles y arcos`}
-            widths={[400, 700, 1000]}
+        <div class="border-noche bg-blanco relative aspect-[3/2] overflow-hidden rounded-[28px] border-2 lg:rounded-[36px]" data-galeria>
+          <img
+            data-galeria-principal
+            src={principal.grande.src}
+            srcset={principal.grande.srcSet.attribute}
             sizes="(min-width: 1024px) 600px, 92vw"
+            width="1200"
+            height="800"
+            alt={principal.alt}
             loading="lazy"
-            class="size-full object-cover object-[50%_51%] lg:object-contain"
+            decoding="async"
+            class="size-full object-cover"
           />
-          <span class="bg-noche text-crema absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-[11px] leading-[18px] font-extrabold tracking-[1px] uppercase lg:top-4 lg:left-4 lg:text-xs">
+          <span data-galeria-real hidden class="bg-noche text-crema absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-[11px] leading-[18px] font-extrabold tracking-[1px] uppercase lg:top-4 lg:left-4 lg:text-xs">
             Foto real · nuestro juego
           </span>
         </div>
-        <ul class="grid grid-cols-3 gap-2 lg:gap-3">
+        <ul class="grid grid-cols-5 gap-2 lg:gap-3" aria-label="Fotos del Megatobogán">
           {
-            GALERIA.map((g) => (
+            GALERIA.map((g, i) => (
               <li>
-                <ImagenPendiente n={g.n} ratio="1:1" texto={g.texto} class="bg-arena aspect-square rounded-xl !p-2 text-[13px] lg:rounded-[20px] lg:text-base" />
+                <button
+                  type="button"
+                  data-galeria-mini
+                  data-src={g.grande.src}
+                  data-srcset={g.grande.srcSet.attribute}
+                  data-alt={g.alt}
+                  data-real={g.real ? "1" : undefined}
+                  aria-label={`Ver foto ${i + 1}: ${g.alt}`}
+                  aria-pressed={i === 0 ? "true" : "false"}
+                  class="border-noche aria-pressed:shadow-sol aria-pressed:border-[3px] block aspect-square w-full cursor-pointer overflow-hidden rounded-xl border-2 lg:rounded-2xl"
+                >
+                  <img src={g.mini.src} alt="" width="240" height="160" loading="lazy" decoding="async" class="size-full object-cover" />
+                </button>
               </li>
             ))
           }
@@ -85,7 +116,7 @@ const INCLUYE = [
 
       <div class="border-noche bg-sol shadow-pop-l flex flex-col gap-3.5 rounded-[28px] border-2 px-4 py-5 lg:gap-4 lg:p-7">
         <div>
-          <p class="text-[13px] leading-[18px] font-extrabold tracking-[1px] uppercase">Arriendo por 4 horas</p>
+          <p class="text-[13px] leading-[18px] font-extrabold tracking-[1px] uppercase">Arriendo por {DESDE_HORAS}</p>
           <p class="font-display mt-0.5 text-[56px] leading-[60px] font-bold lg:text-[68px] lg:leading-[72px]">{PRODUCTO.precio}</p>
         </div>
         <ul class="flex flex-col gap-2 font-semibold">
@@ -99,6 +130,7 @@ const INCLUYE = [
           }
         </ul>
         <WaButton placement="ficha" size="l" class="text-center leading-[22px]">Consultar disponibilidad por WhatsApp</WaButton>
+        <a href={RUTAS.megatobogan} class="text-noche inline-flex min-h-11 items-center font-extrabold underline">Ver ficha completa del Megatobogán</a>
         <p class="text-sm leading-5">
           Concón, Quilpué y Villa Alemana: +$5.000 de despacho.
           <a href="#despacho" class="text-noche font-extrabold underline">Ver tu comuna</a>
@@ -107,3 +139,21 @@ const INCLUYE = [
     </div>
   </div>
 </section>
+
+<script>
+  // Galería: la miniatura elegida pasa a la foto grande.
+  document.querySelectorAll<HTMLElement>("[data-galeria]").forEach((marco) => {
+    const grande = marco.querySelector<HTMLImageElement>("[data-galeria-principal]")!;
+    const etiqueta = marco.querySelector<HTMLElement>("[data-galeria-real]")!;
+    const minis = [...(marco.parentElement?.querySelectorAll<HTMLButtonElement>("[data-galeria-mini]") ?? [])];
+    for (const b of minis) {
+      b.addEventListener("click", () => {
+        grande.srcset = b.dataset.srcset ?? "";
+        grande.src = b.dataset.src ?? grande.src;
+        grande.alt = b.dataset.alt ?? "";
+        etiqueta.hidden = !b.dataset.real;
+        minis.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      });
+    }
+  });
+</script>

@@ -1,0 +1,22 @@
+---
+import Preguntas from "@design/pages/Preguntas.astro";
+import { METAS, PREGUNTAS_FRECUENTES, RUTAS } from "@design/seo";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { migasJsonLd, preguntasJsonLd } from "@/lib/seo";
+
+const migas = [
+  { nombre: "Inicio", href: RUTAS.inicio },
+  { nombre: "Preguntas frecuentes", href: RUTAS.preguntas },
+];
+const jsonLd = [
+  migasJsonLd(migas),
+  preguntasJsonLd(
+    RUTAS.preguntas,
+    PREGUNTAS_FRECUENTES.flatMap((t) => t.preguntas),
+  ),
+];
+---
+
+<BaseLayout {...METAS.preguntas} jsonLd={jsonLd}>
+  <Preguntas migas={migas} />
+</BaseLayout>

@@ -6,12 +6,14 @@ export const PRODUCTO = {
   base: "7,5 × 7,5 m",
   alto: "3,5 m",
   espacioLibre: "[8,5 × 8,5 m]",
-  precio: "$[XX.XXX]",
+  precio: "$40.000",
 };
 
 // Precio base de los inflables y su bloque de horas.
 export const DESDE = "$40.000";
 export const DESDE_HORAS = "3 horas";
+/** Valor de cada hora adicional sobre el bloque base. */
+export const HORA_EXTRA = "$10.000";
 
 export type Comuna = {
   nombre: string;
@@ -23,8 +25,8 @@ export type Comuna = {
 
 // Ordenadas por la costa, de norte a sur y hacia el interior.
 export const COMUNAS: Comuna[] = [
-  { nombre: "Concón", zonas: "Reñaca y Costa de Montemar", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago" },
-  { nombre: "Viña del Mar", zonas: "Centro, Jardín del Mar, Forestal", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis" },
+  { nombre: "Concón", zonas: "Costa de Montemar e Higuerillas", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago" },
+  { nombre: "Viña del Mar", zonas: "Reñaca, Jardín del Mar, Forestal", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis" },
   { nombre: "Valparaíso", zonas: "Nuestra base, Curauma y Placilla", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis" },
   { nombre: "Quilpué", zonas: "Todo Quilpué", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago" },
   { nombre: "Villa Alemana", zonas: "Toda Villa Alemana", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago" },
@@ -70,7 +72,7 @@ export const CHAT = [
   {
     paso: 4,
     yo: false,
-    titulo: "4 horas de saltos y retiramos",
+    titulo: "3 horas de saltos y retiramos",
     texto: "Pasamos a retirar a las 14:15. ¡Gracias por saltar con nosotros!",
     hora: "Sáb 13:50",
   },

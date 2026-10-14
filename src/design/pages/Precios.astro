@@ -1,0 +1,105 @@
+---
+// /precios-arriendo-juegos-inflables/ — pillar de precios: arriendo, hora adicional, despacho y ejemplos de total.
+import { COMUNAS, DESDE, DESDE_HORAS, HORA_EXTRA, PRODUCTO } from "../data";
+import { RUTAS, type Pregunta } from "../seo";
+import CtaFinal from "../components/CtaFinal.astro";
+import HeroInterior from "../components/HeroInterior.astro";
+import Icon from "../components/Icon.astro";
+import ListaPreguntas from "../components/ListaPreguntas.astro";
+import Seccion from "../components/Seccion.astro";
+import PaginaSeo, { type Miga } from "../layouts/PaginaSeo.astro";
+
+interface Props {
+  migas: Miga[];
+  preguntas: Pregunta[];
+}
+const { migas, preguntas } = Astro.props;
+
+const num = (s: string) => Number(s.replace(/\D/g, ""));
+const clp = (n: number) => `$${n.toLocaleString("es-CL")}`;
+const base = num(DESDE);
+const extra = num(HORA_EXTRA);
+const EJEMPLOS = [
+  { caso: "Cumpleaños de 3 horas en Viña del Mar", detalle: "Arriendo base, despacho gratis", total: base },
+  { caso: "Cumpleaños de 4 horas en Quilpué", detalle: `Arriendo base, 1 hora adicional y despacho $5.000`, total: base + extra + 5000 },
+  { caso: "Evento de 5 horas en Valparaíso", detalle: "Arriendo base, 2 horas adicionales, despacho gratis", total: base + extra * 2 },
+];
+const INCLUYE = ["Despacho según comuna", "Montaje en 10 a 15 minutos", "Anclaje al piso con estacas o sacos", "Inflable sanitizado", "Retiro al terminar"];
+---
+
+<PaginaSeo migas={migas}>
+  <HeroInterior
+    eyebrow="Precios claros"
+    titulo="Precios de arriendo de juegos inflables"
+    bajada={`Arriendo de juegos inflables desde ${DESDE} por ${DESDE_HORAS}, hora adicional ${HORA_EXTRA} y despacho gratis en Valparaíso y Viña del Mar, sin letra chica`}
+    placement="precios-hero"
+    mensaje="Hola, quiero cotizar el arriendo de un juego inflable. Vengo de saltabum.cl"
+  />
+
+  <Seccion titulo="Cuánto cuesta arrendar un juego inflable" fondo="blanco">
+    <div class="border-noche overflow-x-auto rounded-[24px] border-2">
+      <table class="w-full min-w-[520px] text-left">
+        <thead class="bg-arena">
+          <tr><th class="p-4">Concepto</th><th class="p-4">Valor</th><th class="p-4">Detalle</th></tr>
+        </thead>
+        <tbody class="bg-blanco">
+          <tr class="border-noche/10 border-t"><td class="p-4 font-bold">{PRODUCTO.nombre}</td><td class="font-display p-4 text-2xl font-bold">{DESDE}</td><td class="p-4">Bloque de {DESDE_HORAS}</td></tr>
+          <tr class="border-noche/10 border-t"><td class="p-4 font-bold">Hora adicional</td><td class="font-display p-4 text-2xl font-bold">{HORA_EXTRA}</td><td class="p-4">Por cada hora extra</td></tr>
+          <tr class="border-noche/10 border-t"><td class="p-4 font-bold">Abono para reservar</td><td class="font-display p-4 text-2xl font-bold">$10.000</td><td class="p-4">Se descuenta del total</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </Seccion>
+
+  <Seccion titulo="Valor del despacho por comuna" fondo="crema">
+    <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        COMUNAS.map((c) => (
+          <li class="border-noche bg-blanco flex flex-col gap-1 rounded-[20px] border-2 p-4">
+            <strong class="text-lg font-extrabold">{c.nombre}</strong>
+            <span class="font-display text-2xl font-bold">{c.precio}</span>
+            <span class="text-noche-suave text-sm">{c.zonas}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </Seccion>
+
+  <Seccion titulo="Ejemplos de precio total" bajada="Así se calcula el valor final según horas y comuna" fondo="arena">
+    <ul class="grid gap-4 lg:grid-cols-3">
+      {
+        EJEMPLOS.map((e) => (
+          <li class="border-noche bg-blanco shadow-pop flex flex-col gap-2 rounded-[24px] border-2 p-5">
+            <strong class="text-lg leading-6 font-extrabold">{e.caso}</strong>
+            <span class="text-noche-suave">{e.detalle}</span>
+            <span class="font-display mt-auto text-[34px] leading-10 font-bold">{clp(e.total)}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </Seccion>
+
+  <Seccion titulo="Qué incluye el precio" fondo="blanco">
+    <ul class="flex flex-wrap gap-2.5">
+      {
+        INCLUYE.map((t) => (
+          <li class="border-noche bg-verde-burbuja flex min-h-11 items-center gap-2 rounded-full border-2 px-4 font-bold">
+            <Icon name="check" size={18} strokeWidth={3} />
+            {t}
+          </li>
+        ))
+      }
+    </ul>
+    <p class="max-w-[760px]">
+      La luz la pones tú, pero consume menos de $2.000 por evento. Si llueve, reprogramamos sin perder el abono. Revisa las
+      <a href={RUTAS.megatobogan} class="text-azul-texto font-bold underline">medidas del inflable</a> o
+      <a href={RUTAS.reservar} class="text-azul-texto font-bold underline">elige tu fecha</a>
+    </p>
+  </Seccion>
+
+  <Seccion titulo="Preguntas sobre precios" fondo="crema">
+    <ListaPreguntas preguntas={preguntas} grupo="faq-precios" />
+  </Seccion>
+
+  <CtaFinal titulo="Cotiza tu arriendo en minutos" placement="precios-cta" />
+</PaginaSeo>

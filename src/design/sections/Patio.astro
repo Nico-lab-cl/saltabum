@@ -4,7 +4,7 @@
 // WebXR / Scene Viewer en Android y Quick Look en iPhone). El visor (model-viewer) se descarga
 // recién cuando la sección se acerca a la pantalla.
 import { getImage } from "astro:assets";
-import portada from "../assets/megatobogan-3d-portada.jpg";
+import portada from "../assets/megatobogan-frente.jpg";
 import { PRODUCTO } from "../data";
 import Icon from "../components/Icon.astro";
 import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
@@ -76,7 +76,7 @@ const REQUISITOS = [
       <div class="border-noche bg-blanco shadow-pop-l relative overflow-hidden rounded-[28px] border-2">
         <model-viewer
           data-modelo-3d
-          src="/modelos/megatobogan.glb"
+          src="/modelos/megatobogan-v2.glb"
           poster={poster.src}
           alt={`Modelo 3D del ${PRODUCTO.nombre} a tamaño real: ${PRODUCTO.base} de base y ${PRODUCTO.alto} de alto`}
           loading="lazy"
@@ -88,7 +88,7 @@ const REQUISITOS = [
           interaction-prompt="auto"
           shadow-intensity="1"
           exposure="1.05"
-          camera-orbit="35deg 70deg 100%"
+          camera-orbit="215deg 70deg 100%"
           ar
           ar-modes="webxr scene-viewer quick-look"
           ar-scale="fixed"

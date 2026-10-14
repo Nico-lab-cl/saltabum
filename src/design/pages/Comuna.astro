@@ -1,0 +1,105 @@
+---
+// /juegos-inflables-[comuna]/ — cluster local: despacho, sectores, patios y preguntas propias de cada comuna.
+import { Image } from "astro:assets";
+import fotoFrenteIzq from "../assets/megatobogan-frente-izq.jpg";
+import fotoDerecha from "../assets/megatobogan-derecha.jpg";
+import { DESDE, DESDE_HORAS, HORA_EXTRA, PRODUCTO } from "../data";
+import { COMUNAS_SEO, RUTAS, type ComunaSeo } from "../seo";
+import CtaFinal from "../components/CtaFinal.astro";
+import HeroInterior from "../components/HeroInterior.astro";
+import Icon from "../components/Icon.astro";
+import ListaPreguntas from "../components/ListaPreguntas.astro";
+import Seccion from "../components/Seccion.astro";
+import PaginaSeo, { type Miga } from "../layouts/PaginaSeo.astro";
+
+interface Props {
+  migas: Miga[];
+  comuna: ComunaSeo;
+}
+const { migas, comuna: c } = Astro.props;
+const mensaje = `Hola, quiero arrendar un juego inflable en ${c.nombre}. Vengo de saltabum.cl`;
+const otras = COMUNAS_SEO.filter((x) => x.slug !== c.slug);
+---
+
+<PaginaSeo migas={migas}>
+  <HeroInterior
+    eyebrow={`Juegos inflables en ${c.titulo}`}
+    titulo={`Arriendo de juegos inflables en ${c.titulo}`}
+    bajada={c.intro}
+    imagen={fotoFrenteIzq}
+    alt={`${PRODUCTO.nombre}, juego inflable para arriendo en ${c.nombre}`}
+    placement={`comuna-${c.slug}`}
+    mensaje={mensaje}
+  />
+
+  <Seccion titulo={`Despacho de inflables a ${c.titulo}`} fondo="blanco">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:gap-10">
+      <div class="border-noche bg-sol shadow-pop rounded-[24px] border-2 p-6 lg:w-[360px]">
+        <p class="text-sm font-extrabold tracking-[1px] uppercase">Despacho a {c.titulo}</p>
+        <p class="font-display text-[44px] leading-[48px] font-bold">{c.despacho}</p>
+        <p class="mt-2">Arriendo desde {DESDE} por {DESDE_HORAS} · hora adicional {HORA_EXTRA}</p>
+      </div>
+      <div class="flex flex-col gap-3 lg:flex-1">
+        <p class="lg:text-lg">{c.despachoDetalle}. Llegamos a estos sectores, entre otros</p>
+        <ul class="flex flex-wrap gap-2">
+          {c.sectores.map((s) => <li class="border-noche bg-crema rounded-full border-2 px-4 py-1.5 font-bold">{s}</li>)}
+        </ul>
+      </div>
+    </div>
+  </Seccion>
+
+  <Seccion titulo={`El ${PRODUCTO.nombre} en tu patio de ${c.titulo}`} fondo="celeste">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-12">
+      <div class="flex flex-col gap-4 lg:flex-1">
+        <p class="lg:text-lg">{c.patios}</p>
+        <ul class="grid grid-cols-2 gap-2.5">
+          <li class="border-noche bg-blanco rounded-2xl border-2 p-3"><span class="text-noche-suave text-xs font-extrabold uppercase">Base</span><br /><strong class="font-display text-xl">{PRODUCTO.base}</strong></li>
+          <li class="border-noche bg-blanco rounded-2xl border-2 p-3"><span class="text-noche-suave text-xs font-extrabold uppercase">Alto</span><br /><strong class="font-display text-xl">{PRODUCTO.alto}</strong></li>
+          <li class="border-noche bg-blanco rounded-2xl border-2 p-3"><span class="text-noche-suave text-xs font-extrabold uppercase">Edad</span><br /><strong class="font-display text-xl">{PRODUCTO.edad}</strong></li>
+          <li class="border-noche bg-blanco rounded-2xl border-2 p-3"><span class="text-noche-suave text-xs font-extrabold uppercase">Enchufe</span><br /><strong class="font-display text-xl">A menos de 15 m</strong></li>
+        </ul>
+        <a href={RUTAS.megatobogan} class="text-azul-texto inline-flex min-h-11 items-center font-extrabold underline">
+          Ver el inflable en 3D y probarlo en tu patio
+        </a>
+      </div>
+      <Image
+        src={fotoDerecha}
+        alt={`Costado del ${PRODUCTO.nombre} sobre pasto`}
+        widths={[480, 800]}
+        sizes="(min-width: 1024px) 560px, 92vw"
+        class="border-noche aspect-[3/2] w-full rounded-[28px] border-2 object-cover lg:flex-1"
+      />
+    </div>
+  </Seccion>
+
+  <Seccion titulo={`Cómo reservar en ${c.titulo}`} fondo="crema">
+    <ol class="grid gap-4 md:grid-cols-3">
+      <li class="border-noche bg-blanco rounded-[20px] border-2 p-5"><Icon name="puntual" size={28} /><strong class="mt-2 block font-extrabold">Elige fecha y horario</strong><span class="text-noche-suave">En el calendario, desde el día siguiente</span></li>
+      <li class="border-noche bg-blanco rounded-[20px] border-2 p-5"><Icon name="check" size={28} /><strong class="mt-2 block font-extrabold">Confirma con $10.000</strong><span class="text-noche-suave">Te escribimos por WhatsApp para el abono</span></li>
+      <li class="border-noche bg-blanco rounded-[20px] border-2 p-5"><Icon name="despacho" size={28} /><strong class="mt-2 block font-extrabold">Llegamos a {c.titulo}</strong><span class="text-noche-suave">Montamos, anclamos y retiramos al terminar</span></li>
+    </ol>
+    <a href={RUTAS.reservar} class="bounce border-noche bg-sol text-noche inline-flex min-h-13 items-center justify-center self-start rounded-full border-2 px-6 font-extrabold no-underline">
+      Ver fechas disponibles
+    </a>
+  </Seccion>
+
+  <Seccion titulo={`Preguntas frecuentes en ${c.titulo}`} fondo="blanco">
+    <ListaPreguntas preguntas={c.preguntas} grupo={`faq-${c.slug}`} />
+  </Seccion>
+
+  <Seccion titulo="Juegos inflables en otras comunas" fondo="arena">
+    <ul class="flex flex-wrap gap-2.5">
+      {
+        otras.map((o) => (
+          <li>
+            <a href={`/juegos-inflables-${o.slug}/`} class="border-noche bg-blanco text-noche inline-flex min-h-12 items-center rounded-full border-2 px-5 font-bold no-underline hover:bg-sol">
+              {o.titulo}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </Seccion>
+
+  <CtaFinal titulo={`Arrienda tu inflable en ${c.titulo}`} placement={`comuna-${c.slug}-cta`} mensaje={mensaje} />
+</PaginaSeo>

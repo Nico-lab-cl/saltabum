@@ -1,0 +1,25 @@
+---
+import Inflables from "@design/pages/Inflables.astro";
+import { DESDE } from "@design/data";
+import { METAS, RUTAS } from "@design/seo";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { migasJsonLd, servicioJsonLd } from "@/lib/seo";
+
+const migas = [
+  { nombre: "Inicio", href: RUTAS.inicio },
+  { nombre: "Inflables", href: RUTAS.inflables },
+];
+const jsonLd = [
+  migasJsonLd(migas),
+  servicioJsonLd({
+    ruta: RUTAS.inflables,
+    nombre: "Arriendo de juegos inflables en la V Región",
+    descripcion: METAS.inflables.description,
+    precio: Number(DESDE.replace(/\D/g, "")),
+  }),
+];
+---
+
+<BaseLayout {...METAS.inflables} jsonLd={jsonLd}>
+  <Inflables migas={migas} />
+</BaseLayout>

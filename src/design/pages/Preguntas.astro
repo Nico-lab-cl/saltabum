@@ -1,0 +1,32 @@
+---
+// /preguntas-frecuentes/ — todas las preguntas, agrupadas por tema (un H2 por tema).
+import { PREGUNTAS_FRECUENTES } from "../seo";
+import CtaFinal from "../components/CtaFinal.astro";
+import HeroInterior from "../components/HeroInterior.astro";
+import ListaPreguntas from "../components/ListaPreguntas.astro";
+import Seccion from "../components/Seccion.astro";
+import PaginaSeo, { type Miga } from "../layouts/PaginaSeo.astro";
+
+interface Props {
+  migas: Miga[];
+}
+const { migas } = Astro.props;
+const FONDOS = ["blanco", "crema", "arena"] as const;
+---
+
+<PaginaSeo migas={migas}>
+  <HeroInterior
+    eyebrow="Preguntas frecuentes"
+    titulo="Preguntas frecuentes sobre arriendo de juegos inflables"
+    bajada="Precios, reservas, seguridad, clima, espacio y edades, todo lo que necesitas saber antes de arrendar"
+    placement="preguntas-hero"
+  />
+  {
+    PREGUNTAS_FRECUENTES.map((t, i) => (
+      <Seccion titulo={t.tema} fondo={FONDOS[i % FONDOS.length]}>
+        <ListaPreguntas preguntas={t.preguntas} grupo={`faq-${i}`} abrirPrimera={i === 0} />
+      </Seccion>
+    ))
+  }
+  <CtaFinal titulo="¿Te quedó otra duda?" placement="preguntas-cta" />
+</PaginaSeo>

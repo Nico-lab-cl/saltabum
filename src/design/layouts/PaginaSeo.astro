@@ -1,0 +1,44 @@
+---
+// Estructura visual de las páginas internas (pillar y cluster): header, migas de pan, contenido, footer y barra fija.
+// El SEO (título, descripción, schemas) lo pone la ruta en src/pages con BaseLayout.
+import Footer from "../sections/Footer.astro";
+import Header from "../sections/Header.astro";
+import StickyBar from "../sections/StickyBar.astro";
+
+export interface Miga {
+  nombre: string;
+  href: string;
+}
+
+interface Props {
+  migas: Miga[];
+}
+const { migas } = Astro.props;
+---
+
+<Header />
+<nav aria-label="Migas de pan" class="border-noche/15 bg-crema border-b">
+  <ol class="mx-auto flex max-w-[1320px] flex-wrap items-center gap-x-2 px-4 py-2 text-sm lg:px-10">
+    {
+      migas.map((m, i) => (
+        <li class="flex items-center gap-2">
+          {i > 0 && <span aria-hidden="true" class="text-noche-suave">›</span>}
+          {i < migas.length - 1 ? (
+            <a href={m.href} class="text-azul-texto inline-flex min-h-11 items-center underline">
+              {m.nombre}
+            </a>
+          ) : (
+            <span aria-current="page" class="text-noche-suave inline-flex min-h-11 items-center">
+              {m.nombre}
+            </span>
+          )}
+        </li>
+      ))
+    }
+  </ol>
+</nav>
+<main class="overflow-x-clip">
+  <slot />
+</main>
+<Footer />
+<StickyBar />

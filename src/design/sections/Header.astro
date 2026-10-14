@@ -3,20 +3,14 @@ import { PUBLIC_WHATSAPP_NUMBER } from "astro:env/client";
 import Icon from "../components/Icon.astro";
 import WaButton from "../components/WaButton.astro";
 import Wordmark from "../components/Wordmark.astro";
+import { NAV } from "../seo";
 
-const NAV = [
-  { href: "#megatobogan", label: "El Megatobogán" },
-  { href: "#reservar", label: "Reservar" },
-  { href: "#despacho", label: "Despacho" },
-  { href: "#eventos", label: "Municipios y eventos" },
-  { href: "#preguntas", label: "Preguntas" },
-];
 const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
 ---
 
 <header class="border-noche bg-sol text-noche sticky top-0 z-40 border-b-2">
   <div class="mx-auto flex max-w-[1320px] items-center gap-6 px-4 py-2.5 lg:px-10 lg:py-3.5">
-    <a href="#inicio" class="no-underline" aria-label="Saltabum y Entretenciones, inicio">
+    <a href="/" class="no-underline" aria-label="Saltabum y Entretenciones, inicio">
       <Wordmark class="text-[27px] lg:text-[34px]" />
     </a>
 

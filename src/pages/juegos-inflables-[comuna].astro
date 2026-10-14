@@ -1,0 +1,36 @@
+---
+// Una página por comuna: /juegos-inflables-quilpue/, /juegos-inflables-vina-del-mar/, etc.
+import type { GetStaticPaths } from "astro";
+import Comuna from "@design/pages/Comuna.astro";
+import { DESDE } from "@design/data";
+import { COMUNAS_SEO, RUTAS, type ComunaSeo } from "@design/seo";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { migasJsonLd, preguntasJsonLd, servicioJsonLd } from "@/lib/seo";
+
+export const getStaticPaths = (() =>
+  COMUNAS_SEO.map((comuna) => ({ params: { comuna: comuna.slug }, props: { comuna } }))) satisfies GetStaticPaths;
+
+const { comuna } = Astro.props as { comuna: ComunaSeo };
+const ruta = `/juegos-inflables-${comuna.slug}/`;
+const migas = [
+  { nombre: "Inicio", href: RUTAS.inicio },
+  { nombre: "Inflables", href: RUTAS.inflables },
+  { nombre: `Juegos inflables en ${comuna.titulo}`, href: ruta },
+];
+const zonas = comuna.nombre.split(" y ");
+const jsonLd = [
+  migasJsonLd(migas),
+  servicioJsonLd({
+    ruta,
+    nombre: `Arriendo de juegos inflables en ${comuna.titulo}`,
+    descripcion: comuna.meta.description,
+    precio: Number(DESDE.replace(/\D/g, "")),
+    zonas,
+  }),
+  preguntasJsonLd(ruta, comuna.preguntas),
+];
+---
+
+<BaseLayout {...comuna.meta} jsonLd={jsonLd}>
+  <Comuna migas={migas} comuna={comuna} />
+</BaseLayout>

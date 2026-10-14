@@ -1,0 +1,28 @@
+---
+// Acordeón de preguntas frecuentes (respuestas directas, también publicadas en el schema FAQPage de la página).
+import type { Pregunta } from "../seo";
+import Icon from "./Icon.astro";
+
+interface Props {
+  preguntas: Pregunta[];
+  grupo: string;
+  abrirPrimera?: boolean;
+}
+const { preguntas, grupo, abrirPrimera = true } = Astro.props;
+---
+
+<div class="flex flex-col gap-2.5 lg:gap-3">
+  {
+    preguntas.map((f, i) => (
+      <details name={grupo} open={abrirPrimera && i === 0} class="group border-noche bg-blanco open:shadow-pop overflow-hidden rounded-[20px] border-2">
+        <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 py-3 pr-3.5 pl-4 leading-[22px] font-extrabold lg:text-lg [&::-webkit-details-marker]:hidden">
+          {f.q}
+          <span class="bg-arena group-open:bg-sol flex size-8 shrink-0 items-center justify-center rounded-full transition-transform group-open:rotate-180 motion-reduce:transition-none">
+            <Icon name="chevron" size={18} strokeWidth={2.6} />
+          </span>
+        </summary>
+        <p class="text-noche-suave max-w-[760px] px-4 pb-4 leading-[24px] lg:text-[17px] lg:leading-[26px]">{f.a}</p>
+      </details>
+    ))
+  }
+</div>

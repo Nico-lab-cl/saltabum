@@ -1,0 +1,27 @@
+---
+import Eventos from "@design/pages/Eventos.astro";
+import { DESDE } from "@design/data";
+import { METAS, PREGUNTAS_PAGINA, RUTAS } from "@design/seo";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { migasJsonLd, preguntasJsonLd, servicioJsonLd } from "@/lib/seo";
+
+const migas = [
+  { nombre: "Inicio", href: RUTAS.inicio },
+  { nombre: "Empresas y eventos", href: RUTAS.eventos },
+];
+const preguntas = PREGUNTAS_PAGINA.eventos;
+const jsonLd = [
+  migasJsonLd(migas),
+  servicioJsonLd({
+    ruta: RUTAS.eventos,
+    nombre: METAS.eventos.title,
+    descripcion: METAS.eventos.description,
+    precio: Number(DESDE.replace(/\D/g, "")),
+  }),
+  preguntasJsonLd(RUTAS.eventos, preguntas),
+];
+---
+
+<BaseLayout {...METAS.eventos} jsonLd={jsonLd}>
+  <Eventos migas={migas} preguntas={preguntas} />
+</BaseLayout>

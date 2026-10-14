@@ -1,0 +1,27 @@
+---
+import Cumpleanos from "@design/pages/Cumpleanos.astro";
+import { DESDE } from "@design/data";
+import { METAS, PREGUNTAS_PAGINA, RUTAS } from "@design/seo";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { migasJsonLd, preguntasJsonLd, servicioJsonLd } from "@/lib/seo";
+
+const migas = [
+  { nombre: "Inicio", href: RUTAS.inicio },
+  { nombre: "Cumpleaños", href: RUTAS.cumpleanos },
+];
+const preguntas = PREGUNTAS_PAGINA.cumpleanos;
+const jsonLd = [
+  migasJsonLd(migas),
+  servicioJsonLd({
+    ruta: RUTAS.cumpleanos,
+    nombre: METAS.cumpleanos.title,
+    descripcion: METAS.cumpleanos.description,
+    precio: Number(DESDE.replace(/\D/g, "")),
+  }),
+  preguntasJsonLd(RUTAS.cumpleanos, preguntas),
+];
+---
+
+<BaseLayout {...METAS.cumpleanos} jsonLd={jsonLd}>
+  <Cumpleanos migas={migas} preguntas={preguntas} />
+</BaseLayout>

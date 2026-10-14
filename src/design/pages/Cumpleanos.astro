@@ -1,0 +1,110 @@
+---
+// /arriendo-juegos-inflables-cumpleanos/ — pillar «arriendo de juegos para cumpleaños».
+import { Image } from "astro:assets";
+import fotoHero from "../assets/hero-inflable.jpg";
+import fotoDerecha from "../assets/megatobogan-derecha.jpg";
+import { BLOQUES } from "@/lib/reservas";
+import { COMUNAS, DESDE, DESDE_HORAS, HORA_EXTRA, PRODUCTO } from "../data";
+import { RUTAS, type Pregunta } from "../seo";
+import CtaFinal from "../components/CtaFinal.astro";
+import HeroInterior from "../components/HeroInterior.astro";
+import Icon from "../components/Icon.astro";
+import ListaPreguntas from "../components/ListaPreguntas.astro";
+import Seccion from "../components/Seccion.astro";
+import PaginaSeo, { type Miga } from "../layouts/PaginaSeo.astro";
+import Agenda from "../sections/Agenda.astro";
+
+interface Props {
+  migas: Miga[];
+  preguntas: Pregunta[];
+}
+const { migas, preguntas } = Astro.props;
+
+const PASOS = [
+  { t: "Eliges fecha y horario", d: `Bloques de 3 horas, ${BLOQUES.map((b) => b.inicio).join(", ")}, desde el día siguiente` },
+  { t: "Reservas con $10.000", d: "El saldo se paga el día del cumpleaños" },
+  { t: "Llegamos, montamos y anclamos", d: "En 10 a 15 minutos, antes de que lleguen los invitados" },
+  { t: "Los niños saltan y retiramos", d: `${DESDE_HORAS} de juego y cada hora adicional por ${HORA_EXTRA}` },
+];
+---
+
+<PaginaSeo migas={migas}>
+  <HeroInterior
+    eyebrow="Cumpleaños infantiles"
+    titulo="Arriendo de juegos inflables para cumpleaños"
+    bajada={`El cumpleaños que tus hijos van a recordar, con el ${PRODUCTO.nombre} desde ${DESDE} por ${DESDE_HORAS}, montaje, anclaje y retiro incluidos`}
+    imagen={fotoHero}
+    alt={`Niños jugando en el ${PRODUCTO.nombre} durante un cumpleaños al aire libre`}
+    placement="cumpleanos-hero"
+    mensaje="Hola, quiero arrendar un juego inflable para un cumpleaños. Vengo de saltabum.cl"
+  />
+
+  <Seccion titulo="Un cumpleaños sin preocupaciones" eyebrow="Así funciona" fondo="blanco">
+    <ol class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        PASOS.map((p, i) => (
+          <li class="border-noche bg-crema flex flex-col gap-2 rounded-[20px] border-2 p-5">
+            <span class="bg-azul border-noche font-display flex size-10 items-center justify-center rounded-full border-2 text-xl font-bold">{i + 1}</span>
+            <strong class="text-lg leading-6 font-extrabold">{p.t}</strong>
+            <span class="text-noche-suave">{p.d}</span>
+          </li>
+        ))
+      }
+    </ol>
+  </Seccion>
+
+  <Seccion titulo="El juego inflable ideal para niños de 3 a 12 años" fondo="celeste">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-12">
+      <Image
+        src={fotoDerecha}
+        alt={`Costado del ${PRODUCTO.nombre} con el bloque para trepar y el tobogán`}
+        widths={[480, 800]}
+        sizes="(min-width: 1024px) 560px, 92vw"
+        class="border-noche aspect-[3/2] w-full rounded-[28px] border-2 object-cover lg:flex-1"
+      />
+      <div class="flex flex-col gap-4 lg:flex-1">
+        <p class="lg:text-lg">
+          El {PRODUCTO.nombre} tiene tobogán doble, túneles para gatear y un bloque para trepar, así juegan varios niños a
+          la vez sin aburrirse. Mide {PRODUCTO.base} y {PRODUCTO.alto} de alto
+        </p>
+        <ul class="flex flex-col gap-2 font-semibold">
+          <li class="flex gap-2"><Icon name="check" size={22} strokeWidth={3} class="shrink-0" />Sanitizado antes de cada cumpleaños</li>
+          <li class="flex gap-2"><Icon name="check" size={22} strokeWidth={3} class="shrink-0" />Anclado al piso, nunca queda suelto</li>
+          <li class="flex gap-2"><Icon name="check" size={22} strokeWidth={3} class="shrink-0" />Si llueve, reprogramamos sin perder el abono</li>
+        </ul>
+        <a href={RUTAS.megatobogan} class="text-azul-texto inline-flex min-h-11 items-center font-extrabold underline">
+          Ver medidas y modelo 3D del inflable
+        </a>
+      </div>
+    </div>
+  </Seccion>
+
+  <Seccion titulo="Cuánto cuesta arrendar un inflable para un cumpleaños" fondo="crema">
+    <div class="grid gap-4 lg:grid-cols-2">
+      <div class="border-noche bg-sol shadow-pop rounded-[24px] border-2 p-6">
+        <p class="text-sm font-extrabold tracking-[1px] uppercase">Arriendo por {DESDE_HORAS}</p>
+        <p class="font-display text-[52px] leading-[56px] font-bold">{DESDE}</p>
+        <p class="mt-2">Hora adicional {HORA_EXTRA} · abono para reservar $10.000</p>
+      </div>
+      <ul class="border-noche bg-blanco divide-noche/10 divide-y rounded-[24px] border-2 px-5">
+        {
+          COMUNAS.map((c) => (
+            <li class="flex items-center justify-between gap-3 py-3">
+              <span class="font-bold">{c.nombre}</span>
+              <span>{c.titulo}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+    <a href={RUTAS.precios} class="text-azul-texto inline-flex min-h-11 items-center font-extrabold underline">Ver todos los precios del arriendo</a>
+  </Seccion>
+
+  <Agenda />
+
+  <Seccion titulo="Preguntas frecuentes de cumpleaños" fondo="blanco">
+    <ListaPreguntas preguntas={preguntas} grupo="faq-cumpleanos" />
+  </Seccion>
+
+  <CtaFinal titulo="Reserva el inflable para el cumpleaños" placement="cumpleanos-cta" mensaje="Hola, quiero arrendar un juego inflable para un cumpleaños. Vengo de saltabum.cl" />
+</PaginaSeo>

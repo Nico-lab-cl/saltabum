@@ -1,6 +1,7 @@
 ---
 import { COMUNAS, mensajeWhatsapp, PRODUCTO, TONO_BG } from "../data";
 import WaButton from "../components/WaButton.astro";
+import { COMUNAS_SEO } from "../seo";
 
 const inicial = COMUNAS[0];
 ---
@@ -55,7 +56,17 @@ const inicial = COMUNAS[0];
         Consultar fecha para <span data-out="comuna">{inicial.nombre}</span>
       </WaButton>
     </div>
-    <p class="text-noche-suave mt-2.5 text-center text-[13px] lg:text-left">Valores por confirmar.</p>
+    <ul class="mt-6 flex flex-wrap gap-2" aria-label="Juegos inflables por comuna">
+      {
+        COMUNAS_SEO.map((c) => (
+          <li>
+            <a href={`/juegos-inflables-${c.slug}/`} class="text-azul-texto inline-flex min-h-11 items-center px-1 font-bold underline">
+              Juegos inflables en {c.titulo}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
   </div>
 </section>
 

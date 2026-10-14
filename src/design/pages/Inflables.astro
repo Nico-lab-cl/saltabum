@@ -1,0 +1,101 @@
+---
+// /inflables/ — catálogo de juegos inflables. Hoy hay uno; cada inflable nuevo es una tarjeta más.
+import { Image } from "astro:assets";
+import fotoFrenteIzq from "../assets/megatobogan-frente-izq.jpg";
+import fotoFrente from "../assets/megatobogan-frente.jpg";
+import { DESDE, DESDE_HORAS, HORA_EXTRA, PRODUCTO } from "../data";
+import { COMUNAS_SEO, RUTAS } from "../seo";
+import CtaFinal from "../components/CtaFinal.astro";
+import HeroInterior from "../components/HeroInterior.astro";
+import Icon from "../components/Icon.astro";
+import Seccion from "../components/Seccion.astro";
+import WaButton from "../components/WaButton.astro";
+import PaginaSeo, { type Miga } from "../layouts/PaginaSeo.astro";
+
+interface Props {
+  migas: Miga[];
+}
+const { migas } = Astro.props;
+
+const INCLUYE = [
+  { icon: "despacho", t: "Despacho a la V Región", d: "Gratis en Valparaíso y Viña del Mar, $5.000 a Concón, Quilpué y Villa Alemana" },
+  { icon: "anclaje", t: "Montaje y anclaje", d: "Lo dejamos listo en 10 a 15 minutos, fijado al piso con estacas o sacos de lastre" },
+  { icon: "sanitizado", t: "Inflable sanitizado", d: "Lo limpiamos y desinfectamos antes de cada arriendo" },
+  { icon: "puntual", t: `${DESDE_HORAS} de juego`, d: `Y cada hora adicional por ${HORA_EXTRA}` },
+] as const;
+---
+
+<PaginaSeo migas={migas}>
+  <HeroInterior
+    eyebrow="Catálogo de inflables"
+    titulo="Arriendo de juegos inflables en la V Región"
+    bajada={`Juegos inflables para cumpleaños, colegios, empresas y eventos desde ${DESDE} por ${DESDE_HORAS}, con despacho, montaje, anclaje y retiro incluidos`}
+    imagen={fotoFrente}
+    alt={`${PRODUCTO.nombre}, juego inflable con tobogán doble, túneles y arcos sobre pasto`}
+    placement="inflables-hero"
+  />
+
+  <Seccion titulo="Nuestros juegos inflables" eyebrow="Elige tu inflable" fondo="blanco">
+    <ul class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+      <li class="border-noche bg-crema shadow-pop flex flex-col overflow-hidden rounded-[28px] border-2">
+        <Image
+          src={fotoFrenteIzq}
+          alt={`${PRODUCTO.nombre} instalado sobre pasto`}
+          widths={[400, 700]}
+          sizes="(min-width: 1024px) 400px, 92vw"
+          class="border-noche aspect-[3/2] w-full border-b-2 object-cover"
+        />
+        <div class="flex flex-1 flex-col gap-3 p-5">
+          <h3 class="font-display text-2xl leading-7 font-semibold">{PRODUCTO.nombre}</h3>
+          <p class="text-noche-suave">Tobogán doble, túneles y arcos para niños de {PRODUCTO.edad}</p>
+          <p class="text-sm font-bold">{PRODUCTO.base} · {PRODUCTO.alto} de alto</p>
+          <p class="font-display text-[28px] leading-8 font-bold">Desde {DESDE} <span class="text-base font-semibold">· {DESDE_HORAS}</span></p>
+          <div class="mt-auto flex flex-wrap gap-2.5">
+            <a
+              href={RUTAS.megatobogan}
+              class="bounce border-noche bg-sol text-noche inline-flex min-h-12 flex-1 items-center justify-center rounded-full border-2 px-5 font-extrabold no-underline"
+            >
+              Ver ficha y medidas
+            </a>
+            <WaButton placement="catalogo" size="m" message={`Hola, quiero consultar el ${PRODUCTO.nombre}. Vengo de saltabum.cl`}>Consultar</WaButton>
+          </div>
+        </div>
+      </li>
+      <li class="border-noche/40 text-noche-suave flex flex-col items-start justify-center gap-3 rounded-[28px] border-2 border-dashed p-6">
+        <Icon name="check" size={28} />
+        <p class="font-display text-noche text-2xl leading-7 font-semibold">Pronto más inflables</p>
+        <p>Estamos sumando nuevos juegos. Si buscas algo especial para tu evento, escríbenos y te contamos</p>
+      </li>
+    </ul>
+  </Seccion>
+
+  <Seccion titulo="Qué incluye el arriendo" fondo="arena">
+    <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        INCLUYE.map((i) => (
+          <li class="border-noche bg-blanco flex flex-col gap-2 rounded-[20px] border-2 p-5">
+            <Icon name={i.icon} size={30} />
+            <strong class="text-lg leading-6 font-extrabold">{i.t}</strong>
+            <span class="text-noche-suave">{i.d}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </Seccion>
+
+  <Seccion titulo="Arriendo de juegos inflables por comuna" bajada="Llevamos los inflables a toda la Región de Valparaíso" fondo="crema">
+    <ul class="flex flex-wrap gap-2.5">
+      {
+        COMUNAS_SEO.map((c) => (
+          <li>
+            <a href={`/juegos-inflables-${c.slug}/`} class="border-noche bg-blanco text-noche inline-flex min-h-12 items-center rounded-full border-2 px-5 font-bold no-underline hover:bg-sol">
+              Juegos inflables en {c.titulo}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </Seccion>
+
+  <CtaFinal placement="inflables-cta" />
+</PaginaSeo>

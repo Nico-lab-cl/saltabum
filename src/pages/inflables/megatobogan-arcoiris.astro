@@ -1,0 +1,36 @@
+---
+import { getImage } from "astro:assets";
+import Megatobogan from "@design/pages/Megatobogan.astro";
+import fotoFrente from "@design/assets/megatobogan-frente.jpg";
+import fotoFrenteIzq from "@design/assets/megatobogan-frente-izq.jpg";
+import fotoDerecha from "@design/assets/megatobogan-derecha.jpg";
+import { DESDE, PRODUCTO } from "@design/data";
+import { METAS, PREGUNTAS_PAGINA, RUTAS } from "@design/seo";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { migasJsonLd, preguntasJsonLd, productoJsonLd } from "@/lib/seo";
+
+const migas = [
+  { nombre: "Inicio", href: RUTAS.inicio },
+  { nombre: "Inflables", href: RUTAS.inflables },
+  { nombre: PRODUCTO.nombre, href: RUTAS.megatobogan },
+];
+const imagenes = await Promise.all(
+  [fotoFrente, fotoFrenteIzq, fotoDerecha].map(async (src) => (await getImage({ src, width: 1200, format: "jpg" })).src),
+);
+const preguntas = PREGUNTAS_PAGINA.megatobogan;
+const jsonLd = [
+  migasJsonLd(migas),
+  productoJsonLd({
+    ruta: RUTAS.megatobogan,
+    nombre: PRODUCTO.nombre,
+    descripcion: METAS.megatobogan.description,
+    imagenes,
+    precio: Number(DESDE.replace(/\D/g, "")),
+  }),
+  preguntasJsonLd(RUTAS.megatobogan, preguntas),
+];
+---
+
+<BaseLayout {...METAS.megatobogan} image={imagenes[0]} imageAlt={`${PRODUCTO.nombre} sobre pasto`} jsonLd={jsonLd}>
+  <Megatobogan migas={migas} preguntas={preguntas} />
+</BaseLayout>

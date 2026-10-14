@@ -1,0 +1,27 @@
+---
+import Precios from "@design/pages/Precios.astro";
+import { DESDE } from "@design/data";
+import { METAS, PREGUNTAS_PAGINA, RUTAS } from "@design/seo";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { migasJsonLd, preguntasJsonLd, servicioJsonLd } from "@/lib/seo";
+
+const migas = [
+  { nombre: "Inicio", href: RUTAS.inicio },
+  { nombre: "Precios", href: RUTAS.precios },
+];
+const preguntas = PREGUNTAS_PAGINA.precios;
+const jsonLd = [
+  migasJsonLd(migas),
+  servicioJsonLd({
+    ruta: RUTAS.precios,
+    nombre: METAS.precios.title,
+    descripcion: METAS.precios.description,
+    precio: Number(DESDE.replace(/\D/g, "")),
+  }),
+  preguntasJsonLd(RUTAS.precios, preguntas),
+];
+---
+
+<BaseLayout {...METAS.precios} jsonLd={jsonLd}>
+  <Precios migas={migas} preguntas={preguntas} />
+</BaseLayout>
