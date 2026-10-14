@@ -54,7 +54,8 @@ export default defineConfig({
       }),
       PUBLIC_GA4_ID: envField.string({ context: "client", access: "public", optional: true }), // G-XXXXXXXXXX
       PUBLIC_CLARITY_ID: envField.string({ context: "client", access: "public", optional: true }),
-      PUBLIC_WHATSAPP_NUMBER: envField.string({ context: "client", access: "public", optional: true }), // 569XXXXXXXX
+      // WhatsApp de Saltabum (+56 9 6344 4133). Se puede reemplazar con la variable de entorno.
+      PUBLIC_WHATSAPP_NUMBER: envField.string({ context: "client", access: "public", default: "56963444133" }),
       PUBLIC_TURNSTILE_SITE_KEY: envField.string({ context: "client", access: "public", optional: true }),
 
       // ---- Secretos: solo en el Worker, se leen en tiempo de ejecución (wrangler secret put) ----

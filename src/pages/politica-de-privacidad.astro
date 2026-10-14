@@ -1,65 +1,131 @@
 ---
-// PLANTILLA — debe revisarla un abogado antes de publicar. Base: Ley 19.628 y Ley 21.719 (Chile).
+// Política de privacidad conforme a la Ley N° 19.628 sobre protección de la vida privada, modificada por la
+// Ley N° 21.719 sobre protección de datos personales. Conviene que la revise un abogado antes de darla por final.
+// Razón social, RUT y domicilio se completan en src/config/site.ts (legal); mientras digan TODO no se muestran.
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { SITE } from "@/config/site";
+
 const { legal } = SITE;
+const dato = (v: string) => (v.startsWith("TODO") ? undefined : v);
+const razonSocial = dato(legal.razonSocial) ?? SITE.legalName;
+const rut = dato(legal.rut);
+const domicilio = dato(legal.direccion);
+const actualizada = "14 de octubre de 2026";
+
+const h2 = "font-display mt-8 text-2xl leading-8 font-semibold";
 ---
 
-<BaseLayout title="Política de privacidad" description="Cómo Saltabum trata tus datos personales y cookies.">
-  <main class="mx-auto max-w-3xl space-y-4 p-6">
-    <h1 class="text-3xl font-bold">Política de privacidad y cookies</h1>
+<BaseLayout
+  title="Política de privacidad y protección de datos personales"
+  description="Cómo Saltabum trata tus datos personales y cookies según la Ley 19.628 y la Ley 21.719 de protección de datos personales de Chile."
+>
+  <main class="mx-auto max-w-3xl px-4 py-10 leading-7 lg:py-16">
+    <a href="/" class="text-azul-texto inline-flex min-h-11 items-center font-bold">Volver a Saltabum</a>
+    <h1 class="font-display mt-2 text-4xl leading-tight font-semibold">Política de privacidad y protección de datos personales</h1>
+    <p class="text-noche-suave mt-2 text-sm">Última actualización {actualizada}</p>
 
-    <h2 class="text-xl font-semibold">1. Responsable</h2>
-    <p>
-      {legal.razonSocial}, RUT {legal.rut}, con domicilio en {legal.direccion}, es responsable del tratamiento
-      de los datos personales recogidos en {SITE.url}. Contacto: {legal.emailPrivacidad}.
+    <p class="mt-6">
+      En Saltabum cuidamos tus datos personales. Esta política explica qué datos tratamos, para qué, con qué base legal,
+      a quién los comunicamos, cuánto tiempo los guardamos y cómo ejercer tus derechos, de acuerdo con la Ley N° 19.628
+      sobre protección de la vida privada, modificada por la Ley N° 21.719 sobre protección de datos personales.
     </p>
 
-    <h2 class="text-xl font-semibold">2. Datos que recogemos</h2>
-    <p>
-      Los datos que nos entregas en el formulario de contacto (nombre, teléfono, email y mensaje) y datos de
-      navegación (dirección IP, dispositivo, páginas visitadas y origen de la visita).
+    <h2 class={h2}>Quién es el responsable de tus datos</h2>
+    <p class="mt-3">
+      {razonSocial}{rut && <>, RUT {rut}</>}{domicilio && <>, con domicilio en {domicilio}</>}, con base en Valparaíso,
+      Chile, es responsable del tratamiento de los datos que se recogen en {SITE.url}. Para cualquier consulta sobre tus
+      datos escríbenos a <a class="text-azul-texto underline" href={`mailto:${legal.emailPrivacidad}`}>{legal.emailPrivacidad}</a>
+      o al WhatsApp {SITE.telefono}.
     </p>
 
-    <h2 class="text-xl font-semibold">3. Finalidad y base de licitud</h2>
-    <p>
-      Responder tus consultas y enviarte información comercial que solicites (base: tu consentimiento y la
-      ejecución de medidas precontractuales). Medir el sitio y la eficacia de nuestra publicidad (base: tu
-      consentimiento mediante el banner de cookies).
-    </p>
-
-    <h2 class="text-xl font-semibold">4. Cookies y tecnologías de terceros</h2>
-    <p>Solo si las aceptas, usamos:</p>
-    <ul class="list-disc pl-6">
-      <li>Google Analytics y Google Ads (Google LLC): medición y publicidad.</li>
+    <h2 class={h2}>Qué datos tratamos</h2>
+    <ul class="mt-3 list-disc space-y-1.5 pl-6">
+      <li><strong>Formulario de contacto</strong> nombre, teléfono, correo, comuna, fecha del evento y mensaje</li>
+      <li><strong>Calendario de reservas</strong> nombre, teléfono, comuna, dirección (opcional), mensaje, fecha y horario reservados</li>
+      <li><strong>WhatsApp</strong> los datos que tú decidas enviarnos en la conversación</li>
       <li>
-        Píxel de Meta y Conversions API (Meta Platforms Inc.): medición y publicidad en Facebook e Instagram.
+        <strong>Datos de navegación</strong> dirección IP, dispositivo, páginas visitadas y origen de la visita. Para evitar
+        reservas abusivas guardamos solo una huella cifrada de la IP, nunca la IP misma
       </li>
-      <li>Microsoft Clarity (Microsoft Corp.): mapas de calor y grabaciones anónimas de sesión.</li>
     </ul>
-    <p>
-      Puedes cambiar tu decisión en cualquier momento:
-      <button type="button" data-consent-open class="underline">
-        configurar cookies
-      </button>
+    <p class="mt-3">
+      No pedimos datos sensibles. No tratamos datos de niños, niñas ni adolescentes, los formularios los completa la
+      persona adulta que organiza el evento.
     </p>
 
-    <h2 class="text-xl font-semibold">5. Destinatarios y transferencias</h2>
-    <p>
-      Los proveedores anteriores pueden tratar datos fuera de Chile. Nuestro sitio se aloja en Cloudflare. No
-      vendemos tus datos.
+    <h2 class={h2}>Para qué los usamos y con qué base legal</h2>
+    <ul class="mt-3 list-disc space-y-1.5 pl-6">
+      <li>
+        <strong>Responder consultas, agendar y coordinar tu reserva</strong> (despacho, montaje, abono y retiro). Base
+        legal la ejecución de medidas precontractuales y del contrato de arriendo que solicitas
+      </li>
+      <li>
+        <strong>Emitir boletas o facturas y cumplir obligaciones tributarias</strong>. Base legal el cumplimiento de una
+        obligación legal
+      </li>
+      <li>
+        <strong>Prevenir abusos y proteger el sitio</strong> (antispam y límite de reservas). Base legal nuestro interés
+        legítimo en la seguridad del servicio
+      </li>
+      <li>
+        <strong>Medir el sitio y la eficacia de nuestra publicidad</strong>. Base legal tu consentimiento, que entregas o
+        rechazas en el aviso de cookies y puedes retirar cuando quieras
+      </li>
+    </ul>
+    <p class="mt-3">
+      Tratamos solo los datos necesarios para estas finalidades y no los usamos para fines distintos sin informarte. No
+      tomamos decisiones basadas únicamente en tratamientos automatizados que te afecten.
     </p>
 
-    <h2 class="text-xl font-semibold">6. Tus derechos</h2>
-    <p>
-      Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, portabilidad y bloqueo
-      escribiendo a {legal.emailPrivacidad}.
+    <h2 class={h2}>Cookies y herramientas de terceros</h2>
+    <p class="mt-3">Solo si las aceptas, usamos</p>
+    <ul class="mt-2 list-disc space-y-1.5 pl-6">
+      <li>Google Analytics y Google Ads (Google LLC), medición y publicidad</li>
+      <li>Píxel de Meta y Conversions API (Meta Platforms Inc.), medición y publicidad en Facebook e Instagram</li>
+      <li>Microsoft Clarity (Microsoft Corp.), mapas de calor y grabaciones anónimas de sesión</li>
+    </ul>
+    <p class="mt-3">
+      Puedes cambiar tu decisión en cualquier momento en
+      <button type="button" data-consent-open class="text-azul-texto min-h-11 cursor-pointer underline">configurar cookies</button>
     </p>
 
-    <h2 class="text-xl font-semibold">7. Conservación</h2>
-    <p>
-      Conservamos los datos de contacto mientras sean necesarios para la finalidad indicada. TODO: definir
-      plazo.
+    <h2 class={h2}>Con quién compartimos tus datos</h2>
+    <p class="mt-3">
+      No vendemos ni cedemos tus datos. Los compartimos solo con proveedores que nos prestan servicios y que actúan por
+      encargo nuestro, Cloudflare (alojamiento del sitio, base de datos de reservas y antispam), WhatsApp (Meta) para
+      conversar contigo y, si aceptas cookies, Google, Meta y Microsoft. Algunos de ellos tratan datos fuera de Chile, en
+      países como Estados Unidos, con garantías contractuales de protección adecuadas.
+    </p>
+
+    <h2 class={h2}>Cuánto tiempo los guardamos</h2>
+    <ul class="mt-3 list-disc space-y-1.5 pl-6">
+      <li>Consultas que no terminan en reserva, hasta 12 meses desde el último contacto</li>
+      <li>Reservas y datos de clientes, hasta 24 meses desde el evento</li>
+      <li>Documentos tributarios, el plazo que exige la ley</li>
+      <li>Cookies, según su duración, o hasta que retires tu consentimiento</li>
+    </ul>
+    <p class="mt-3">Cumplidos estos plazos eliminamos o anonimizamos los datos.</p>
+
+    <h2 class={h2}>Cómo protegemos tus datos</h2>
+    <p class="mt-3">
+      Usamos conexiones cifradas (HTTPS), acceso restringido con contraseña al panel de reservas y proveedores con
+      estándares de seguridad reconocidos. Si ocurriera una vulneración de seguridad que pueda afectarte, la informaremos a
+      la autoridad y a las personas afectadas según exige la ley.
+    </p>
+
+    <h2 class={h2}>Tus derechos</h2>
+    <p class="mt-3">
+      Puedes ejercer en forma gratuita tus derechos de acceso, rectificación, supresión, oposición, portabilidad y
+      bloqueo de tus datos, y retirar tu consentimiento cuando quieras, escribiendo a
+      <a class="text-azul-texto underline" href={`mailto:${legal.emailPrivacidad}`}>{legal.emailPrivacidad}</a>
+      con tu nombre y lo que necesitas. Te responderemos dentro de 30 días corridos, plazo que puede extenderse por otros 30
+      cuando la ley lo permite. Si no quedas conforme, puedes reclamar ante la Agencia de Protección de Datos Personales.
+    </p>
+
+    <h2 class={h2}>Cambios a esta política</h2>
+    <p class="mt-3">
+      Si actualizamos esta política lo publicaremos en esta página con su fecha de actualización. Si el cambio es
+      relevante, te lo avisaremos por los medios de contacto que nos hayas dado.
     </p>
   </main>
 </BaseLayout>
