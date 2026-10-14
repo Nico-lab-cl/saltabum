@@ -2,8 +2,8 @@
 // Hero con foto de fondo a sangre del Megatobogán sobre pasto (imagen referencial, 3840 px). Recorte horizontal en desktop y vertical en
 // mobile, servidos en AVIF con respaldo WebP y en varios anchos para que cada pantalla baje solo lo que necesita.
 import { getImage } from "astro:assets";
-import fondo from "../assets/hero-tobogan-hd.jpg";
-import fondoMovil from "../assets/hero-tobogan-hd-movil.jpg";
+import fondo from "../assets/hero-inflable.jpg";
+import fondoMovil from "../assets/hero-inflable-movil.jpg";
 import { DESDE, DESDE_HORAS, PRODUCTO } from "../data";
 import WaButton from "../components/WaButton.astro";
 
@@ -33,7 +33,7 @@ const [avif, webp, avifMovil, webpMovil] = await Promise.all([
       loading="eager"
       fetchpriority="high"
       decoding="async"
-      class="absolute inset-0 -z-20 size-full object-cover object-[50%_60%] lg:object-[70%_50%]"
+      class="absolute inset-0 -z-20 size-full object-cover object-[50%_70%] lg:object-[70%_75%]"
     />
   </picture>
   <!-- Capa noche para que el texto se lea sobre la foto: arriba en mobile, a la izquierda en desktop. -->
