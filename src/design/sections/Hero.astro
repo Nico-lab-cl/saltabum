@@ -2,8 +2,8 @@
 // Hero con foto de fondo a sangre del Megatobogán sobre pasto (imagen referencial, 3840 px). Recorte horizontal en desktop y vertical en
 // mobile, servidos en AVIF con respaldo WebP y en varios anchos para que cada pantalla baje solo lo que necesita.
 import { getImage } from "astro:assets";
-import fondo from "../assets/hero-ninos-chilenos.jpg";
-import fondoMovil from "../assets/hero-ninos-chilenos-movil.jpg";
+import fondo from "../assets/hero-tobogan.jpg";
+import fondoMovil from "../assets/hero-tobogan-movil.jpg";
 import { DESDE, DESDE_HORAS, PRODUCTO } from "../data";
 import WaButton from "../components/WaButton.astro";
 
@@ -29,7 +29,7 @@ const [avif, webp, avifMovil, webpMovil] = await Promise.all([
       sizes="100vw"
       width="1500"
       height="2160"
-      alt={`${PRODUCTO.nombre} instalado sobre pasto, con niños bajando por el tobogán, entrando al túnel y saltando`}
+      alt={`${PRODUCTO.nombre} instalado sobre pasto, con niños bajando por el tobogán, saliendo del túnel y saltando`}
       loading="eager"
       fetchpriority="high"
       decoding="async"
