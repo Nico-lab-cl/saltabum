@@ -1,7 +1,7 @@
 // @ts-check
 import { defineConfig, envField } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
-import sitemap from "@astrojs/sitemap";
+import sitemap, { ChangeFreqEnum } from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
@@ -20,12 +20,13 @@ export default defineConfig({
   // legales; `lastmod` es la fecha del build, así Google sabe cuándo volver a rastrear.
   integrations: [
     sitemap({
+      filter: (page) => !page.includes("/admin"),
       serialize(item) {
         const esLegal = item.url.includes("/politica-de-privacidad");
         return {
           ...item,
           lastmod: new Date().toISOString(),
-          changefreq: esLegal ? "yearly" : "weekly",
+          changefreq: esLegal ? ChangeFreqEnum.YEARLY : ChangeFreqEnum.WEEKLY,
           priority: esLegal ? 0.3 : 1.0,
         };
       },
@@ -33,6 +34,8 @@ export default defineConfig({
   ],
   vite: {
     plugins: [tailwindcss()],
+    // Visor 3D de la sección «¿Cabe en mi patio?»: pre-empaquetado para que el dev server no lo re-optimice al vuelo.
+    optimizeDeps: { include: ["@google/model-viewer"] },
   },
   i18n: {
     defaultLocale: "es",
@@ -60,6 +63,8 @@ export default defineConfig({
       META_CAPI_TEST_EVENT_CODE: envField.string({ context: "server", access: "secret", optional: true }),
       CRM_WEBHOOK_URL: envField.string({ context: "server", access: "secret", optional: true }),
       CRM_WEBHOOK_SECRET: envField.string({ context: "server", access: "secret", optional: true }),
+      // Contraseña del panel de reservas (/admin)
+      ADMIN_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
     },
   },
 });

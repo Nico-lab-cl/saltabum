@@ -12,3 +12,6 @@ META_CAPI_TEST_EVENT_CODE=
 # Tu CRM propio: URL que recibe los leads (POST JSON) y secreto compartido para firmar (HMAC-SHA256)
 CRM_WEBHOOK_URL=
 CRM_WEBHOOK_SECRET=
+
+# Contraseña del panel de reservas (/admin). Usa una larga y aleatoria.
+ADMIN_TOKEN=

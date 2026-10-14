@@ -1,0 +1,326 @@
+---
+// Calendario de reservas: el cliente ve los horarios libres, elige uno y reserva.
+// Datos y envío: src/lib/client/reservas.ts (API /api/disponibilidad y /api/reservas).
+import Turnstile from "@/components/core/Turnstile.astro";
+import { BLOQUES } from "@/lib/reservas";
+import { COMUNAS } from "../data";
+import Icon from "../components/Icon.astro";
+import WaButton from "../components/WaButton.astro";
+
+const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
+const input =
+  "border-noche bg-crema text-noche placeholder:text-noche-suave/70 min-h-12 w-full min-w-0 rounded-xl border-2 px-3.5";
+---
+
+<section id="reservar" aria-labelledby="agenda-titulo" class="border-noche bg-arena border-b-2" data-agenda>
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-6 px-4 py-10 lg:gap-10 lg:px-10 lg:py-20">
+    <div>
+      <p class="text-azul-texto text-xs font-extrabold tracking-[1.2px] uppercase">Reserva en línea</p>
+      <h2 id="agenda-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
+        Elige tu fecha y horario
+      </h2>
+      <p class="text-noche-suave mt-2 max-w-[560px] lg:mt-3 lg:text-lg">
+        Reserva desde la web en minutos, sin formularios complicados ni letra chica
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:gap-8">
+      <!-- Calendario -->
+      <div class="border-noche bg-blanco shadow-pop flex flex-col gap-4 rounded-[28px] border-2 p-4 lg:flex-1 lg:p-6 lg:shadow-pop-l">
+        <div class="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            data-mes-anterior
+            aria-label="Mes anterior"
+            class="border-noche bg-crema flex size-11 cursor-pointer items-center justify-center rounded-full border-2 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <Icon name="flecha" size={20} strokeWidth={2.6} class="rotate-180" />
+          </button>
+          <p data-mes-titulo aria-live="polite" class="font-display text-2xl leading-7 font-semibold first-letter:uppercase">&nbsp;</p>
+          <button
+            type="button"
+            data-mes-siguiente
+            aria-label="Mes siguiente"
+            class="border-noche bg-crema flex size-11 cursor-pointer items-center justify-center rounded-full border-2 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <Icon name="flecha" size={20} strokeWidth={2.6} />
+          </button>
+        </div>
+
+        <div class="grid grid-cols-7 gap-1.5 text-center lg:gap-2" aria-hidden="true">
+          {DIAS_SEMANA.map((d) => <span class="text-noche-suave text-xs font-extrabold tracking-[1px]">{d}</span>)}
+        </div>
+        <div data-dias class="grid min-h-[300px] grid-cols-7 gap-1.5 lg:gap-2"></div>
+
+        <p data-agenda-estado class="text-noche-suave text-sm">Cargando disponibilidad…</p>
+
+        <ul class="flex flex-wrap gap-x-4 gap-y-2 text-sm" aria-label="Simbología">
+          <li class="flex items-center gap-2"><span class="border-noche bg-verde-burbuja size-4 rounded border-2"></span>Con horarios libres</li>
+          <li class="flex items-center gap-2"><span class="border-noche bg-sol size-4 rounded border-2"></span>Quedan pocos</li>
+          <li class="flex items-center gap-2"><span class="border-noche/30 bg-arena size-4 rounded border-2"></span>Sin horarios</li>
+        </ul>
+      </div>
+
+      <!-- Horarios y formulario -->
+      <div class="border-noche bg-blanco flex flex-col gap-4 rounded-[28px] border-2 p-4 lg:flex-1 lg:p-6">
+        <div data-paso="dia">
+          <p class="font-display text-[22px] leading-7 font-semibold">Elige un día en el calendario</p>
+          <p class="text-noche-suave mt-1.5">Puedes reservar desde mañana, en bloques de 3 horas</p>
+          <ul class="mt-4 flex flex-col gap-2">
+            {
+              BLOQUES.map((b) => (
+                <li class="bg-crema flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold">
+                  <Icon name="puntual" size={20} />
+                  {b.inicio} a {b.fin}
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+
+        <div data-paso="horario" hidden>
+          <p data-dia-titulo class="font-display text-[22px] leading-7 font-semibold first-letter:uppercase"></p>
+          <div data-bloques role="group" aria-label="Horario" class="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+            {
+              BLOQUES.map((b) => (
+                <button
+                  type="button"
+                  data-bloque={b.id}
+                  aria-pressed="false"
+                  class="border-noche bg-verde-burbuja aria-pressed:bg-noche aria-pressed:text-crema aria-pressed:shadow-sol flex min-h-14 cursor-pointer flex-col items-center justify-center rounded-xl border-2 px-3 py-2 font-extrabold disabled:cursor-not-allowed disabled:border-noche/20 disabled:bg-arena disabled:text-noche-suave disabled:line-through"
+                >
+                  {b.inicio} a {b.fin}
+                  <span data-bloque-estado class="text-xs font-semibold">Libre</span>
+                </button>
+              ))
+            }
+          </div>
+
+          <form data-reserva class="group mt-5 grid grid-cols-2 gap-3.5" hidden>
+            <label class="col-span-2 flex flex-col gap-1.5 font-bold sm:col-span-1">
+              Nombre
+              <input name="nombre" required autocomplete="name" placeholder="Ej.: Camila Rojas" class={input} />
+            </label>
+            <label class="col-span-2 flex flex-col gap-1.5 font-bold sm:col-span-1">
+              Teléfono
+              <input name="telefono" type="tel" required autocomplete="tel" inputmode="tel" placeholder="+56 9 1234 5678" class={input} />
+            </label>
+            <label class="col-span-2 flex flex-col gap-1.5 font-bold sm:col-span-1">
+              Comuna
+              <select name="comuna" required class={input}>
+                {COMUNAS.map((c) => <option>{c.nombre}</option>)}
+              </select>
+            </label>
+            <label class="col-span-2 flex flex-col gap-1.5 font-bold sm:col-span-1">
+              <span>Dirección <span class="text-noche-suave font-normal">(opcional)</span></span>
+              <input name="direccion" autocomplete="street-address" class={input} />
+            </label>
+            <label class="col-span-2 flex flex-col gap-1.5 font-bold">
+              <span>Mensaje <span class="text-noche-suave font-normal">(opcional)</span></span>
+              <textarea name="mensaje" rows="2" placeholder="Tipo de evento, cantidad de niños, pasto o cemento" class={`${input} resize-y py-3`}></textarea>
+            </label>
+            <input name="website" hidden tabindex="-1" autocomplete="off" />
+            <div class="col-span-2 min-h-[65px] w-[300px] max-w-full">
+              <Turnstile theme="light" />
+            </div>
+            <button
+              type="submit"
+              data-reserva-boton
+              class="bounce bg-rojo-texto border-noche shadow-pop col-span-2 min-h-14 cursor-pointer rounded-full border-2 px-6 text-[17px] font-extrabold text-white group-data-[state=sending]:pointer-events-none group-data-[state=sending]:opacity-75"
+            >
+              Reservar
+            </button>
+            <p data-reserva-mensaje aria-live="polite" class="text-noche-suave col-span-2 text-sm">
+              Después te escribimos por WhatsApp para confirmar con el abono de $10.000
+            </p>
+          </form>
+        </div>
+
+        <div data-paso="listo" hidden class="flex flex-col gap-3">
+          <span class="border-noche bg-verde flex size-12 items-center justify-center rounded-full border-2">
+            <Icon name="check" size={26} strokeWidth={3} />
+          </span>
+          <p class="font-display text-[26px] leading-8 font-semibold">¡Tu horario quedó reservado!</p>
+          <p data-listo-detalle class="text-noche-suave"></p>
+          <WaButton placement="reserva" size="l" message="Hola, acabo de reservar en saltabum.cl y quiero confirmar con el abono." class="text-center leading-[22px] lg:self-start">
+            Confirmar por WhatsApp
+          </WaButton>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { cargarDisponibilidad, enviarReserva, type Disponibilidad } from "@/lib/client/reservas";
+  import { BLOQUES, claveHorario, etiquetaBloque } from "@/lib/reservas";
+
+  const root = document.querySelector<HTMLElement>("[data-agenda]");
+  if (root) iniciar(root);
+
+  function iniciar(root: HTMLElement) {
+    const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
+    const gridDias = $<HTMLElement>("[data-dias]");
+    const tituloMes = $<HTMLElement>("[data-mes-titulo]");
+    const btnAnterior = $<HTMLButtonElement>("[data-mes-anterior]");
+    const btnSiguiente = $<HTMLButtonElement>("[data-mes-siguiente]");
+    const estado = $<HTMLElement>("[data-agenda-estado]");
+    const pasoDia = $<HTMLElement>('[data-paso="dia"]');
+    const pasoHorario = $<HTMLElement>('[data-paso="horario"]');
+    const pasoListo = $<HTMLElement>('[data-paso="listo"]');
+    const tituloDia = $<HTMLElement>("[data-dia-titulo]");
+    const botonesBloque = [...root.querySelectorAll<HTMLButtonElement>("[data-bloque]")];
+    const form = $<HTMLFormElement>("[data-reserva]");
+    const botonReservar = $<HTMLButtonElement>("[data-reserva-boton]");
+    const mensaje = $<HTMLElement>("[data-reserva-mensaje]");
+    const mensajeInicial = mensaje.textContent ?? "";
+
+    const fechaLarga = new Intl.DateTimeFormat("es-CL", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+    const nombreMes = new Intl.DateTimeFormat("es-CL", { month: "long", year: "numeric", timeZone: "UTC" });
+    const aFecha = (iso: string) => new Date(`${iso}T12:00:00Z`);
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+    let disp: Disponibilidad | undefined;
+    let mes = ""; // "YYYY-MM"
+    let diaElegido: string | undefined;
+    let bloqueElegido: string | undefined;
+
+    const libres = (fecha: string) => BLOQUES.filter((b) => !disp?.ocupados.has(claveHorario(fecha, b.id))).length;
+
+    function pintarMes() {
+      if (!disp) return;
+      const [y, m] = mes.split("-").map(Number);
+      const primero = new Date(Date.UTC(y, m - 1, 1, 12));
+      tituloMes.textContent = nombreMes.format(primero);
+      btnAnterior.disabled = mes <= disp.desde.slice(0, 7);
+      btnSiguiente.disabled = mes >= disp.hasta.slice(0, 7);
+
+      gridDias.replaceChildren();
+      const vacios = (primero.getUTCDay() + 6) % 7; // semana parte el lunes
+      for (let i = 0; i < vacios; i++) gridDias.append(document.createElement("span"));
+
+      const diasDelMes = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      for (let d = 1; d <= diasDelMes; d++) {
+        const fecha = iso(new Date(Date.UTC(y, m - 1, d, 12)));
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.textContent = String(d);
+        boton.dataset.fecha = fecha;
+        const fuera = fecha < disp.desde || fecha > disp.hasta;
+        const n = fuera ? 0 : libres(fecha);
+        const tipo = fuera ? "fuera" : n === 0 ? "lleno" : n === 1 ? "pocos" : "libre";
+        boton.dataset.estado = tipo;
+        boton.disabled = tipo === "fuera" || tipo === "lleno";
+        boton.setAttribute("aria-pressed", String(fecha === diaElegido));
+        const textoEstado = { fuera: "no disponible", lleno: "sin horarios", pocos: "queda 1 horario", libre: `${n} horarios libres` }[tipo];
+        boton.setAttribute("aria-label", `${fechaLarga.format(aFecha(fecha))}, ${textoEstado}`);
+        boton.className =
+          "min-h-11 cursor-pointer rounded-xl border-2 text-[15px] font-extrabold aria-pressed:bg-noche aria-pressed:text-crema aria-pressed:border-noche aria-pressed:shadow-sol disabled:cursor-not-allowed lg:min-h-13 lg:text-base " +
+          {
+            fuera: "border-transparent text-noche-suave/40",
+            lleno: "border-noche/20 bg-arena text-noche-suave line-through",
+            pocos: "border-noche bg-sol",
+            libre: "border-noche bg-verde-burbuja",
+          }[tipo];
+        boton.addEventListener("click", () => elegirDia(fecha));
+        gridDias.append(boton);
+      }
+    }
+
+    function elegirDia(fecha: string) {
+      diaElegido = fecha;
+      bloqueElegido = undefined;
+      pasoDia.hidden = true;
+      pasoListo.hidden = true;
+      pasoHorario.hidden = false;
+      form.hidden = true;
+      tituloDia.textContent = fechaLarga.format(aFecha(fecha));
+      for (const b of botonesBloque) {
+        const ocupado = disp?.ocupados.has(claveHorario(fecha, b.dataset.bloque!)) ?? false;
+        b.disabled = ocupado;
+        b.setAttribute("aria-pressed", "false");
+        b.querySelector("[data-bloque-estado]")!.textContent = ocupado ? "Ocupado" : "Libre";
+      }
+      gridDias.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.fecha === fecha)));
+    }
+
+    for (const b of botonesBloque) {
+      b.addEventListener("click", () => {
+        bloqueElegido = b.dataset.bloque;
+        botonesBloque.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        form.hidden = false;
+        botonReservar.textContent = `Reservar de ${etiquetaBloque(bloqueElegido!)}`;
+        form.querySelector<HTMLInputElement>('[name="nombre"]')?.focus();
+      });
+    }
+
+    btnAnterior.addEventListener("click", () => cambiarMes(-1));
+    btnSiguiente.addEventListener("click", () => cambiarMes(1));
+    function cambiarMes(delta: number) {
+      const [y, m] = mes.split("-").map(Number);
+      mes = iso(new Date(Date.UTC(y, m - 1 + delta, 1, 12))).slice(0, 7);
+      pintarMes();
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!diaElegido || !bloqueElegido || form.dataset.state === "sending") return;
+      form.dataset.state = "sending";
+      botonReservar.disabled = true;
+      mensaje.textContent = "Reservando…";
+      const data = new FormData(form);
+      const txt = (k: string) => (typeof data.get(k) === "string" ? (data.get(k) as string) : undefined);
+      const r = await enviarReserva({
+        fecha: diaElegido,
+        bloque: bloqueElegido as never,
+        nombre: txt("nombre") ?? "",
+        telefono: txt("telefono") ?? "",
+        comuna: txt("comuna") ?? "",
+        direccion: txt("direccion"),
+        mensaje: txt("mensaje"),
+        turnstile_token: txt("cf-turnstile-response"),
+        website: txt("website"),
+      });
+      form.dataset.state = "idle";
+      botonReservar.disabled = false;
+      window.turnstile?.reset();
+
+      if (r.ok) {
+        disp?.ocupados.add(claveHorario(diaElegido, bloqueElegido));
+        root.querySelector("[data-listo-detalle]")!.textContent =
+          `${fechaLarga.format(aFecha(diaElegido))}, de ${etiquetaBloque(bloqueElegido)}, te escribimos por WhatsApp para confirmar con el abono de $10.000`;
+        pasoHorario.hidden = true;
+        pasoListo.hidden = false;
+        form.reset();
+        mensaje.textContent = mensajeInicial;
+        pintarMes();
+        return;
+      }
+      if (r.error === "ocupado") {
+        mensaje.textContent = "Ese horario se acaba de tomar, elige otro";
+        await recargar();
+        elegirDia(diaElegido);
+        return;
+      }
+      mensaje.textContent =
+        r.error === "captcha"
+          ? "No pudimos verificar que no eres un robot, inténtalo de nuevo"
+          : r.error === "limite"
+            ? "Ya hiciste varias reservas hoy, escríbenos por WhatsApp para agendar otra"
+            : "No pudimos reservar, inténtalo de nuevo o escríbenos por WhatsApp";
+    });
+
+    async function recargar() {
+      try {
+        disp = await cargarDisponibilidad();
+        mes ||= disp.desde.slice(0, 7);
+        estado.textContent = "";
+        estado.hidden = true;
+        pintarMes();
+      } catch {
+        estado.textContent = "No pudimos cargar la disponibilidad, escríbenos por WhatsApp";
+      }
+    }
+    void recargar();
+  }
+</script>

@@ -1,30 +1,56 @@
 ---
-// «¿Cabe en mi patio?»: esquema visto desde arriba, a escala (7,5 m dentro de 8,5 m).
+// «¿Cabe en mi patio?»: medidas reales y modelo 3D del Megatobogán a escala 1:1.
+// En el celular, «Ver en tu patio» lo pone en el terreno con la cámara (realidad aumentada:
+// WebXR / Scene Viewer en Android y Quick Look en iPhone). El visor (model-viewer) se descarga
+// recién cuando la sección se acerca a la pantalla.
+import { getImage } from "astro:assets";
+import portada from "../assets/megatobogan-3d-portada.jpg";
 import { PRODUCTO } from "../data";
 import Icon from "../components/Icon.astro";
-import ImagenPendiente from "../components/ImagenPendiente.astro";
 import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
 
+const poster = await getImage({ src: portada, width: 1200, format: "webp", quality: 80 });
+
 const MENSAJE = `Hola, quiero saber si el ${PRODUCTO.nombre} cabe en mi patio. Les mando una foto. Vengo de saltabum.cl`;
+const MEDIDAS = [
+  { icon: "despacho", label: "Base", valor: PRODUCTO.base },
+  { icon: "alto", label: "Alto", valor: PRODUCTO.alto },
+  { icon: "capacidad", label: "Espacio libre", valor: PRODUCTO.espacioLibre },
+  { icon: "electricidad", label: "Enchufe", valor: "A menos de 15 m" },
+] as const;
 const REQUISITOS = [
-  `Pasto o piso firme y parejo, sin ramas ni techos bajo los ${PRODUCTO.alto}.`,
-  "Un enchufe a menos de 15 m. Consume menos de $2.000 por evento.",
-  "Un acceso por donde entrar con el juego enrollado.",
+  `Pasto o piso firme y parejo, sin ramas ni techos bajo los ${PRODUCTO.alto}`,
+  "Un enchufe a menos de 15 m, consume menos de $2.000 por evento",
+  "Un acceso por donde entrar con el juego enrollado",
 ];
 ---
 
 <section id="patio" aria-labelledby="patio-titulo" class="border-noche bg-celeste border-b-2">
-  <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:py-20">
-    <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-6">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-6 px-4 py-10 lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:py-20">
+    <div class="flex flex-col gap-5 lg:min-w-0 lg:flex-1 lg:gap-6">
       <div>
         <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Medidas</p>
         <h2 id="patio-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
           ¿Cabe en mi patio?
         </h2>
-        <p class="mt-2 lg:mt-3 lg:text-lg">Mide el espacio despejado. Si tienes {PRODUCTO.espacioLibre} libres, cabe.</p>
+        <p class="mt-2 lg:mt-3 lg:text-lg">Gíralo en 3D o ponlo en tu patio con la cámara del celular, a tamaño real</p>
       </div>
 
-      <ul class="order-2 flex flex-col gap-2.5 font-semibold lg:order-none">
+      <dl class="grid grid-cols-2 gap-2.5">
+        {
+          MEDIDAS.map((m) => (
+            <div class="border-noche bg-blanco flex items-center gap-3 rounded-2xl border-2 px-3.5 py-3">
+              <Icon name={m.icon} size={26} class="shrink-0" />
+              <div>
+                <dt class="text-noche-suave text-xs font-extrabold tracking-[1px] uppercase">{m.label}</dt>
+                <dd class="font-display text-xl leading-6 font-semibold">{m.valor}</dd>
+              </div>
+            </div>
+          ))
+        }
+      </dl>
+
+      <ul class="flex flex-col gap-2.5 font-semibold">
         {
           REQUISITOS.map((texto) => (
             <li class="flex items-start gap-2.5">
@@ -37,54 +63,85 @@ const REQUISITOS = [
         }
       </ul>
 
-      <ImagenPendiente
-        n={5}
-        ratio="3:2"
-        texto="El juego en un patio de casa mediano, con la casa de fondo como escala"
-        class="bg-blanco order-3 aspect-[3/2] rounded-[20px] lg:order-none"
-      />
-
       <WhatsAppLink
         placement="patio"
         message={MENSAJE}
-        class="bounce border-noche bg-blanco text-noche shadow-pop order-4 inline-flex min-h-13 items-center justify-center rounded-full border-2 px-5 text-center leading-[21px] font-extrabold no-underline lg:order-none lg:self-start"
+        class="bounce border-noche bg-blanco text-noche shadow-pop inline-flex min-h-13 items-center justify-center rounded-full border-2 px-5 text-center leading-[21px] font-extrabold no-underline lg:self-start"
       >
         ¿Dudas? Mándanos una foto de tu patio
       </WhatsAppLink>
     </div>
 
-    <div class="order-1 lg:order-none lg:min-w-0 lg:flex-1">
-      <div
-        role="img"
-        aria-label={`Esquema visto desde arriba: el juego mide ${PRODUCTO.base} y necesita ${PRODUCTO.espacioLibre} de espacio libre`}
-        class="border-noche bg-blanco mx-auto flex max-w-[520px] flex-col gap-3 rounded-[28px] border-2 p-3.5 lg:p-5 lg:shadow-pop-l"
-      >
-        <div class="border-noche bg-crema flex aspect-square rounded-[20px] border-2 border-dashed p-[5.9%]">
-          <div class="border-noche bg-sol flex flex-1 flex-col overflow-hidden rounded-2xl border-2">
-            <div class="border-noche bg-verde h-[14%] border-b-2"></div>
-            <div class="flex flex-1 flex-col items-center justify-center gap-0.5 p-2 text-center">
-              <span class="text-xs font-extrabold tracking-[1px] uppercase">Megatobogán</span>
-              <span class="font-display text-[34px] leading-[38px] font-bold lg:text-5xl lg:leading-[52px]">{PRODUCTO.base}</span>
-              <span class="text-sm font-bold lg:text-base">{PRODUCTO.alto} de alto</span>
-            </div>
-            <div class="border-noche grid h-[22%] grid-cols-3 border-t-2">
-              <div class="border-noche bg-rojo border-r-2"></div>
-              <div class="border-noche flex items-center justify-center border-r-2 text-xs font-extrabold">Tobogán</div>
-              <div class="bg-azul"></div>
-            </div>
-          </div>
-        </div>
-        <ul class="flex flex-col gap-1.5 text-sm leading-5">
-          <li class="flex items-center gap-2">
-            <span aria-hidden="true" class="border-noche bg-crema h-3.5 w-5.5 shrink-0 rounded border-2 border-dashed"></span>
-            <span>Espacio libre necesario: <strong class="font-extrabold">{PRODUCTO.espacioLibre}</strong></span>
-          </li>
-          <li class="flex items-center gap-2">
-            <span aria-hidden="true" class="border-noche bg-sol h-3.5 w-5.5 shrink-0 rounded border-2"></span>
-            <span>Juego inflado: <strong class="font-extrabold">{PRODUCTO.base}</strong></span>
-          </li>
-        </ul>
+    <div class="lg:min-w-0 lg:flex-1">
+      <div class="border-noche bg-blanco shadow-pop-l relative overflow-hidden rounded-[28px] border-2">
+        <model-viewer
+          data-modelo-3d
+          src="/modelos/megatobogan.glb"
+          poster={poster.src}
+          alt={`Modelo 3D del ${PRODUCTO.nombre} a tamaño real: ${PRODUCTO.base} de base y ${PRODUCTO.alto} de alto`}
+          loading="lazy"
+          camera-controls
+          touch-action="pan-y"
+          auto-rotate
+          auto-rotate-delay="1500"
+          rotation-per-second="18deg"
+          interaction-prompt="auto"
+          shadow-intensity="1"
+          exposure="1.05"
+          camera-orbit="35deg 70deg 100%"
+          ar
+          ar-modes="webxr scene-viewer quick-look"
+          ar-scale="fixed"
+          ar-placement="floor"
+          class="block h-[380px] w-full bg-[radial-gradient(circle_at_50%_40%,#fff6ea_0%,#f3e6d3_100%)] sm:h-[460px] lg:h-[540px]"
+        >
+          <button
+            slot="ar-button"
+            type="button"
+            class="bounce bg-verde border-noche shadow-pop absolute bottom-4 left-1/2 inline-flex min-h-13 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full border-2 px-6 font-extrabold whitespace-nowrap"
+          >
+            <Icon name="despacho" size={22} />
+            Ver en tu patio
+          </button>
+        </model-viewer>
+        <p class="bg-crema/90 text-noche-suave pointer-events-none absolute top-3 left-3 rounded-full px-3 py-1 text-xs font-bold">
+          Arrastra para girar · tamaño real
+        </p>
       </div>
+      <p class="mt-3 text-sm">
+        En el celular, toca «Ver en tu patio», apunta al suelo y el Megatobogán aparece a tamaño real para que veas si cabe
+      </p>
     </div>
   </div>
 </section>
+
+<script>
+  // Carga el visor 3D solo cuando la sección está por aparecer en pantalla.
+  const visor = document.querySelector("[data-modelo-3d]");
+  if (visor) {
+    let cargado = false;
+    const cargar = () => {
+      if (cargado) return;
+      cargado = true;
+      window.removeEventListener("scroll", alAcercarse);
+      void import("@google/model-viewer");
+    };
+    // Respaldo por si el observador no se dispara: revisa la posición al hacer scroll.
+    const alAcercarse = () => {
+      if (visor.getBoundingClientRect().top < innerHeight + 400) cargar();
+    };
+    window.addEventListener("scroll", alAcercarse, { passive: true });
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver(
+        (entradas) => {
+          if (entradas.some((e) => e.isIntersecting)) {
+            io.disconnect();
+            cargar();
+          }
+        },
+        { rootMargin: "400px" },
+      );
+      io.observe(visor);
+    } else cargar();
+  }
+</script>

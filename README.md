@@ -70,6 +70,7 @@ npx wrangler secret put TURNSTILE_SECRET_KEY
 npx wrangler secret put META_CAPI_ACCESS_TOKEN
 npx wrangler secret put CRM_WEBHOOK_URL
 npx wrangler secret put CRM_WEBHOOK_SECRET
+npx wrangler secret put ADMIN_TOKEN   # contraseña del panel de reservas (/admin)
 ```
 
 En producción, si falta `TURNSTILE_SECRET_KEY` o `CRM_WEBHOOK_URL`, `/api/lead` responde 503
@@ -105,6 +106,17 @@ npm run deploy
 
 El dominio `saltabum.cl` y `www.saltabum.cl` se asocian solos al Worker (ver `routes` en `wrangler.jsonc`).
 Recomendado: regla de redirección en Cloudflare `www.saltabum.cl/*` → `https://saltabum.cl/$1` (301).
+
+## Calendario de reservas
+
+- La sección «Elige tu fecha y horario» (`src/design/sections/Agenda.astro`) muestra los horarios libres y reserva
+  vía `/api/reservas`. Los bloques (10:00–13:00, 13:30–16:30, 17:00–20:00) y el rango de días están en
+  `src/lib/reservas.ts`. Nunca se puede reservar para el mismo día.
+- Las reservas se guardan en Cloudflare D1 (binding `DB`, base `saltabum-reservas`). Wrangler la crea sola en el
+  primer deploy y el Worker crea la tabla al primer uso. La clave primaria (fecha + bloque) impide reservas dobles.
+- Antispam: Turnstile si está configurado y, siempre, máximo 3 reservas por conexión cada 24 horas.
+- Panel: `https://saltabum.cl/admin` (contraseña = secreto `ADMIN_TOKEN`). Ahí se ven las reservas con sus datos,
+  se bloquean días u horarios y se cancelan reservas.
 
 ## Contrato del webhook al CRM
 

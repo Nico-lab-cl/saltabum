@@ -9,5 +9,8 @@
     { "pattern": "saltabum.cl", "custom_domain": true },
     { "pattern": "www.saltabum.cl", "custom_domain": true },
   ],
+  // Base de datos de reservas del calendario. Sin database_id: Wrangler la crea sola en el primer deploy
+  // (y la tabla la crea el Worker la primera vez que la usa). Ver src/lib/server/reservas-db.ts.
+  "d1_databases": [{ "binding": "DB", "database_name": "saltabum-reservas" }],
   // Secretos (NO van aquí): ver README → "Secretos".
 }
