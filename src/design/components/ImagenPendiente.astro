@@ -1,6 +1,5 @@
 ---
 // Espacio para una imagen generada con IA que aún no está producida (lista en el brief, #1 a #10).
-// Al reemplazarla por la imagen final, mantener la etiqueta «Imagen referencial» en chico.
 interface Props {
   n: number;
   ratio: string;
@@ -20,5 +19,4 @@ const { n, ratio, texto, class: className } = Astro.props;
 >
   <span class="bg-noche text-crema rounded-full px-3 py-0.5 text-xs font-extrabold tracking-[1px]">IMG {n} · {ratio}</span>
   <span class="max-w-[320px] leading-[21px] font-extrabold">{texto}</span>
-  <span class="text-noche-suave text-[13px] leading-[18px]">Imagen referencial</span>
 </div>

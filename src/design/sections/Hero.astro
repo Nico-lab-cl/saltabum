@@ -4,11 +4,11 @@
 import { getImage } from "astro:assets";
 import fondo from "../assets/hero-megatobogan.jpg";
 import fondoMovil from "../assets/hero-megatobogan-movil.jpg";
-import { DESDE, PRODUCTO } from "../data";
+import { DESDE, DESDE_HORAS, PRODUCTO } from "../data";
 import WaButton from "../components/WaButton.astro";
 
 const ANCHOS = [1024, 1440, 1920, 2560, 3840];
-const ANCHOS_MOVIL = [480, 720, 1080];
+const ANCHOS_MOVIL = [480, 720, 1000];
 const [avif, webp, avifMovil, webpMovil] = await Promise.all([
   getImage({ src: fondo, widths: ANCHOS, format: "avif", quality: 55 }),
   getImage({ src: fondo, widths: ANCHOS, format: "webp", quality: 72 }),
@@ -26,9 +26,9 @@ const [avif, webp, avifMovil, webpMovil] = await Promise.all([
       src={webpMovil.src}
       srcset={webpMovil.srcSet.attribute}
       sizes="100vw"
-      width="1080"
-      height="1920"
-      alt={`${PRODUCTO.nombre} instalado sobre pasto, con niños tirándose por el tobogán`}
+      width="1000"
+      height="1440"
+      alt={`${PRODUCTO.nombre} instalado sobre pasto, con niños bajando por el tobogán, entrando al túnel y saltando`}
       loading="eager"
       fetchpriority="high"
       decoding="async"
@@ -47,7 +47,7 @@ const [avif, webp, avifMovil, webpMovil] = await Promise.all([
         ¡A <span class="text-sol">saltar</span> se ha dicho!
       </h1>
       <p class="text-lg leading-[26px] lg:text-[21px] lg:leading-[31px]">
-        Arriendo de juegos inflables <strong class="font-extrabold">desde {DESDE} por 4 horas</strong>, con montaje, anclaje y
+        Arriendo de juegos inflables <strong class="font-extrabold">desde {DESDE} por {DESDE_HORAS}</strong>, con montaje, anclaje y
         retiro incluidos. Tú organizas el evento; nosotros llevamos la diversión.
       </p>
 
@@ -83,11 +83,8 @@ const [avif, webp, avifMovil, webpMovil] = await Promise.all([
   >
     <span class="text-sm leading-[15px] font-extrabold">desde</span>
     <span class="font-display text-[28px] leading-8 font-bold">{DESDE}</span>
-    <span class="text-sm leading-[15px] font-extrabold">4 horas</span>
+    <span class="text-sm leading-[15px] font-extrabold">{DESDE_HORAS}</span>
   </div>
 
-  <span class="bg-crema/90 text-noche-suave absolute bottom-3 left-4 rounded-full px-2.5 py-0.5 text-[11px] font-bold lg:left-10">
-    Imagen referencial
-  </span>
 </section>
 

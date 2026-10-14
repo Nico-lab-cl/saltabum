@@ -9,8 +9,9 @@ export const PRODUCTO = {
   precio: "$[XX.XXX]",
 };
 
-// Precio base de los inflables (bloque de 4 horas).
+// Precio base de los inflables y su bloque de horas.
 export const DESDE = "$40.000";
+export const DESDE_HORAS = "3 horas";
 
 export type Comuna = {
   nombre: string;

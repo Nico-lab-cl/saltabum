@@ -6,7 +6,7 @@ export const SITE = {
   lang: "es-CL",
   defaultTitle: "Saltabum · Arriendo de juegos inflables en Valparaíso",
   defaultDescription:
-    "Arriendo de juegos inflables en la Región de Valparaíso desde $40.000 por 4 horas, con montaje, anclaje y retiro. Cumpleaños, empresas, colegios y municipios.",
+    "Arriendo de juegos inflables en la Región de Valparaíso desde $40.000 por 3 horas, con montaje, anclaje y retiro. Cumpleaños, empresas, colegios y municipios.",
   defaultOgImage: "/og-default.jpg",
   // Mensaje prellenado al abrir WhatsApp desde el sitio
   whatsappDefaultMessage: "¡Hola Saltabum! Quiero más información.",
