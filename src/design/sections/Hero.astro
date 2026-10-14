@@ -2,8 +2,8 @@
 // Hero con foto de fondo a sangre del Megatobogán sobre pasto (imagen referencial, 3840 px). Recorte horizontal en desktop y vertical en
 // mobile, servidos en AVIF con respaldo WebP y en varios anchos para que cada pantalla baje solo lo que necesita.
 import { getImage } from "astro:assets";
-import fondo from "../assets/hero-tobogan.jpg";
-import fondoMovil from "../assets/hero-tobogan-movil.jpg";
+import fondo from "../assets/hero-tobogan-hd.jpg";
+import fondoMovil from "../assets/hero-tobogan-hd-movil.jpg";
 import { DESDE, DESDE_HORAS, PRODUCTO } from "../data";
 import WaButton from "../components/WaButton.astro";
 
@@ -11,9 +11,9 @@ import WaButton from "../components/WaButton.astro";
 const ANCHOS = [1280, 1920, 2560, 3200, 3840];
 const ANCHOS_MOVIL = [640, 960, 1500];
 const [avif, webp, avifMovil, webpMovil] = await Promise.all([
-  getImage({ src: fondo, widths: ANCHOS, format: "avif", quality: 80 }),
+  getImage({ src: fondo, widths: ANCHOS, format: "avif", quality: 85 }),
   getImage({ src: fondo, widths: ANCHOS, format: "webp", quality: 90 }),
-  getImage({ src: fondoMovil, widths: ANCHOS_MOVIL, format: "avif", quality: 80 }),
+  getImage({ src: fondoMovil, widths: ANCHOS_MOVIL, format: "avif", quality: 85 }),
   getImage({ src: fondoMovil, widths: ANCHOS_MOVIL, format: "webp", quality: 90 }),
 ]);
 ---
