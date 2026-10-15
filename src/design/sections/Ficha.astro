@@ -2,32 +2,22 @@
 // Ficha del Megatobogán: galería (las miniaturas cambian la foto grande), datos, precio y botón de WhatsApp.
 import { getImage } from "astro:assets";
 import type { ImageMetadata } from "astro";
-import fotoReal from "../assets/megatobogan-arcoiris.webp";
 import realFrente from "../assets/megatobogan-real-frente.jpg";
 import realTobogan from "../assets/megatobogan-real-tobogan.jpg";
 import realTrasera from "../assets/megatobogan-real-trasera.jpg";
 import realCostado from "../assets/megatobogan-real-costado.jpg";
-import fotoFrente from "../assets/megatobogan-frente.jpg";
-import fotoFrenteIzq from "../assets/megatobogan-frente-izq.jpg";
-import fotoDerecha from "../assets/megatobogan-derecha.jpg";
-import fotoLateral from "../assets/megatobogan-lateral.jpg";
 import { DESDE_HORAS, HORA_EXTRA, PRECIO_NORMAL, PRODUCTO } from "../data";
 import Icon from "../components/Icon.astro";
 import WaButton from "../components/WaButton.astro";
 import { RUTAS } from "../seo";
 
-// Fotos reales primero. Son verticales, así que `pos` elige qué parte se ve en el marco 3:2.
+// Solo fotos reales del juego. Son verticales, así que `pos` elige qué parte se ve en el marco 3:2.
 type Foto = { src: ImageMetadata; alt: string; real?: boolean; pos?: string };
 const FOTOS: Foto[] = [
   { src: realFrente, alt: `Foto real del ${PRODUCTO.nombre} de frente, con la pista del tobogán, el arco verde y los túneles`, real: true, pos: "50% 30%" },
   { src: realTobogan, alt: `Foto real del costado del ${PRODUCTO.nombre} con las dos pistas de tobogán y el túnel redondo`, real: true, pos: "50% 40%" },
   { src: realTrasera, alt: `Foto real de la parte trasera del ${PRODUCTO.nombre} con la entrada para trepar`, real: true, pos: "50% 48%" },
   { src: realCostado, alt: `Foto real del ${PRODUCTO.nombre} armado en la calle, visto de lado con su soplador`, real: true, pos: "50% 47%" },
-  { src: fotoFrenteIzq, alt: `${PRODUCTO.nombre} visto de frente y a la izquierda sobre pasto, con sus dos pistas de tobogán y túneles` },
-  { src: fotoFrente, alt: `Vista frontal del ${PRODUCTO.nombre} con las dos pistas de tobogán, los túneles redondos y los arcos verdes` },
-  { src: fotoDerecha, alt: `Costado derecho del ${PRODUCTO.nombre} con el bloque de techo verde y la entrada para trepar` },
-  { src: fotoLateral, alt: `Vista lateral del ${PRODUCTO.nombre} con la baranda azul y el muro con túnel` },
-  { src: fotoReal, alt: `Foto real del ${PRODUCTO.nombre} armado`, real: true },
 ];
 const GALERIA = await Promise.all(
   FOTOS.map(async (f) => ({
@@ -82,7 +72,7 @@ const INCLUYE = [
             Foto real · nuestro juego
           </span>
         </div>
-        <ul class="grid grid-cols-5 gap-2 lg:gap-3" aria-label="Fotos del Megatobogán">
+        <ul class="grid grid-cols-4 gap-2 lg:gap-3" aria-label="Fotos del Megatobogán">
           {
             GALERIA.map((g, i) => (
               <li>
