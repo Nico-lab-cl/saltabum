@@ -24,7 +24,7 @@ const EJEMPLOS = [
   { caso: "Cumpleaños de 4 horas en Quilpué", detalle: `Arriendo base, 1 hora adicional y despacho $5.000`, total: base + extra + 5000 },
   { caso: "Evento de 5 horas en Valparaíso", detalle: "Arriendo base, 2 horas adicionales, despacho gratis", total: base + extra * 2 },
 ];
-const INCLUYE = ["Despacho según comuna", "Montaje en 10 a 15 minutos", "Anclaje al piso con estacas o sacos", "Inflable sanitizado", "Retiro al terminar"];
+const INCLUYE = ["Despacho según comuna", "Montaje en 30 minutos", "Anclaje al piso con estacas o sacos", "Inflable sanitizado", "Retiro al terminar"];
 ---
 
 <PaginaSeo migas={migas}>
@@ -43,7 +43,7 @@ const INCLUYE = ["Despacho según comuna", "Montaje en 10 a 15 minutos", "Anclaj
           <tr><th class="p-4">Concepto</th><th class="p-4">Valor</th><th class="p-4">Detalle</th></tr>
         </thead>
         <tbody class="bg-blanco">
-          <tr class="border-noche/10 border-t"><td class="p-4 font-bold">{PRODUCTO.nombre}</td><td class="p-4"><span class="font-display block text-2xl font-bold">{DESDE}</span><span class="text-noche-suave text-sm">Precio normal <s><span class="sr-only">antes </span>{PRECIO_NORMAL}</s></span></td><td class="p-4">Bloque de {DESDE_HORAS}, precio de promoción</td></tr>
+          <tr class="border-noche/10 border-t"><td class="p-4 font-bold">{PRODUCTO.nombre}</td><td class="p-4"><span class="font-display block text-2xl font-bold">{DESDE}</span><span class="text-noche-suave text-sm">Precio normal <s>{PRECIO_NORMAL}</s></span></td><td class="p-4">Bloque de {DESDE_HORAS}, precio de promoción</td></tr>
           <tr class="border-noche/10 border-t"><td class="p-4 font-bold">Hora adicional</td><td class="font-display p-4 text-2xl font-bold">{HORA_EXTRA}</td><td class="p-4">Por cada hora extra</td></tr>
           <tr class="border-noche/10 border-t"><td class="p-4 font-bold">Abono para reservar</td><td class="font-display p-4 text-2xl font-bold">$10.000</td><td class="p-4">Se descuenta del total</td></tr>
         </tbody>

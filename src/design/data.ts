@@ -12,7 +12,7 @@ export const PRODUCTO = {
 // Precio base de los inflables y su bloque de horas. Hoy rige la promoción ($69.990) sobre el precio normal.
 export const DESDE = "$69.990";
 /** Precio normal por el mismo bloque, se muestra tachado junto a la promoción. */
-export const PRECIO_NORMAL = "$70.000";
+export const PRECIO_NORMAL = "$100.000";
 export const DESDE_HORAS = "3 horas";
 /** Valor de cada hora adicional sobre el bloque base. */
 export const HORA_EXTRA = "$10.000";
@@ -95,7 +95,7 @@ export const FAQS = [
     q: "¿Cómo se ancla?",
     a: "[Estacas en pasto o sacos de lastre en piso duro]. Nunca dejamos el juego sin anclar.",
   },
-  { q: "¿Cuánto demora el montaje?", a: "Entre 10 y 15 minutos. Llegamos antes de la hora de inicio." },
+  { q: "¿Cuánto demora el montaje?", a: "Unos 30 minutos. Llegamos antes de la hora de inicio." },
   { q: "¿Emiten factura?", a: "Sí, para municipalidades, juntas de vecinos, colegios, empresas y particulares." },
 ];
 

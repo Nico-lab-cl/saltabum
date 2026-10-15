@@ -33,18 +33,33 @@ const DATOS = [
   { label: "Alto", valor: PRODUCTO.alto },
   { label: "Espacio libre", valor: PRODUCTO.espacioLibre },
   { label: "Enchufe", valor: "A menos de 15 m" },
-  { label: "Montaje", valor: "10 a 15 minutos" },
+  { label: "Montaje", valor: "30 minutos" },
 ];
 const INCLUYE = [
   "Despacho gratis en Valparaíso y Viña del Mar",
-  "Montaje y anclaje al piso",
+  "Montaje incluido",
   "Retiro al terminar el arriendo",
   `Hora adicional ${HORA_EXTRA}`,
   "Reservas con $10.000 de abono",
 ];
 ---
 
-<section id="megatobogan" aria-labelledby="ficha-titulo" class="border-noche bg-blanco border-b-2">
+<section id="megatobogan" aria-labelledby="ficha-titulo" class="border-noche bg-blanco relative isolate overflow-hidden border-b-2" data-fondo-vivo>
+  <!-- Fondo vivo: formas de la marca que flotan lento y se corren un poco con el mouse. Decorativo. -->
+  <div aria-hidden="true" class="fondo pointer-events-none absolute inset-0 -z-10">
+    <span class="capa" style="--d: 18px; left: -90px; top: -70px"><span class="forma disco bg-sol" style="--t: 22s; --dx: 26px; --dy: 18px; --s: 280px"></span></span>
+    <span class="capa" style="--d: -24px; right: -70px; top: 70px"><span class="forma pildora bg-celeste" style="--t: 26s; --dx: -30px; --dy: 22px; --r: -12deg; --w: 330px; --h: 120px"></span></span>
+    <span class="capa max-lg:hidden" style="--d: 30px; left: 41%; top: 9%"><span class="forma disco bg-morado" style="--t: 17s; --dx: 18px; --dy: -22px; --s: 64px"></span></span>
+    <span class="capa" style="--d: -16px; left: 3%; bottom: 7%"><span class="forma disco bg-rosa" style="--t: 20s; --dx: 22px; --dy: -26px; --s: 150px"></span></span>
+    <span class="capa max-lg:hidden" style="--d: 22px; left: 47%; top: 58%"><span class="forma pildora bg-verde" style="--t: 24s; --dx: -20px; --dy: 20px; --r: 18deg; --w: 210px; --h: 74px"></span></span>
+    <span class="capa" style="--d: -28px; right: 4%; bottom: 5%"><span class="forma anillo border-azul" style="--t: 28s; --dx: -24px; --dy: -18px; --s: 190px"></span></span>
+    <span class="capa max-lg:hidden" style="--d: 14px; right: 30%; bottom: 14%"><span class="forma disco bg-naranja" style="--t: 15s; --dx: 16px; --dy: 16px; --s: 46px"></span></span>
+    <span class="capa" style="--d: 20px; left: 30%; bottom: -8px">
+      <svg class="forma" style="--t: 30s; --dx: 40px; --dy: 0px" width="300" height="34" viewBox="0 0 300 34">
+        <path class="fill-sol" d="M0 34 A25 25 0 0 1 50 34 A25 25 0 0 1 100 34 A25 25 0 0 1 150 34 A25 25 0 0 1 200 34 A25 25 0 0 1 250 34 A25 25 0 0 1 300 34 Z"></path>
+      </svg>
+    </span>
+  </div>
   <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:flex-row lg:items-start lg:gap-14 lg:px-10 lg:py-20">
     <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-3">
       <div class="lg:hidden">
@@ -121,7 +136,7 @@ const INCLUYE = [
         <div>
           <p class="text-[13px] leading-[18px] font-extrabold tracking-[1px] uppercase">Promoción · arriendo por {DESDE_HORAS}</p>
           <p class="font-display mt-0.5 text-[56px] leading-[60px] font-bold lg:text-[68px] lg:leading-[72px]">{PRODUCTO.precio}</p>
-          <p class="mt-1 font-semibold">Precio normal <s class="font-extrabold"><span class="sr-only">antes </span>{PRECIO_NORMAL}</s></p>
+          <p class="mt-1 font-semibold">Precio normal <s class="font-extrabold">{PRECIO_NORMAL}</s></p>
         </div>
         <ul class="flex flex-col gap-2 font-semibold">
           {
@@ -143,6 +158,53 @@ const INCLUYE = [
     </div>
   </div>
 </section>
+
+<style>
+  /* Formas planas en tonos suaves para que no compitan con las fotos ni con el texto. */
+  .fondo { opacity: 0.32; }
+  .capa {
+    position: absolute;
+    transform: translate3d(calc(var(--px, 0) * var(--d)), calc(var(--py, 0) * var(--d)), 0);
+    transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .forma {
+    display: block;
+    animation: flotar var(--t, 20s) ease-in-out infinite alternate;
+  }
+  .disco { width: var(--s); height: var(--s); border-radius: 9999px; }
+  .anillo { width: var(--s); height: var(--s); border-radius: 9999px; border-width: 22px; }
+  .pildora { width: var(--w); height: var(--h); border-radius: 9999px; rotate: var(--r, 0deg); }
+  [data-quieto] .forma { animation-play-state: paused; }
+  @keyframes flotar {
+    to { transform: translate3d(var(--dx, 0), var(--dy, 0), 0) scale(1.04, 0.97); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .forma { animation: none; }
+    .capa { transition: none; transform: none; }
+  }
+</style>
+
+<script>
+  // Fondo vivo: las formas siguen un poco al mouse y se detienen fuera de pantalla.
+  document.querySelectorAll<HTMLElement>("[data-fondo-vivo]").forEach((seccion) => {
+    new IntersectionObserver(([e]) => seccion.toggleAttribute("data-quieto", !e.isIntersecting)).observe(seccion);
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || !matchMedia("(pointer: fine)").matches) return;
+    let pendiente = 0;
+    seccion.addEventListener("pointermove", (ev) => {
+      if (pendiente) return;
+      pendiente = requestAnimationFrame(() => {
+        const r = seccion.getBoundingClientRect();
+        seccion.style.setProperty("--px", ((ev.clientX - r.left) / r.width - 0.5).toFixed(3));
+        seccion.style.setProperty("--py", ((ev.clientY - r.top) / r.height - 0.5).toFixed(3));
+        pendiente = 0;
+      });
+    });
+    seccion.addEventListener("pointerleave", () => {
+      seccion.style.setProperty("--px", "0");
+      seccion.style.setProperty("--py", "0");
+    });
+  });
+</script>
 
 <script>
   // Galería: la miniatura elegida pasa a la foto grande.

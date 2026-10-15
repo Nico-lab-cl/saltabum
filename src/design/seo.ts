@@ -52,7 +52,7 @@ export const COMUNAS_SEO: ComunaSeo[] = [
     despachoDetalle: "Despacho a Quilpué por $5.000, con montaje, anclaje y retiro incluidos",
     sectores: ["El Belloto", "Paso Hondo", "Los Pinos", "Valencia", "Belloto Norte", "Centro de Quilpué"],
     intro:
-      "Llevamos el Megatobogán Arcoíris a cumpleaños, colegios y eventos en todo Quilpué. Llegamos, lo montamos en 10 a 15 minutos, lo anclamos al piso y lo retiramos al terminar",
+      "Llevamos el Megatobogán Arcoíris a cumpleaños, colegios y eventos en todo Quilpué. Llegamos, lo montamos en 30 minutos, lo anclamos al piso y lo retiramos al terminar",
     patios:
       "Muchos patios de Quilpué tienen pasto y buen espacio, ideal para un inflable grande. Si el patio es de cemento, lo anclamos con sacos de lastre",
     preguntas: [
@@ -188,7 +188,7 @@ export const PREGUNTAS_FRECUENTES: { tema: string; preguntas: Pregunta[] }[] = [
     preguntas: [
       { q: "¿Los juegos inflables se pueden volar con el viento?", a: "Un inflable bien anclado no se vuela. Siempre lo fijamos al piso con estacas en pasto o sacos de lastre en cemento, y si el viento sube a un nivel peligroso lo desinflamos." },
       { q: "¿Qué pasa si llueve?", a: "Reprogramamos a otra fecha disponible sin perder el abono. Avísanos apenas veas el pronóstico." },
-      { q: "¿Cuánto demora el montaje?", a: "Entre 10 y 15 minutos. Llegamos antes de la hora de inicio." },
+      { q: "¿Cuánto demora el montaje?", a: "Unos 30 minutos. Llegamos antes de la hora de inicio." },
       { q: "¿Los juegos están limpios?", a: "Sí, limpiamos y sanitizamos el inflable antes de cada arriendo." },
       { q: "¿Se necesita un adulto supervisando?", a: "Sí, siempre debe haber un adulto a cargo mientras los niños juegan. Te explicamos las reglas de uso al montar." },
     ],
