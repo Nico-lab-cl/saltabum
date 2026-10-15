@@ -1,6 +1,6 @@
 ---
 // /precios-arriendo-juegos-inflables/ — pillar de precios: arriendo, hora adicional, despacho y ejemplos de total.
-import { COMUNAS, DESDE, DESDE_HORAS, HORA_EXTRA, PRODUCTO } from "../data";
+import { COMUNAS, DESDE, DESDE_HORAS, HORA_EXTRA, PRECIO_NORMAL, PRODUCTO } from "../data";
 import { RUTAS, type Pregunta } from "../seo";
 import CtaFinal from "../components/CtaFinal.astro";
 import HeroInterior from "../components/HeroInterior.astro";
@@ -43,7 +43,7 @@ const INCLUYE = ["Despacho según comuna", "Montaje en 10 a 15 minutos", "Anclaj
           <tr><th class="p-4">Concepto</th><th class="p-4">Valor</th><th class="p-4">Detalle</th></tr>
         </thead>
         <tbody class="bg-blanco">
-          <tr class="border-noche/10 border-t"><td class="p-4 font-bold">{PRODUCTO.nombre}</td><td class="font-display p-4 text-2xl font-bold">{DESDE}</td><td class="p-4">Bloque de {DESDE_HORAS}</td></tr>
+          <tr class="border-noche/10 border-t"><td class="p-4 font-bold">{PRODUCTO.nombre}</td><td class="p-4"><span class="font-display block text-2xl font-bold">{DESDE}</span><span class="text-noche-suave text-sm">Precio normal <s><span class="sr-only">antes </span>{PRECIO_NORMAL}</s></span></td><td class="p-4">Bloque de {DESDE_HORAS}, precio de promoción</td></tr>
           <tr class="border-noche/10 border-t"><td class="p-4 font-bold">Hora adicional</td><td class="font-display p-4 text-2xl font-bold">{HORA_EXTRA}</td><td class="p-4">Por cada hora extra</td></tr>
           <tr class="border-noche/10 border-t"><td class="p-4 font-bold">Abono para reservar</td><td class="font-display p-4 text-2xl font-bold">$10.000</td><td class="p-4">Se descuenta del total</td></tr>
         </tbody>

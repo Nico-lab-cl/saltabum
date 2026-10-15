@@ -1,17 +1,28 @@
 ---
 // Ficha del Megatobogán: galería (las miniaturas cambian la foto grande), datos, precio y botón de WhatsApp.
 import { getImage } from "astro:assets";
+import type { ImageMetadata } from "astro";
 import fotoReal from "../assets/megatobogan-arcoiris.webp";
+import realFrente from "../assets/megatobogan-real-frente.jpg";
+import realTobogan from "../assets/megatobogan-real-tobogan.jpg";
+import realTrasera from "../assets/megatobogan-real-trasera.jpg";
+import realCostado from "../assets/megatobogan-real-costado.jpg";
 import fotoFrente from "../assets/megatobogan-frente.jpg";
 import fotoFrenteIzq from "../assets/megatobogan-frente-izq.jpg";
 import fotoDerecha from "../assets/megatobogan-derecha.jpg";
 import fotoLateral from "../assets/megatobogan-lateral.jpg";
-import { DESDE_HORAS, HORA_EXTRA, PRODUCTO } from "../data";
+import { DESDE_HORAS, HORA_EXTRA, PRECIO_NORMAL, PRODUCTO } from "../data";
 import Icon from "../components/Icon.astro";
 import WaButton from "../components/WaButton.astro";
 import { RUTAS } from "../seo";
 
-const FOTOS = [
+// Fotos reales primero. Son verticales, así que `pos` elige qué parte se ve en el marco 3:2.
+type Foto = { src: ImageMetadata; alt: string; real?: boolean; pos?: string };
+const FOTOS: Foto[] = [
+  { src: realFrente, alt: `Foto real del ${PRODUCTO.nombre} de frente, con la pista del tobogán, el arco verde y los túneles`, real: true, pos: "50% 30%" },
+  { src: realTobogan, alt: `Foto real del costado del ${PRODUCTO.nombre} con las dos pistas de tobogán y el túnel redondo`, real: true, pos: "50% 40%" },
+  { src: realTrasera, alt: `Foto real de la parte trasera del ${PRODUCTO.nombre} con la entrada para trepar`, real: true, pos: "50% 48%" },
+  { src: realCostado, alt: `Foto real del ${PRODUCTO.nombre} armado en la calle, visto de lado con su soplador`, real: true, pos: "50% 47%" },
   { src: fotoFrenteIzq, alt: `${PRODUCTO.nombre} visto de frente y a la izquierda sobre pasto, con sus dos pistas de tobogán y túneles` },
   { src: fotoFrente, alt: `Vista frontal del ${PRODUCTO.nombre} con las dos pistas de tobogán, los túneles redondos y los arcos verdes` },
   { src: fotoDerecha, alt: `Costado derecho del ${PRODUCTO.nombre} con el bloque de techo verde y la entrada para trepar` },
@@ -65,8 +76,9 @@ const INCLUYE = [
             loading="lazy"
             decoding="async"
             class="size-full object-cover"
+            style={principal.pos ? `object-position:${principal.pos}` : undefined}
           />
-          <span data-galeria-real hidden class="bg-noche text-crema absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-[11px] leading-[18px] font-extrabold tracking-[1px] uppercase lg:top-4 lg:left-4 lg:text-xs">
+          <span data-galeria-real hidden={!principal.real} class="bg-noche text-crema absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-[11px] leading-[18px] font-extrabold tracking-[1px] uppercase lg:top-4 lg:left-4 lg:text-xs">
             Foto real · nuestro juego
           </span>
         </div>
@@ -81,11 +93,12 @@ const INCLUYE = [
                   data-srcset={g.grande.srcSet.attribute}
                   data-alt={g.alt}
                   data-real={g.real ? "1" : undefined}
+                  data-pos={g.pos}
                   aria-label={`Ver foto ${i + 1}: ${g.alt}`}
                   aria-pressed={i === 0 ? "true" : "false"}
                   class="border-noche aria-pressed:shadow-sol aria-pressed:border-[3px] block aspect-square w-full cursor-pointer overflow-hidden rounded-xl border-2 lg:rounded-2xl"
                 >
-                  <img src={g.mini.src} alt="" width="240" height="160" loading="lazy" decoding="async" class="size-full object-cover" />
+                  <img src={g.mini.src} alt="" width="240" height="160" loading="lazy" decoding="async" class="size-full object-cover" style={g.pos ? `object-position:${g.pos}` : undefined} />
                 </button>
               </li>
             ))
@@ -116,8 +129,9 @@ const INCLUYE = [
 
       <div class="border-noche bg-sol shadow-pop-l flex flex-col gap-3.5 rounded-[28px] border-2 px-4 py-5 lg:gap-4 lg:p-7">
         <div>
-          <p class="text-[13px] leading-[18px] font-extrabold tracking-[1px] uppercase">Arriendo por {DESDE_HORAS}</p>
+          <p class="text-[13px] leading-[18px] font-extrabold tracking-[1px] uppercase">Promoción · arriendo por {DESDE_HORAS}</p>
           <p class="font-display mt-0.5 text-[56px] leading-[60px] font-bold lg:text-[68px] lg:leading-[72px]">{PRODUCTO.precio}</p>
+          <p class="mt-1 font-semibold">Precio normal <s class="font-extrabold"><span class="sr-only">antes </span>{PRECIO_NORMAL}</s></p>
         </div>
         <ul class="flex flex-col gap-2 font-semibold">
           {
@@ -151,6 +165,7 @@ const INCLUYE = [
         grande.srcset = b.dataset.srcset ?? "";
         grande.src = b.dataset.src ?? grande.src;
         grande.alt = b.dataset.alt ?? "";
+        grande.style.objectPosition = b.dataset.pos ?? "";
         etiqueta.hidden = !b.dataset.real;
         minis.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       });

@@ -6,11 +6,13 @@ export const PRODUCTO = {
   base: "7,5 × 7,5 m",
   alto: "3,5 m",
   espacioLibre: "[8,5 × 8,5 m]",
-  precio: "$40.000",
+  precio: "$69.990",
 };
 
-// Precio base de los inflables y su bloque de horas.
-export const DESDE = "$40.000";
+// Precio base de los inflables y su bloque de horas. Hoy rige la promoción ($69.990) sobre el precio normal.
+export const DESDE = "$69.990";
+/** Precio normal por el mismo bloque, se muestra tachado junto a la promoción. */
+export const PRECIO_NORMAL = "$70.000";
 export const DESDE_HORAS = "3 horas";
 /** Valor de cada hora adicional sobre el bloque base. */
 export const HORA_EXTRA = "$10.000";
