@@ -152,15 +152,15 @@ export const COMUNAS_SEO: ComunaSeo[] = [
     slug: "limache-olmue",
     nombre: "Limache y Olmué",
     titulo: "Limache y Olmué",
-    despacho: "A convenir",
-    despachoDetalle: "Despacho a Limache y Olmué a convenir según la distancia, te lo cotizamos al tiro",
+    despacho: "+$7.000",
+    despachoDetalle: "Despacho a Limache y Olmué por $7.000",
     sectores: ["Limache", "San Francisco de Limache", "Limache Viejo", "Olmué", "Granizo"],
     intro:
       "También llevamos el Megatobogán Arcoíris a Limache y Olmué. Ideal para cumpleaños en parcelas y patios grandes, con montaje, anclaje y retiro incluidos",
     patios:
       "Las parcelas de Limache y Olmué suelen tener mucho espacio con pasto, perfecto para un inflable de 7,5 × 7,5 metros. Solo necesitas un enchufe a menos de 15 m",
     preguntas: [
-      { q: "¿Cuánto cuesta el despacho a Limache u Olmué?", a: "El despacho es a convenir según la distancia. Escríbenos con la dirección y te lo cotizamos al tiro." },
+      { q: "¿Cuánto cuesta el despacho a Limache u Olmué?", a: "El despacho a Limache y Olmué cuesta $7.000." },
       { q: "¿Se puede instalar en una parcela?", a: "Sí, en pasto lo anclamos con estacas. Solo necesitamos un enchufe a menos de 15 m." },
     ],
     meta: {
@@ -177,7 +177,7 @@ export const PREGUNTAS_FRECUENTES: { tema: string; preguntas: Pregunta[] }[] = [
     preguntas: [
       { q: "¿Qué precio tienen los juegos inflables en arriendo?", a: `En Saltabum el arriendo parte en ${DESDE} por ${DESDE_HORAS}, con montaje, anclaje y retiro incluidos. Cada hora adicional cuesta ${HORA_EXTRA}.` },
       { q: "¿Cuánto es el abono para reservar?", a: "Reservas tu fecha con un abono de $10.000. El saldo se paga el día del evento." },
-      { q: "¿Cuánto cuesta el despacho?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Concón, Quilpué y Villa Alemana, y a Limache y Olmué es a convenir." },
+      { q: "¿Cuánto cuesta el despacho?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Concón, Quilpué y Villa Alemana, y $7.000 a Limache y Olmué." },
       { q: "¿Cómo reservo un juego inflable?", a: "Elige el día y el horario en el calendario de la web o escríbenos por WhatsApp. Te confirmamos y coordinamos el abono." },
       { q: "¿Puedo reservar para el mismo día?", a: "No, las reservas se hacen desde el día siguiente para coordinar bien el despacho y el montaje." },
       { q: "¿Emiten factura?", a: "Sí, emitimos factura para empresas, colegios, municipalidades, juntas de vecinos y particulares que la necesiten." },
@@ -221,7 +221,7 @@ export const PREGUNTAS_PAGINA: Record<"megatobogan" | "cumpleanos" | "precios" |
   precios: [
     { q: "¿Cuánto cuesta arrendar un juego inflable?", a: `Desde ${DESDE} por ${DESDE_HORAS} con montaje, anclaje y retiro incluidos.` },
     { q: "¿Cuánto vale la hora adicional?", a: `Cada hora adicional cuesta ${HORA_EXTRA}.` },
-    { q: "¿El despacho tiene costo?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Concón, Quilpué y Villa Alemana, y a Limache y Olmué es a convenir." },
+    { q: "¿El despacho tiene costo?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Concón, Quilpué y Villa Alemana, y $7.000 a Limache y Olmué." },
     { q: "¿Hay costos ocultos?", a: "No, el precio incluye montaje, anclaje y retiro. Solo pones el enchufe, que consume menos de $2.000 por evento." },
   ],
   eventos: [

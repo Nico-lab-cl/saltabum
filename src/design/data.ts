@@ -32,7 +32,7 @@ export const COMUNAS: Comuna[] = [
   { nombre: "Valparaíso", zonas: "Nuestra base, Curauma y Placilla", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis" },
   { nombre: "Quilpué", zonas: "Todo Quilpué", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago" },
   { nombre: "Villa Alemana", zonas: "Toda Villa Alemana", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago" },
-  { nombre: "Limache / Olmué", zonas: "Te lo cotizamos al tiro", precio: "A convenir", titulo: "Despacho a convenir", tono: "convenir" },
+  { nombre: "Limache / Olmué", zonas: "Todo Limache y Olmué", precio: "+$7.000", titulo: "+$7.000 de despacho", tono: "pago" },
 ];
 
 export const TONO_BG: Record<Comuna["tono"], string> = {

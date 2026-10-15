@@ -44,32 +44,27 @@ const INCLUYE = [
 ];
 ---
 
-<section id="megatobogan" aria-labelledby="ficha-titulo" class="border-noche bg-blanco relative isolate overflow-hidden border-b-2" data-fondo-vivo>
-  <!-- Fondo vivo: formas de la marca que flotan lento y se corren un poco con el mouse. Decorativo. -->
-  <div aria-hidden="true" class="fondo pointer-events-none absolute inset-0 -z-10">
-    <span class="capa" style="--d: 18px; left: -90px; top: -70px"><span class="forma disco bg-sol" style="--t: 22s; --dx: 26px; --dy: 18px; --s: 280px"></span></span>
-    <span class="capa" style="--d: -24px; right: -70px; top: 70px"><span class="forma pildora bg-celeste" style="--t: 26s; --dx: -30px; --dy: 22px; --r: -12deg; --w: 330px; --h: 120px"></span></span>
-    <span class="capa max-lg:hidden" style="--d: 30px; left: 41%; top: 9%"><span class="forma disco bg-morado" style="--t: 17s; --dx: 18px; --dy: -22px; --s: 64px"></span></span>
-    <span class="capa" style="--d: -16px; left: 3%; bottom: 7%"><span class="forma disco bg-rosa" style="--t: 20s; --dx: 22px; --dy: -26px; --s: 150px"></span></span>
-    <span class="capa max-lg:hidden" style="--d: 22px; left: 47%; top: 58%"><span class="forma pildora bg-verde" style="--t: 24s; --dx: -20px; --dy: 20px; --r: 18deg; --w: 210px; --h: 74px"></span></span>
-    <span class="capa" style="--d: -28px; right: 4%; bottom: 5%"><span class="forma anillo border-azul" style="--t: 28s; --dx: -24px; --dy: -18px; --s: 190px"></span></span>
-    <span class="capa max-lg:hidden" style="--d: 14px; right: 30%; bottom: 14%"><span class="forma disco bg-naranja" style="--t: 15s; --dx: 16px; --dy: 16px; --s: 46px"></span></span>
-    <span class="capa" style="--d: 20px; left: 30%; bottom: -8px">
-      <svg class="forma" style="--t: 30s; --dx: 40px; --dy: 0px" width="300" height="34" viewBox="0 0 300 34">
-        <path class="fill-sol" d="M0 34 A25 25 0 0 1 50 34 A25 25 0 0 1 100 34 A25 25 0 0 1 150 34 A25 25 0 0 1 200 34 A25 25 0 0 1 250 34 A25 25 0 0 1 300 34 Z"></path>
-      </svg>
-    </span>
+<section id="megatobogan" aria-labelledby="ficha-titulo" class="border-noche bg-noche text-crema relative isolate overflow-hidden border-b-2" data-fondo-vivo>
+  <!-- Fondo vivo: video en loop hecho con las 4 fotos reales (zoom y paneo lentos), bajo una capa noche. Sigue un poco al mouse. -->
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+    <div class="capa-video absolute -inset-[6%]">
+      <video data-fondo-video class="size-full object-cover" muted loop playsinline preload="none" poster="/videos/inflable-fondo.jpg">
+        <source data-src="/videos/inflable-fondo.mp4" type="video/mp4" />
+        <source data-src="/videos/inflable-fondo.webm" type="video/webm" />
+      </video>
+    </div>
+    <div class="bg-noche/70 absolute inset-0"></div>
   </div>
   <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:flex-row lg:items-start lg:gap-14 lg:px-10 lg:py-20">
     <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-3">
       <div class="lg:hidden">
-        <p class="text-rojo-texto text-xs font-extrabold tracking-[1.2px] uppercase">Nuestro inflable</p>
+        <p class="text-sol text-xs font-extrabold tracking-[1.2px] uppercase">Nuestro inflable</p>
         <p class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold">{PRODUCTO.nombre}</p>
-        <p class="text-noche-suave mt-2">Rojo, amarillo, azul y verde, con tobogán, túneles y arcos, para niños de {PRODUCTO.edad}</p>
+        <p class="text-crema/90 mt-2">Rojo, amarillo, azul y verde, con tobogán, túneles y arcos, para niños de {PRODUCTO.edad}</p>
       </div>
 
       <div class="flex flex-col gap-2.5 lg:gap-3">
-        <div class="border-noche bg-blanco relative aspect-[3/2] overflow-hidden rounded-[28px] border-2 lg:rounded-[36px]" data-galeria>
+        <div class="border-crema bg-blanco relative aspect-[3/2] overflow-hidden rounded-[28px] border-2 lg:rounded-[36px]" data-galeria>
           <img
             data-galeria-principal
             src={principal.grande.src}
@@ -101,7 +96,7 @@ const INCLUYE = [
                   data-pos={g.pos}
                   aria-label={`Ver foto ${i + 1}: ${g.alt}`}
                   aria-pressed={i === 0 ? "true" : "false"}
-                  class="border-noche aria-pressed:shadow-sol aria-pressed:border-[3px] block aspect-square w-full cursor-pointer overflow-hidden rounded-xl border-2 lg:rounded-2xl"
+                  class="border-crema/60 aria-pressed:border-sol aria-pressed:border-[3px] block aspect-square w-full cursor-pointer overflow-hidden rounded-xl border-2 lg:rounded-2xl"
                 >
                   <img src={g.mini.src} alt="" width="240" height="160" loading="lazy" decoding="async" class="size-full object-cover" style={g.pos ? `object-position:${g.pos}` : undefined} />
                 </button>
@@ -114,9 +109,9 @@ const INCLUYE = [
 
     <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-6">
       <div class="hidden lg:block">
-        <p class="text-rojo-texto text-xs font-extrabold tracking-[1.2px] uppercase">Nuestro inflable</p>
+        <p class="text-sol text-xs font-extrabold tracking-[1.2px] uppercase">Nuestro inflable</p>
         <h2 id="ficha-titulo" class="font-display mt-1.5 text-5xl leading-[52px] font-semibold">{PRODUCTO.nombre}</h2>
-        <p class="text-noche-suave mt-3 max-w-[520px] text-lg">
+        <p class="text-crema/90 mt-3 max-w-[520px] text-lg">
           Rojo, amarillo, azul y verde, con tobogán, túneles y arcos, para niños de {PRODUCTO.edad}
         </p>
       </div>
@@ -124,7 +119,7 @@ const INCLUYE = [
       <dl class="grid grid-cols-2 gap-2 lg:grid-cols-3 lg:gap-3">
         {
           DATOS.map((d) => (
-            <div class="border-noche bg-crema rounded-xl border-2 px-3 py-2.5 lg:rounded-2xl lg:px-4 lg:py-3">
+            <div class="border-noche bg-crema text-noche rounded-xl border-2 px-3 py-2.5 lg:rounded-2xl lg:px-4 lg:py-3">
               <dt class="text-noche-suave text-xs font-extrabold tracking-[1px] uppercase">{d.label}</dt>
               <dd class="font-display mt-0.5 text-xl leading-[26px] font-semibold">{d.valor}</dd>
             </div>
@@ -132,7 +127,7 @@ const INCLUYE = [
         }
       </dl>
 
-      <div class="border-noche bg-sol shadow-pop-l flex flex-col gap-3.5 rounded-[28px] border-2 px-4 py-5 lg:gap-4 lg:p-7">
+      <div class="border-noche bg-sol text-noche flex flex-col gap-3.5 rounded-[28px] border-2 px-4 py-5 lg:gap-4 lg:p-7">
         <div>
           <p class="text-[13px] leading-[18px] font-extrabold tracking-[1px] uppercase">Promoción · arriendo por {DESDE_HORAS}</p>
           <p class="font-display mt-0.5 text-[56px] leading-[60px] font-bold lg:text-[68px] lg:leading-[72px]">{PRODUCTO.precio}</p>
@@ -151,7 +146,7 @@ const INCLUYE = [
         <WaButton placement="ficha" size="l" class="text-center leading-[22px]">Consultar disponibilidad por WhatsApp</WaButton>
         <a href={RUTAS.megatobogan} class="text-noche inline-flex min-h-11 items-center font-extrabold underline">Ver ficha completa del Megatobogán</a>
         <p class="text-sm leading-5">
-          Concón, Quilpué y Villa Alemana: +$5.000 de despacho.
+          Concón, Quilpué y Villa Alemana +$5.000 de despacho, Limache y Olmué +$7.000.
           <a href="#despacho" class="text-noche font-extrabold underline">Ver tu comuna</a>
         </p>
       </div>
@@ -160,35 +155,39 @@ const INCLUYE = [
 </section>
 
 <style>
-  /* Formas planas en tonos suaves para que no compitan con las fotos ni con el texto. */
-  .fondo { opacity: 0.32; }
-  .capa {
-    position: absolute;
-    transform: translate3d(calc(var(--px, 0) * var(--d)), calc(var(--py, 0) * var(--d)), 0);
-    transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-  .forma {
-    display: block;
-    animation: flotar var(--t, 20s) ease-in-out infinite alternate;
-  }
-  .disco { width: var(--s); height: var(--s); border-radius: 9999px; }
-  .anillo { width: var(--s); height: var(--s); border-radius: 9999px; border-width: 22px; }
-  .pildora { width: var(--w); height: var(--h); border-radius: 9999px; rotate: var(--r, 0deg); }
-  [data-quieto] .forma { animation-play-state: paused; }
-  @keyframes flotar {
-    to { transform: translate3d(var(--dx, 0), var(--dy, 0), 0) scale(1.04, 0.97); }
+  .capa-video {
+    transform: translate3d(calc(var(--px, 0) * -40px), calc(var(--py, 0) * -40px), 0);
+    transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   @media (prefers-reduced-motion: reduce) {
-    .forma { animation: none; }
-    .capa { transition: none; transform: none; }
+    .capa-video { transition: none; transform: none; }
   }
 </style>
 
 <script>
-  // Fondo vivo: las formas siguen un poco al mouse y se detienen fuera de pantalla.
+  // Fondo vivo: el video carga cuando la sección se acerca, se pausa fuera de pantalla y el fondo sigue un poco al mouse.
+  // Con movimiento reducido o ahorro de datos queda la imagen fija (poster).
   document.querySelectorAll<HTMLElement>("[data-fondo-vivo]").forEach((seccion) => {
-    new IntersectionObserver(([e]) => seccion.toggleAttribute("data-quieto", !e.isIntersecting)).observe(seccion);
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches || !matchMedia("(pointer: fine)").matches) return;
+    const video = seccion.querySelector<HTMLVideoElement>("[data-fondo-video]");
+    const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const ahorro = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+    if (video && !quieto && !ahorro) {
+      let cargado = false;
+      new IntersectionObserver(
+        ([e]) => {
+          if (e.isIntersecting) {
+            if (!cargado) {
+              video.querySelectorAll<HTMLSourceElement>("source[data-src]").forEach((s) => (s.src = s.dataset.src!));
+              video.load();
+              cargado = true;
+            }
+            video.play().catch(() => {});
+          } else video.pause();
+        },
+        { rootMargin: "200px" },
+      ).observe(seccion);
+    }
+    if (quieto || !matchMedia("(pointer: fine)").matches) return;
     let pendiente = 0;
     seccion.addEventListener("pointermove", (ev) => {
       if (pendiente) return;
