@@ -27,6 +27,15 @@ const GALERIA = await Promise.all(
   })),
 );
 const principal = GALERIA[0];
+// Nubes del fondo: altura, ancho, duración del paso, desfase para que partan repartidas
+// y posición fija cuando el usuario pide menos movimiento.
+const NUBES = [
+  { top: "4%", w: "clamp(130px, 16vw, 230px)", dur: "95s", delay: "-12s", x: "6vw", clase: "" },
+  { top: "22%", w: "clamp(90px, 10vw, 140px)", dur: "130s", delay: "-95s", x: "78vw", clase: "max-sm:hidden" },
+  { top: "46%", w: "clamp(150px, 19vw, 270px)", dur: "115s", delay: "-40s", x: "44vw", clase: "" },
+  { top: "68%", w: "clamp(110px, 13vw, 190px)", dur: "90s", delay: "-62s", x: "2vw", clase: "max-md:hidden" },
+  { top: "86%", w: "clamp(120px, 15vw, 210px)", dur: "105s", delay: "-20s", x: "70vw", clase: "" },
+];
 const DATOS = [
   { label: "Edad", valor: PRODUCTO.edad },
   { label: "Base", valor: PRODUCTO.base },
@@ -44,27 +53,35 @@ const INCLUYE = [
 ];
 ---
 
-<section id="megatobogan" aria-labelledby="ficha-titulo" class="border-noche bg-noche text-crema relative isolate overflow-hidden border-b-2" data-fondo-vivo>
-  <!-- Fondo vivo: video en loop hecho con las 4 fotos reales (zoom y paneo lentos), bajo una capa noche. Sigue un poco al mouse. -->
+<section id="megatobogan" aria-labelledby="ficha-titulo" class="border-noche bg-celeste text-noche relative isolate overflow-hidden border-b-2" data-cielo>
+  <!-- Cielo de cumpleaños: nubes planas que pasan lento y globos que suben por los bordes. Un toque revienta el globo con un «¡bum!». -->
   <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-    <div class="capa-video absolute -inset-[6%]">
-      <video data-fondo-video class="size-full object-cover" muted loop playsinline preload="none" poster="/videos/inflable-fondo.jpg">
-        <source data-src="/videos/inflable-fondo.mp4" type="video/mp4" />
-        <source data-src="/videos/inflable-fondo.webm" type="video/webm" />
-      </video>
+    <div class="cielo-nubes absolute inset-0">
+      {
+        NUBES.map((n) => (
+          <svg class:list={["cielo-nube", n.clase]} style={`top: ${n.top}; --w: ${n.w}; --dur: ${n.dur}; --delay: ${n.delay}; --x-quieta: ${n.x}`} viewBox="0 0 220 100">
+            <g fill="#fff">
+              <circle cx="58" cy="62" r="30" />
+              <circle cx="104" cy="44" r="40" />
+              <circle cx="152" cy="60" r="32" />
+              <rect x="40" y="60" width="132" height="34" rx="17" />
+            </g>
+          </svg>
+        ))
+      }
     </div>
-    <div class="bg-noche/70 absolute inset-0"></div>
+    <div class="cielo-globos absolute inset-0" data-globos></div>
   </div>
-  <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:flex-row lg:items-start lg:gap-14 lg:px-10 lg:py-20">
+  <div data-cielo-contenido class="pointer-events-none mx-auto flex max-w-[1320px] flex-col md:max-w-[680px] lg:max-w-[1320px] gap-5 px-4 py-10 lg:flex-row lg:items-start lg:gap-14 lg:px-10 lg:py-20">
     <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-3">
-      <div class="lg:hidden">
-        <p class="text-sol text-xs font-extrabold tracking-[1.2px] uppercase">Nuestro inflable</p>
+      <div class="pointer-events-auto lg:hidden">
+        <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Nuestro inflable</p>
         <p class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold">{PRODUCTO.nombre}</p>
-        <p class="text-crema/90 mt-2">Rojo, amarillo, azul y verde, con tobogán, túneles y arcos, para niños de {PRODUCTO.edad}</p>
+        <p class="mt-2">Rojo, amarillo, azul y verde, con tobogán, túneles y arcos, para niños de {PRODUCTO.edad}</p>
       </div>
 
-      <div class="flex flex-col gap-2.5 lg:gap-3">
-        <div class="border-crema bg-blanco relative aspect-[3/2] overflow-hidden rounded-[28px] border-2 lg:rounded-[36px]" data-galeria>
+      <div class="pointer-events-auto flex flex-col gap-2.5 lg:gap-3">
+        <div class="border-noche bg-blanco shadow-pop relative aspect-[3/2] overflow-hidden rounded-[28px] border-2 lg:rounded-[36px]" data-galeria>
           <img
             data-galeria-principal
             src={principal.grande.src}
@@ -96,7 +113,7 @@ const INCLUYE = [
                   data-pos={g.pos}
                   aria-label={`Ver foto ${i + 1}: ${g.alt}`}
                   aria-pressed={i === 0 ? "true" : "false"}
-                  class="border-crema/60 aria-pressed:border-sol aria-pressed:border-[3px] block aspect-square w-full cursor-pointer overflow-hidden rounded-xl border-2 lg:rounded-2xl"
+                  class="border-noche bg-blanco aria-pressed:shadow-sol aria-pressed:border-[3px] block aspect-square w-full cursor-pointer overflow-hidden rounded-xl border-2 lg:rounded-2xl"
                 >
                   <img src={g.mini.src} alt="" width="240" height="160" loading="lazy" decoding="async" class="size-full object-cover" style={g.pos ? `object-position:${g.pos}` : undefined} />
                 </button>
@@ -108,15 +125,15 @@ const INCLUYE = [
     </div>
 
     <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-6">
-      <div class="hidden lg:block">
-        <p class="text-sol text-xs font-extrabold tracking-[1.2px] uppercase">Nuestro inflable</p>
+      <div class="pointer-events-auto hidden lg:block">
+        <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Nuestro inflable</p>
         <h2 id="ficha-titulo" class="font-display mt-1.5 text-5xl leading-[52px] font-semibold">{PRODUCTO.nombre}</h2>
-        <p class="text-crema/90 mt-3 max-w-[520px] text-lg">
+        <p class="mt-3 max-w-[520px] text-lg">
           Rojo, amarillo, azul y verde, con tobogán, túneles y arcos, para niños de {PRODUCTO.edad}
         </p>
       </div>
 
-      <dl class="grid grid-cols-2 gap-2 lg:grid-cols-3 lg:gap-3">
+      <dl class="pointer-events-auto grid grid-cols-2 gap-2 lg:grid-cols-3 lg:gap-3">
         {
           DATOS.map((d) => (
             <div class="border-noche bg-crema text-noche rounded-xl border-2 px-3 py-2.5 lg:rounded-2xl lg:px-4 lg:py-3">
@@ -127,7 +144,7 @@ const INCLUYE = [
         }
       </dl>
 
-      <div class="border-noche bg-sol text-noche flex flex-col gap-3.5 rounded-[28px] border-2 px-4 py-5 lg:gap-4 lg:p-7">
+      <div class="border-noche bg-sol text-noche shadow-pop-l pointer-events-auto flex flex-col gap-3.5 rounded-[28px] border-2 px-4 py-5 lg:gap-4 lg:p-7">
         <div>
           <p class="text-[13px] leading-[18px] font-extrabold tracking-[1px] uppercase">Promoción · arriendo por {DESDE_HORAS}</p>
           <p class="font-display mt-0.5 text-[56px] leading-[60px] font-bold lg:text-[68px] lg:leading-[72px]">{PRODUCTO.precio}</p>
@@ -154,39 +171,193 @@ const INCLUYE = [
   </div>
 </section>
 
-<style>
-  .capa-video {
-    transform: translate3d(calc(var(--px, 0) * -40px), calc(var(--py, 0) * -40px), 0);
+<style is:global>
+  /* Cielo de cumpleaños (sección «Nuestro inflable»). Global porque los globos se crean desde el script. */
+  .cielo-nubes {
+    transform: translate3d(calc(var(--px, 0) * -14px), calc(var(--py, 0) * -8px), 0);
     transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
+  .cielo-nube {
+    position: absolute;
+    left: 0;
+    width: var(--w);
+    height: auto;
+    opacity: 0.92;
+    animation: cielo-viento var(--dur) linear var(--delay) infinite;
+  }
+  @keyframes cielo-viento {
+    from { transform: translateX(-120%); }
+    to { transform: translateX(calc(100vw + 20%)); }
+  }
+  .cielo-globo {
+    position: absolute;
+    top: 100%;
+    width: var(--w);
+    pointer-events: auto;
+    cursor: pointer;
+    touch-action: manipulation;
+    will-change: transform;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cielo-globo svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .cielo-mecer {
+    display: block;
+    transform-origin: 50% 0;
+    animation: cielo-mecer var(--mecer, 3.2s) ease-in-out infinite alternate;
+  }
+  @keyframes cielo-mecer {
+    from { transform: rotate(-6deg) translateX(-5px); }
+    to { transform: rotate(6deg) translateX(5px); }
+  }
+  .cielo-bum {
+    position: absolute;
+    pointer-events: none;
+    translate: -50% -50%;
+    font-size: clamp(22px, 3vw, 32px);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .cielo-papel {
+    position: absolute;
+    width: 8px;
+    height: 14px;
+    border-radius: 9999px;
+    pointer-events: none;
+  }
+  [data-cielo-quieto] .cielo-nube,
+  [data-cielo-quieto] .cielo-mecer { animation-play-state: paused; }
   @media (prefers-reduced-motion: reduce) {
-    .capa-video { transition: none; transform: none; }
+    .cielo-nubes { transition: none; transform: none; }
+    .cielo-nube { animation: none; transform: translateX(var(--x-quieta, 10vw)); }
+    .cielo-mecer { animation: none; }
   }
 </style>
 
 <script>
-  // Fondo vivo: el video carga cuando la sección se acerca, se pausa fuera de pantalla y el fondo sigue un poco al mouse.
-  // Con movimiento reducido o ahorro de datos queda la imagen fija (poster).
-  document.querySelectorAll<HTMLElement>("[data-fondo-vivo]").forEach((seccion) => {
-    const video = seccion.querySelector<HTMLVideoElement>("[data-fondo-video]");
+  // Globos que suben por los bordes del cielo. Un toque o clic los revienta con un «¡bum!».
+  // Se pausan fuera de pantalla; con movimiento reducido quedan quietos y solo se desvanecen.
+  const COLORES = ["#f0462d", "#ffc23a", "#2db866", "#2f8fea", "#8e5be8", "#ff8a1f", "#ff6fae"];
+  const NOCHE = "#1f2a5c";
+  const azar = (a: number, b: number) => a + Math.random() * (b - a);
+
+  function globoSvg(color: string) {
+    return `<svg viewBox="0 0 60 112"><ellipse cx="30" cy="32" rx="26" ry="30" fill="${color}" stroke="${NOCHE}" stroke-width="2.5"/><ellipse cx="20" cy="21" rx="5" ry="8" fill="#fff" opacity=".65"/><path d="M25 61h10l-5 7z" fill="${color}" stroke="${NOCHE}" stroke-width="2" stroke-linejoin="round"/><path d="M30 68c-8 12 8 22 0 42" fill="none" stroke="${NOCHE}" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-cielo]").forEach((seccion) => {
+    const capa = seccion.querySelector<HTMLElement>("[data-globos]");
+    if (!capa) return;
     const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const ahorro = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
-    if (video && !quieto && !ahorro) {
-      let cargado = false;
-      new IntersectionObserver(
-        ([e]) => {
-          if (e.isIntersecting) {
-            if (!cargado) {
-              video.querySelectorAll<HTMLSourceElement>("source[data-src]").forEach((s) => (s.src = s.dataset.src!));
-              video.load();
-              cargado = true;
-            }
-            video.play().catch(() => {});
-          } else video.pause();
-        },
-        { rootMargin: "200px" },
-      ).observe(seccion);
+    const vivos = new Map<HTMLElement, Animation | null>();
+    let visible = false;
+    let reloj = 0;
+
+    // Zonas libres: los márgenes a los lados del contenido (o el 14 % de cada borde en pantallas angostas).
+    function zonaX(ancho: number) {
+      const r = seccion.getBoundingClientRect();
+      const contenido = seccion.querySelector<HTMLElement>("[data-cielo-contenido]")?.getBoundingClientRect();
+      const libreIzq = Math.max(r.width * 0.14, contenido ? contenido.left - r.left + 24 : 0);
+      const libreDer = Math.max(r.width * 0.14, contenido ? r.right - contenido.right + 24 : 0);
+      return Math.random() < 0.5
+        ? azar(-ancho * 0.2, Math.max(0, libreIzq - ancho * 0.8))
+        : azar(r.width - libreDer, r.width - ancho * 0.8);
     }
+
+    function medidas() {
+      const w = seccion.clientWidth;
+      if (w < 640) return { ancho: azar(38, 48), max: 2, cada: 5200, rapidez: 55 };
+      if (w < 1024) return { ancho: azar(46, 58), max: 3, cada: 4200, rapidez: 60 };
+      return { ancho: azar(56, 76), max: 5, cada: 3000, rapidez: 66 };
+    }
+
+    function reventar(globo: HTMLElement) {
+      const anim = vivos.get(globo);
+      anim?.pause();
+      vivos.delete(globo);
+      const r = globo.getBoundingClientRect(), base = capa!.getBoundingClientRect();
+      const cx = r.left - base.left + r.width / 2, cy = r.top - base.top + r.width * 0.55;
+      globo.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: quieto ? 1 : 1.35 }], { duration: 160, fill: "forwards" }).finished.then(() => globo.remove());
+
+      const bum = document.createElement("span");
+      bum.className = "cielo-bum font-display letra text-sol font-bold";
+      bum.textContent = "¡bum!";
+      bum.style.left = `${cx}px`;
+      bum.style.top = `${cy}px`;
+      capa!.append(bum);
+      bum.animate(
+        quieto ? [{ opacity: 1 }, { opacity: 0 }] : [{ opacity: 0, scale: 0.6, transform: "translateY(0)" }, { opacity: 1, scale: 1.1, offset: 0.25 }, { opacity: 0, scale: 1, transform: "translateY(-28px)" }],
+        { duration: 800, easing: "ease-out" },
+      ).finished.then(() => bum.remove());
+
+      if (quieto) return;
+      for (let i = 0; i < 9; i++) {
+        const p = document.createElement("span");
+        p.className = "cielo-papel";
+        p.style.background = COLORES[i % COLORES.length];
+        p.style.left = `${cx}px`;
+        p.style.top = `${cy}px`;
+        capa!.append(p);
+        const ang = (i / 9) * Math.PI * 2 + azar(-0.3, 0.3), d = azar(40, 80);
+        p.animate(
+          [{ transform: "translate(-50%, -50%) rotate(0deg)", opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(ang) * d}px), calc(-50% + ${Math.sin(ang) * d + 20}px)) rotate(${azar(180, 540)}deg)`, opacity: 0 }],
+          { duration: azar(600, 900), easing: "cubic-bezier(0.2, 0.7, 0.4, 1)" },
+        ).finished.then(() => p.remove());
+      }
+    }
+
+    function crear(progreso = 0) {
+      const m = medidas();
+      if (vivos.size >= m.max) return;
+      const globo = document.createElement("span");
+      globo.className = "cielo-globo";
+      globo.style.setProperty("--w", `${m.ancho}px`);
+      globo.style.left = `${zonaX(m.ancho)}px`;
+      globo.innerHTML = `<span class="cielo-mecer" style="--mecer: ${azar(2.6, 3.8).toFixed(1)}s">${globoSvg(COLORES[Math.floor(Math.random() * COLORES.length)])}</span>`;
+      globo.addEventListener("pointerdown", () => reventar(globo), { once: true });
+      capa!.append(globo);
+
+      if (quieto) {
+        globo.style.top = `${azar(12, 70)}%`;
+        vivos.set(globo, null);
+        return;
+      }
+      const recorrido = seccion.clientHeight + m.ancho * 2.2;
+      const duracion = (recorrido / m.rapidez) * 1000;
+      // Un retraso negativo hace que el globo parta ya a mitad de camino.
+      const anim = globo.animate([{ transform: "translateY(0)" }, { transform: `translateY(-${recorrido}px)` }], {
+        duration: duracion,
+        delay: -duracion * progreso,
+        easing: "linear",
+      });
+      if (!visible) anim.pause();
+      anim.finished.then(() => {
+        vivos.delete(globo);
+        globo.remove();
+      }).catch(() => {});
+      vivos.set(globo, anim);
+    }
+
+    function programar() {
+      clearTimeout(reloj);
+      if (!visible || quieto) return;
+      reloj = window.setTimeout(() => {
+        if (!document.hidden) crear();
+        programar();
+      }, medidas().cada * azar(0.7, 1.3));
+    }
+
+    // Arranca con algunos globos ya en camino para que el cielo no parta vacío.
+    const inicial = quieto ? 3 : Math.min(medidas().max - 1, 3);
+    for (let i = 0; i < inicial; i++) crear(quieto ? 0 : azar(0.15, 0.75));
+
+    new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting;
+      seccion.toggleAttribute("data-cielo-quieto", !visible);
+      vivos.forEach((a) => (visible ? a?.play() : a?.pause()));
+      programar();
+    }).observe(seccion);
+
+    // Las nubes se corren un poco con el mouse.
     if (quieto || !matchMedia("(pointer: fine)").matches) return;
     let pendiente = 0;
     seccion.addEventListener("pointermove", (ev) => {
