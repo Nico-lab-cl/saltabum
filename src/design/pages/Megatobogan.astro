@@ -1,6 +1,5 @@
 ---
 // /inflables/megatobogan-arcoiris/ — ficha completa del producto con galería, medidas y modelo 3D.
-import fotoFrente from "../assets/megatobogan-frente.jpg";
 import { DESDE, DESDE_HORAS, PRODUCTO } from "../data";
 import type { Pregunta } from "../seo";
 import CtaFinal from "../components/CtaFinal.astro";
@@ -24,8 +23,7 @@ const { migas, preguntas } = Astro.props;
     eyebrow="Tobogán inflable"
     titulo={`Arriendo del ${PRODUCTO.nombre}, tobogán inflable grande`}
     bajada={`Tobogán inflable doble con túneles y arcos para niños de ${PRODUCTO.edad}, de ${PRODUCTO.base} y ${PRODUCTO.alto} de alto, desde ${DESDE} por ${DESDE_HORAS}`}
-    imagen={fotoFrente}
-    alt={`Vista frontal del ${PRODUCTO.nombre} sobre pasto`}
+    destacado={PRODUCTO.nombre}
     placement="megatobogan-hero"
     mensaje={`Hola, quiero consultar la disponibilidad del ${PRODUCTO.nombre}. Vengo de saltabum.cl`}
   />

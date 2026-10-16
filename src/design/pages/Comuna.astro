@@ -1,7 +1,6 @@
 ---
 // /juegos-inflables-[comuna]/ — cluster local: despacho, sectores, patios y preguntas propias de cada comuna.
 import { Image } from "astro:assets";
-import fotoFrenteIzq from "../assets/megatobogan-frente-izq.jpg";
 import fotoDerecha from "../assets/megatobogan-derecha.jpg";
 import { DESDE, DESDE_HORAS, HORA_EXTRA, PRODUCTO } from "../data";
 import { COMUNAS_SEO, RUTAS, type ComunaSeo } from "../seo";
@@ -26,8 +25,7 @@ const otras = COMUNAS_SEO.filter((x) => x.slug !== c.slug);
     eyebrow={`Juegos inflables en ${c.titulo}`}
     titulo={`Arriendo de juegos inflables en ${c.titulo}`}
     bajada={c.intro}
-    imagen={fotoFrenteIzq}
-    alt={`${PRODUCTO.nombre}, juego inflable para arriendo en ${c.nombre}`}
+    destacado={c.titulo}
     placement={`comuna-${c.slug}`}
     mensaje={mensaje}
   />

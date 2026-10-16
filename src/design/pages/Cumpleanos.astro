@@ -1,7 +1,6 @@
 ---
 // /arriendo-juegos-inflables-cumpleanos/ — pillar «arriendo de juegos para cumpleaños».
 import { Image } from "astro:assets";
-import fotoHero from "../assets/hero-inflable.jpg";
 import fotoDerecha from "../assets/megatobogan-derecha.jpg";
 import { BLOQUES } from "@/lib/reservas";
 import { COMUNAS, DESDE, DESDE_HORAS, HORA_EXTRA, PRODUCTO } from "../data";
@@ -33,8 +32,7 @@ const PASOS = [
     eyebrow="Cumpleaños infantiles"
     titulo="Arriendo de juegos inflables para cumpleaños"
     bajada={`El cumpleaños que tus hijos van a recordar, con el ${PRODUCTO.nombre} desde ${DESDE} por ${DESDE_HORAS}, montaje, anclaje y retiro incluidos`}
-    imagen={fotoHero}
-    alt={`Niños jugando en el ${PRODUCTO.nombre} durante un cumpleaños al aire libre`}
+    destacado="cumpleaños"
     placement="cumpleanos-hero"
     mensaje="Hola, quiero arrendar un juego inflable para un cumpleaños. Vengo de saltabum.cl"
   />

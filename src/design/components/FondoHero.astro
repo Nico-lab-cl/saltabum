@@ -1,0 +1,48 @@
+---
+// Foto de fondo a sangre de los heroes (home y páginas internas): el Megatobogán sobre pasto, imagen referencial de 3840 px.
+// Recorte horizontal en desktop y vertical en mobile, en AVIF con respaldo WebP y en varios anchos para que cada pantalla
+// baje solo lo que necesita. Encima va una capa noche para que el texto crema se lea: arriba en mobile, a la izquierda en desktop.
+// Va dentro de una sección con `relative isolate overflow-hidden`.
+import { getImage } from "astro:assets";
+import fondo from "../assets/hero-inflable.jpg";
+import fondoMovil from "../assets/hero-inflable-movil.jpg";
+import { PRODUCTO } from "../data";
+
+interface Props {
+  alt?: string;
+}
+const { alt = `${PRODUCTO.nombre} instalado sobre pasto, con niños bajando por el tobogán, saliendo del túnel y saltando` } = Astro.props;
+
+// Calidad alta: la foto es la protagonista del primer pantallazo.
+const ANCHOS = [1280, 1920, 2560, 3200, 3840];
+const ANCHOS_MOVIL = [640, 960, 1500];
+const [avif, webp, avifMovil, webpMovil] = await Promise.all([
+  getImage({ src: fondo, widths: ANCHOS, format: "avif", quality: 85 }),
+  getImage({ src: fondo, widths: ANCHOS, format: "webp", quality: 90 }),
+  getImage({ src: fondoMovil, widths: ANCHOS_MOVIL, format: "avif", quality: 85 }),
+  getImage({ src: fondoMovil, widths: ANCHOS_MOVIL, format: "webp", quality: 90 }),
+]);
+---
+
+<picture>
+  <source media="(min-width: 1024px)" srcset={avif.srcSet.attribute} sizes="100vw" type="image/avif" />
+  <source media="(min-width: 1024px)" srcset={webp.srcSet.attribute} sizes="100vw" type="image/webp" />
+  <source srcset={avifMovil.srcSet.attribute} sizes="100vw" type="image/avif" />
+  <img
+    src={webpMovil.src}
+    srcset={webpMovil.srcSet.attribute}
+    sizes="100vw"
+    width="1500"
+    height="2160"
+    alt={alt}
+    loading="eager"
+    fetchpriority="high"
+    decoding="async"
+    class="absolute inset-0 -z-20 size-full object-cover object-[50%_70%] lg:object-[70%_75%]"
+  />
+</picture>
+<div
+  aria-hidden="true"
+  class="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgb(31_42_92/0.88)_0%,rgb(31_42_92/0.68)_50%,rgb(31_42_92/0.4)_100%)] lg:bg-[linear-gradient(90deg,rgb(31_42_92/0.9)_0%,rgb(31_42_92/0.7)_38%,rgb(31_42_92/0)_70%)]"
+>
+</div>

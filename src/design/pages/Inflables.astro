@@ -2,7 +2,6 @@
 // /inflables/ — catálogo de juegos inflables. Hoy hay uno; cada inflable nuevo es una tarjeta más.
 import { Image } from "astro:assets";
 import fotoFrenteIzq from "../assets/megatobogan-frente-izq.jpg";
-import fotoFrente from "../assets/megatobogan-frente.jpg";
 import { DESDE, DESDE_HORAS, HORA_EXTRA, PRODUCTO } from "../data";
 import { COMUNAS_SEO, RUTAS } from "../seo";
 import CtaFinal from "../components/CtaFinal.astro";
@@ -30,8 +29,7 @@ const INCLUYE = [
     eyebrow="Catálogo de inflables"
     titulo="Arriendo de juegos inflables en la V Región"
     bajada={`Juegos inflables para cumpleaños, colegios, empresas y eventos desde ${DESDE} por ${DESDE_HORAS}, con despacho, montaje, anclaje y retiro incluidos`}
-    imagen={fotoFrente}
-    alt={`${PRODUCTO.nombre}, juego inflable con tobogán doble, túneles y arcos sobre pasto`}
+    destacado="V Región"
     placement="inflables-hero"
   />
 
