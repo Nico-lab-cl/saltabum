@@ -5,12 +5,22 @@
 // WebXR / Scene Viewer en Android y Quick Look en iPhone). El visor (model-viewer) se descarga
 // recién cuando la sección se acerca a la pantalla.
 import { getImage } from "astro:assets";
+import QRCode from "qrcode";
 import portada from "../assets/megatobogan-real-frente.jpg";
 import { PRODUCTO } from "../data";
 import Icon from "../components/Icon.astro";
 import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
 
 const poster = await getImage({ src: portada, width: 1200, height: 800, fit: "cover", position: "center", format: "webp", quality: 80 });
+
+// QR (SVG generado en el build) que abre esta misma página en el celular, directo en esta sección.
+const enlace = new URL(`${Astro.url.pathname}#patio`, Astro.site).href;
+const qr = await QRCode.toString(enlace, {
+  type: "svg",
+  margin: 1,
+  errorCorrectionLevel: "M",
+  color: { dark: "#1f2a5cff", light: "#ffffffff" },
+});
 
 const MENSAJE = `Hola, quiero saber si el ${PRODUCTO.nombre} cabe en el lugar de mi evento. Les mando una foto. Vengo de saltabum.cl`;
 const MEDIDAS = [
@@ -109,9 +119,19 @@ const REQUISITOS = [
           Arrastra para girar · tamaño real
         </p>
       </div>
-      <p class="mt-3 text-sm">
+      <p class="mt-3 text-sm lg:hidden">
         En el celular, toca «Verlo en tu espacio», apunta al suelo y el Megatobogán aparece a tamaño real para que veas si cabe
       </p>
+      <!-- En computador no hay realidad aumentada: un QR abre esta misma sección en el celular. -->
+      <div class="border-noche bg-blanco mt-4 hidden items-center gap-5 rounded-[20px] border-2 p-4 lg:flex">
+        <div class="border-noche size-[120px] shrink-0 overflow-hidden rounded-xl border-2 p-1 [&_svg]:size-full" data-qr={enlace} set:html={qr} />
+        <div class="flex flex-col gap-1.5">
+          <p class="font-display text-[21px] leading-[26px] font-semibold">Míralo en tu espacio con el celular</p>
+          <p class="text-noche-suave text-[15px] leading-[21px]">
+            Escanea el código con la cámara, toca «Verlo en tu espacio» y apunta al suelo. El Megatobogán aparece a tamaño real
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
