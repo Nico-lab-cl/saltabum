@@ -1,0 +1,116 @@
+---
+// /ver-en-tu-espacio/ — a donde lleva el QR de «¿Cabe en tu espacio?». Pensada para el celular: el modelo 3D carga de
+// inmediato y el botón grande «Verlo en tu espacio» abre la cámara (WebXR o Scene Viewer en Android, Quick Look en
+// iPhone) para poner el Megatobogán en el suelo a tamaño real. Si el celular no lo permite, se avisa y queda el 3D.
+import { getImage } from "astro:assets";
+import portada from "../assets/megatobogan-real-frente.jpg";
+import { MODELO_3D, PRODUCTO } from "../data";
+import { RUTAS } from "../seo";
+import Icon from "../components/Icon.astro";
+import WaButton from "../components/WaButton.astro";
+import Wordmark from "../components/Wordmark.astro";
+
+const poster = await getImage({ src: portada, width: 900, height: 900, fit: "cover", position: "center", format: "webp", quality: 78 });
+const PASOS = [
+  "Toca «Verlo en tu espacio» y permite usar la cámara",
+  "Apunta al suelo y mueve el celular despacio",
+  "El Megatobogán aparece a tamaño real, camina alrededor para ver si cabe",
+];
+---
+
+<div class="bg-celeste text-noche flex min-h-dvh flex-col">
+  <header class="border-noche bg-sol border-b-2">
+    <div class="mx-auto flex max-w-[720px] items-center justify-between gap-3 px-4 py-2.5">
+      <a href="/" class="no-underline" aria-label="Saltabum y Entretenciones, inicio">
+        <Wordmark class="text-[26px]" />
+      </a>
+      <a href={RUTAS.megatobogan} class="text-noche inline-flex min-h-11 items-center text-sm font-extrabold underline">Medidas y precio</a>
+    </div>
+  </header>
+
+  <main class="mx-auto flex w-full max-w-[720px] flex-1 flex-col gap-4 px-4 pt-5 pb-8">
+    <div>
+      <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Realidad aumentada</p>
+      <h1 class="font-display mt-1 text-[32px] leading-9 font-semibold">Mira el {PRODUCTO.nombre} en tu espacio</h1>
+      <p class="mt-1.5">A tamaño real, {PRODUCTO.base} de base y {PRODUCTO.alto} de alto, con la cámara de tu celular</p>
+    </div>
+
+    <div class="border-noche bg-blanco shadow-pop-l relative overflow-hidden rounded-[28px] border-2">
+      <model-viewer
+        data-visor-espacio
+        src={MODELO_3D}
+        poster={poster.src}
+        alt={`Modelo 3D del ${PRODUCTO.nombre} a tamaño real`}
+        loading="eager"
+        reveal="auto"
+        camera-controls
+        touch-action="pan-y"
+        auto-rotate
+        auto-rotate-delay="1200"
+        rotation-per-second="18deg"
+        shadow-intensity="1"
+        exposure="1.05"
+        camera-orbit="30deg 74deg 100%"
+        ar
+        ar-modes="webxr scene-viewer quick-look"
+        ar-scale="fixed"
+        ar-placement="floor"
+        class="block h-[min(58dvh,520px)] w-full bg-[radial-gradient(circle_at_50%_40%,#fff6ea_0%,#f3e6d3_100%)]"
+      >
+        <button
+          slot="ar-button"
+          type="button"
+          class="bounce bg-verde border-noche shadow-pop absolute bottom-4 left-1/2 inline-flex min-h-15 -translate-x-1/2 cursor-pointer items-center gap-2.5 rounded-full border-2 px-7 text-lg font-extrabold whitespace-nowrap"
+        >
+          <Icon name="despacho" size={24} />
+          Verlo en tu espacio
+        </button>
+      </model-viewer>
+      <p data-cargando class="bg-crema/90 text-noche-suave pointer-events-none absolute top-3 left-3 rounded-full px-3 py-1 text-xs font-bold">
+        Cargando el modelo 3D…
+      </p>
+    </div>
+
+    <!-- Se muestra si el celular o el navegador no permiten la realidad aumentada. -->
+    <div data-sin-ar hidden class="border-noche bg-crema rounded-[20px] border-2 p-4">
+      <p class="font-extrabold">Este dispositivo no permite verlo con la cámara</p>
+      <p class="text-noche-suave mt-1 text-[15px] leading-[21px]">
+        Funciona en iPhone y en la mayoría de los Android. Mientras, puedes girarlo en 3D arriba o mandarnos una foto del lugar y te decimos si cabe
+      </p>
+    </div>
+
+    <ol class="flex flex-col gap-2.5">
+      {
+        PASOS.map((p, i) => (
+          <li class="flex items-start gap-3">
+            <span class="border-noche bg-sol font-display flex size-8 shrink-0 items-center justify-center rounded-full border-2 font-bold">{i + 1}</span>
+            <span class="pt-1 leading-[22px] font-semibold">{p}</span>
+          </li>
+        ))
+      }
+    </ol>
+
+    <WaButton
+      placement="ver-en-tu-espacio"
+      size="l"
+      message={`Hola, quiero saber si el ${PRODUCTO.nombre} cabe en el lugar de mi evento. Les mando una foto. Vengo de saltabum.cl`}
+      class="mt-1 text-center leading-[22px]"
+    >
+      ¿Dudas? Mándanos una foto del lugar
+    </WaButton>
+  </main>
+</div>
+
+<script>
+  import "@google/model-viewer";
+
+  // Avisa si no hay realidad aumentada y quita el «cargando» cuando el modelo está listo.
+  const visor = document.querySelector<HTMLElement & { canActivateAR?: boolean }>("[data-visor-espacio]");
+  visor?.addEventListener("load", () => {
+    document.querySelector("[data-cargando]")?.remove();
+    // model-viewer decide si hay realidad aumentada un instante después de cargar el modelo.
+    setTimeout(() => {
+      if (!visor.canActivateAR) document.querySelector<HTMLElement>("[data-sin-ar]")?.removeAttribute("hidden");
+    }, 400);
+  });
+</script>

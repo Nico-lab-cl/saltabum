@@ -1,0 +1,13 @@
+---
+// Página del QR de «¿Cabe en tu espacio?»: el Megatobogán en 3D con el botón de realidad aumentada.
+// Es una herramienta, no una página para buscadores: noindex y fuera del sitemap.
+import VerEnTuEspacio from "@design/pages/VerEnTuEspacio.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { PRODUCTO } from "@design/data";
+
+const titulo = `Ver el ${PRODUCTO.nombre} en tu espacio`;
+---
+
+<BaseLayout title={titulo} description={`Mira el ${PRODUCTO.nombre} a tamaño real en tu espacio con la cámara del celular.`} noindex>
+  <VerEnTuEspacio />
+</BaseLayout>

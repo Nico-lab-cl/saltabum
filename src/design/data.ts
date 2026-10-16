@@ -16,6 +16,8 @@ export const PRECIO_NORMAL = "$100.000";
 export const DESDE_HORAS = "3 horas";
 /** Valor de cada hora adicional sobre el bloque base. */
 export const HORA_EXTRA = "$10.000";
+/** Modelo 3D a escala real (scripts/generar-modelo-3d.mjs). Al cambiarlo, súbele la versión al nombre: /modelos se guarda 7 días en caché. */
+export const MODELO_3D = "/modelos/megatobogan-v6.glb";
 
 export type Comuna = {
   nombre: string;

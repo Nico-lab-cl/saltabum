@@ -7,14 +7,16 @@
 import { getImage } from "astro:assets";
 import QRCode from "qrcode";
 import portada from "../assets/megatobogan-real-frente.jpg";
-import { PRODUCTO } from "../data";
+import { MODELO_3D, PRODUCTO } from "../data";
+import { RUTAS } from "../seo";
 import Icon from "../components/Icon.astro";
 import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
 
 const poster = await getImage({ src: portada, width: 1200, height: 800, fit: "cover", position: "center", format: "webp", quality: 80 });
 
-// QR (SVG generado en el build) que abre esta misma página en el celular, directo en esta sección.
-const enlace = new URL(`${Astro.url.pathname}#patio`, Astro.site).href;
+// QR (SVG generado en el build) que abre en el celular la página «ver en tu espacio»: el modelo 3D con el botón
+// para ponerlo en el suelo con la cámara.
+const enlace = new URL(RUTAS.verEnTuEspacio, Astro.site).href;
 const qr = await QRCode.toString(enlace, {
   type: "svg",
   margin: 1,
@@ -87,7 +89,7 @@ const REQUISITOS = [
       <div class="border-noche bg-blanco shadow-pop-l relative overflow-hidden rounded-[28px] border-2">
         <model-viewer
           data-modelo-3d
-          src="/modelos/megatobogan-v6.glb"
+          src={MODELO_3D}
           poster={poster.src}
           alt={`Modelo 3D del ${PRODUCTO.nombre} a tamaño real: ${PRODUCTO.base} de base y ${PRODUCTO.alto} de alto`}
           loading="lazy"

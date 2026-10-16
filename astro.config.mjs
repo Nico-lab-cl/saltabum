@@ -20,7 +20,7 @@ export default defineConfig({
   // legales; `lastmod` es la fecha del build, así Google sabe cuándo volver a rastrear.
   integrations: [
     sitemap({
-      filter: (page) => !page.includes("/admin"),
+      filter: (page) => !page.includes("/admin") && !page.includes("/ver-en-tu-espacio"),
       // Prioridad según el tipo de página (portada > pillars > catálogo, producto y comunas > preguntas > legal).
       serialize(item) {
         const ruta = new URL(item.url).pathname;

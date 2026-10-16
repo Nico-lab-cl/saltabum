@@ -11,6 +11,8 @@ export const RUTAS = {
   eventos: "/arriendo-inflables-eventos-empresas/",
   preguntas: "/preguntas-frecuentes/",
   reservar: "/#reservar",
+  /** Página a la que lleva el QR: el modelo 3D con el botón para verlo con la cámara del celular. */
+  verEnTuEspacio: "/ver-en-tu-espacio/",
 } as const;
 
 export const NAV = [
