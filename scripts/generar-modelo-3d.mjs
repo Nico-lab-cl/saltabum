@@ -1,4 +1,4 @@
-// Genera public/modelos/megatobogan-v5.glb: el Megatobogán Arcoíris armado por código a partir del video real
+// Genera public/modelos/megatobogan-v6.glb: el Megatobogán Arcoíris armado por código a partir del video real
 // (vuelta completa al juego inflado). Es un modelo simplificado, de tubos y bloques redondeados, con la distribución,
 // los colores y las medidas reales, pensado para reemplazarse por un escaneo cuando exista.
 //
@@ -7,10 +7,11 @@
 //   · zona de obstáculos en «L»: detrás de la torre y por el costado izquierdo hasta la entrada del frente,
 //     con tubo verde solo en las dos caras de afuera; adentro, pilares rayados, cilindros rojos y tubos verdes.
 //     Desde la rama del fondo, la rampa amarilla con manillas negras sube a la torre
-//   · al medio: la torre, con la lona de torre de castillo (paredes rojas, franja amarilla y almenas)
+//   · al medio: la torre, con paredes rojas y amarillas, ventana atrás para la rampa y techo de lona café
+//     anaranjado en forma de montura, con un arco amarillo en cada extremo
 //   · al frente: tobogán principal, corto y empinado, con paredes escalonadas rojas y amarillas,
 //     pilares rojos, arco verde grande y techo de malla rojo anaranjada
-//   · a la derecha: tobogán largo que baja hacia ese lado, con arco amarillo y malla naranja
+//   · a la derecha: tobogán largo que baja hacia ese lado desde el arco amarillo de la torre
 //   · túneles bajos (forma de cerradura) bajo los toboganes, hacia la zona de salto azul de adelante a la derecha
 //
 // Uso: node scripts/generar-modelo-3d.mjs
@@ -50,6 +51,7 @@ const COLOR = {
   hueco: "#4a1520",
   negro: "#24242a",
   cartel: "#f2ede4",
+  lona: "#d9893a",
 };
 const piezas = Object.fromEntries(Object.keys(COLOR).map((k) => [k, []]));
 
@@ -135,7 +137,7 @@ function inclinada(color, x, ancho, alto, zA, yA, zB, yB, r = 0.18) {
 
 // Tobogán en coordenadas locales: pista centrada en x = 0, arriba en z = 0 (altura yTop), baja hacia +z
 // hasta z = largo (altura yPie) y sigue plano hasta z = largo + llegada.
-function tobogan({ pista, largo, llegada, yTop, yPie, arcoColor, mallaColor, paredAlta = 0, arcoGrande = false }) {
+function tobogan({ pista, largo, llegada, yTop, yPie, arcoColor, mallaColor, paredAlta = 0, arcoGrande = false, largoMalla = 1.5 }) {
   const eIn = 0.32, eOut = 0.48, fin = largo + llegada;
   const xa = -pista / 2, xb = pista / 2, x0 = xa - eIn - eOut, x1 = xb + eIn + eOut;
   // Cuerpo rojo macizo bajo la pista y pista amarilla encima.
@@ -161,8 +163,10 @@ function tobogan({ pista, largo, llegada, yTop, yPie, arcoColor, mallaColor, par
   // Arco y techo de malla sobre la entrada.
   // El arco verde del tobogán principal es grande y grueso, y domina el frente del juego.
   const R = pista / 2 + eIn + (arcoGrande ? 0.2 : 0.05), g = arcoGrande ? 0.42 : 0.3, yArco = arcoGrande ? yTop - 0.19 : yTop + 0.02;
-  arco(arcoColor, R, g, { x: 0, y: yArco, z: 0.05 });
-  techo(mallaColor, R - 0.2, 1.5, { x: 0, y: yArco, z: -0.75 });
+  if (arcoColor) {
+    arco(arcoColor, R, g, { x: 0, y: yArco, z: 0.05 });
+    techo(mallaColor, R - 0.2, largoMalla, { x: 0, y: yArco, z: -largoMalla / 2 });
+  }
   return { ancho: x1 - x0, fin };
 }
 
@@ -179,28 +183,35 @@ const XC = (TORRE.x0 + TORRE.x1) / 2;
   const bandas = ["amarillo", "rojo", "amarillo", "rojo"];
   const alto = (PISO - BASE) / bandas.length;
   bandas.forEach((c, i) => franja(c, x0 + 0.05, x1 - 0.05, BASE + i * alto, BASE + (i + 1) * alto, z0 + 0.05, z1 - 0.05, 0.14));
-  // Lona de torre de castillo arriba: paredes rojas con franja amarilla y almenas, abiertas hacia los toboganes
-  // y con la entrada de la rampa atrás.
-  const e = 0.36, h = PISO + 0.95;
+  // Paredes rojas con franja amarilla atrás y a la izquierda; atrás queda la ventana por donde llega la rampa.
+  const e = 0.36, h = PISO + 1.0;
   const rampa = { x0: XC - 0.75, x1: XC + 0.75 };
-  const muros = [
+  for (const [a, b, c, d] of [
     [x0, x0 + e, z0, z1], // costado izquierdo
-    [x0, rampa.x0, z0, z0 + e], // atrás, a la izquierda de la rampa
-    [rampa.x1, x1 - 0.9, z0, z0 + e], // atrás, a la derecha de la rampa
-  ];
-  for (const [a, b, c, d] of muros) {
-    franja("rojo", a, b, PISO, h - 0.25, c, d, 0.14);
-    franja("amarillo", a, b, h - 0.25, h, c, d, 0.1);
+    [x0, rampa.x0, z0, z0 + e], // atrás, a la izquierda de la ventana
+    [rampa.x1, x1, z0, z0 + e], // atrás, a la derecha de la ventana
+  ]) {
+    franja("amarillo", a, b, PISO, PISO + 0.45, c, d, 0.12);
+    franja("rojo", a, b, PISO + 0.45, h, c, d, 0.14);
   }
-  // Almenas en las esquinas y a lo largo del costado.
-  for (const [x, z] of [[x0 + e / 2, z0 + e / 2], [x0 + e / 2, (z0 + z1) / 2], [x0 + e / 2, z1 - e / 2], [rampa.x0 - 0.2, z0 + e / 2], [rampa.x1 + 0.2, z0 + e / 2]]) {
-    bloque("rojo", 0.36, 0.34, 0.36, { x, y: h + 0.17, z }, 0.08);
+  franja("rojo", rampa.x0, rampa.x1, h - 0.3, h, z0, z0 + e, 0.12); // dintel de la ventana
+  // Torre de lona: techo café anaranjado en forma de montura, con un arco amarillo en cada extremo.
+  // Visto desde atrás o desde el costado es la «torre» del juego.
+  const zc = (z0 + z1) / 2, Rz = (z1 - z0) / 2 + 0.05, aplasta = 0.5, yLona = h - 0.04;
+  const lona = new THREE.CylinderGeometry(Rz, Rz, x1 - x0, 32, 1, true, 0, Math.PI);
+  lona.rotateZ(Math.PI / 2); // eje en x, la mitad curva hacia arriba
+  lona.scale(1, aplasta, 1);
+  poner(lona, "lona", { x: (x0 + x1) / 2, y: yLona, z: zc });
+  for (const x of [x0 + 0.12, x1 - 0.12]) {
+    const arcoTorre = new THREE.TorusGeometry(Rz, 0.2, 14, 40, Math.PI);
+    arcoTorre.scale(1, aplasta, 1);
+    poner(arcoTorre, "amarillo", { x, y: yLona, z: zc, ry: Math.PI / 2 });
   }
 }
 
 // ── 2. Tobogán principal (al frente) ───────────────────────────────────────────────
 grupo(new THREE.Matrix4().makeTranslation(XC, 0, TORRE.z1), () =>
-  tobogan({ pista: 1.5, largo: 3.45, llegada: MAX - TORRE.z1 - 3.45, yTop: PISO, yPie: BASE, arcoColor: "verde", mallaColor: "malla", arcoGrande: true }),
+  tobogan({ pista: 1.5, largo: 3.45, llegada: MAX - TORRE.z1 - 3.45, yTop: PISO, yPie: BASE, arcoColor: "verde", mallaColor: "malla", arcoGrande: true, largoMalla: 0.75 }),
 );
 // Túnel bajo el tobogán principal, en su costado derecho, hacia la zona de salto.
 const XDER = XC + 0.75 + 0.32 + 0.48;
@@ -215,11 +226,10 @@ const ZC2 = (TORRE.z0 + TORRE.z1) / 2 - 0.3;
   const largo = MAX - TORRE.x1 - 0.55;
   const m = new THREE.Matrix4().makeRotationY(Math.PI / 2).setPosition(TORRE.x1, 0, ZC2);
   grupo(m, () =>
-    tobogan({ pista: 1.2, largo, llegada: 0.55, yTop: PISO, yPie: BASE, arcoColor: "amarillo", mallaColor: "naranja", paredAlta: -1 }),
+    tobogan({ pista: 1.2, largo, llegada: 0.55, yTop: PISO, yPie: BASE, arcoColor: null, paredAlta: -1 }),
   );
   const zCara = ZC2 + ANCHO2 / 2 + 0.005;
   tunel({ x: TORRE.x1 + 0.95, y: BASE + 0.45, z: zCara }, 0.38);
-  tunel({ x: TORRE.x1 + 2.0, y: BASE + 0.4, z: zCara }, 0.34);
 }
 
 // ── 4. Zona de salto (derecha adelante) ────────────────────────────────────────────
@@ -314,9 +324,9 @@ new GLTFExporter().parse(
   escena,
   (glb) => {
     mkdirSync("public/modelos", { recursive: true });
-    writeFileSync("public/modelos/megatobogan-v5.glb", Buffer.from(glb));
+    writeFileSync("public/modelos/megatobogan-v6.glb", Buffer.from(glb));
     console.log(
-      `megatobogan-v5.glb · ${(glb.byteLength / 1024).toFixed(0)} KB · ${Math.round(triangulos)} triángulos · ` +
+      `megatobogan-v6.glb · ${(glb.byteLength / 1024).toFixed(0)} KB · ${Math.round(triangulos)} triángulos · ` +
         `${tam.x.toFixed(2)} × ${tam.z.toFixed(2)} m de base, ${tam.y.toFixed(2)} m de alto · ` +
         `x ${caja.min.x.toFixed(2)}…${caja.max.x.toFixed(2)}, z ${caja.min.z.toFixed(2)}…${caja.max.z.toFixed(2)}`,
     );
