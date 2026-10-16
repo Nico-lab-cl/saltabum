@@ -1,4 +1,4 @@
-// Genera public/modelos/megatobogan-v6.glb: el Megatobogán Arcoíris armado por código a partir del video real
+// Genera public/modelos/megatobogan-v7.glb: el Megatobogán Arcoíris armado por código a partir del video real
 // (vuelta completa al juego inflado). Es un modelo simplificado, de tubos y bloques redondeados, con la distribución,
 // los colores y las medidas reales, pensado para reemplazarse por un escaneo cuando exista.
 //
@@ -13,6 +13,7 @@
 //     pilares rojos, arco verde grande y techo de malla rojo anaranjada
 //   · a la derecha: tobogán largo que baja hacia ese lado desde el arco amarillo de la torre
 //   · túneles bajos (forma de cerradura) bajo los toboganes, hacia la zona de salto azul de adelante a la derecha
+//   · en el suelo: el espacio libre de 8,5 × 8,5 m (alfombra translúcida con borde blanco) y una flecha que marca el frente
 //
 // Uso: node scripts/generar-modelo-3d.mjs
 
@@ -52,6 +53,9 @@ const COLOR = {
   negro: "#24242a",
   cartel: "#f2ede4",
   lona: "#d9893a",
+  espacio: "#ffffff",
+  borde: "#ffffff",
+  noche: "#1f2a5c",
 };
 const piezas = Object.fromEntries(Object.keys(COLOR).map((k) => [k, []]));
 
@@ -293,6 +297,37 @@ const ZC2 = (TORRE.z0 + TORRE.z1) / 2 - 0.3;
   }
 }
 
+// ── 6. Espacio libre y frente, dibujados en el suelo ─────────────────────────────
+// En realidad aumentada muestran si el juego cabe: una alfombra translúcida de 8,5 × 8,5 m (el espacio libre que
+// necesita) con borde blanco, y una flecha amarilla delante que marca el frente, hacia donde baja el tobogán principal.
+const ESPACIO = 8.5;
+{
+  const h = ESPACIO / 2, y = 0.01, b = 0.1;
+  poner(new THREE.PlaneGeometry(ESPACIO, ESPACIO), "espacio", { y, rx: -Math.PI / 2 });
+  for (const [x, z, w, d] of [[0, -h + b / 2, ESPACIO, b], [0, h - b / 2, ESPACIO, b], [-h + b / 2, 0, b, ESPACIO], [h - b / 2, 0, b, ESPACIO]]) {
+    poner(new THREE.PlaneGeometry(w, d), "borde", { x, y: y + 0.002, z, rx: -Math.PI / 2 });
+  }
+  // Flecha: cuerpo y punta en el plano del suelo, apuntando hacia +z, con contorno noche.
+  const flecha = (escala) => {
+    const f = new THREE.Shape();
+    const a = 0.2 * escala, p = 0.45 * escala, l = 0.55;
+    f.moveTo(-a, 0);
+    f.lineTo(a, 0);
+    f.lineTo(a, l);
+    f.lineTo(p, l);
+    f.lineTo(0, l + 0.5 * escala);
+    f.lineTo(-p, l);
+    f.lineTo(-a, l);
+    f.closePath();
+    return new THREE.ShapeGeometry(f);
+  };
+  const z0 = h + 0.15;
+  const contorno = flecha(1.18);
+  contorno.translate(0, -0.06, 0);
+  poner(contorno, "noche", { x: XC, y: y + 0.004, z: z0, rx: Math.PI / 2 });
+  poner(flecha(1), "amarillo", { x: XC, y: y + 0.006, z: z0, rx: Math.PI / 2 });
+}
+
 // ── Escena y exportación ───────────────────────────────────────────────────────────
 const escena = new THREE.Scene();
 for (const [nombre, lista] of Object.entries(piezas)) {
@@ -301,15 +336,15 @@ for (const [nombre, lista] of Object.entries(piezas)) {
   for (const g of lista) g.deleteAttribute("uv");
   const geo = mergeVertices(mergeGeometries(lista), 1e-4);
   geo.computeBoundingBox();
-  const translucida = nombre === "malla" || nombre === "naranja";
+  const translucida = nombre === "malla" || nombre === "naranja" || nombre === "espacio";
   const mat = new THREE.MeshStandardMaterial({
     name: nombre,
     color: new THREE.Color(COLOR[nombre]),
     roughness: translucida ? 0.85 : 0.4,
     metalness: 0,
-    side: translucida || nombre === "hueco" ? THREE.DoubleSide : THREE.FrontSide,
+    side: translucida || nombre === "hueco" || nombre === "noche" || nombre === "amarillo" ? THREE.DoubleSide : THREE.FrontSide,
     transparent: translucida,
-    opacity: translucida ? 0.9 : 1,
+    opacity: nombre === "espacio" ? 0.3 : translucida ? 0.9 : 1,
   });
   const malla = new THREE.Mesh(geo, mat);
   malla.name = nombre;
@@ -324,9 +359,9 @@ new GLTFExporter().parse(
   escena,
   (glb) => {
     mkdirSync("public/modelos", { recursive: true });
-    writeFileSync("public/modelos/megatobogan-v6.glb", Buffer.from(glb));
+    writeFileSync("public/modelos/megatobogan-v7.glb", Buffer.from(glb));
     console.log(
-      `megatobogan-v6.glb · ${(glb.byteLength / 1024).toFixed(0)} KB · ${Math.round(triangulos)} triángulos · ` +
+      `megatobogan-v7.glb · ${(glb.byteLength / 1024).toFixed(0)} KB · ${Math.round(triangulos)} triángulos · ` +
         `${tam.x.toFixed(2)} × ${tam.z.toFixed(2)} m de base, ${tam.y.toFixed(2)} m de alto · ` +
         `x ${caja.min.x.toFixed(2)}…${caja.max.x.toFixed(2)}, z ${caja.min.z.toFixed(2)}…${caja.max.z.toFixed(2)}`,
     );

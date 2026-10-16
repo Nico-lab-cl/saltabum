@@ -5,7 +5,7 @@ export const PRODUCTO = {
   edad: "3 a 12 años",
   base: "7,5 × 7,5 m",
   alto: "3,5 m",
-  espacioLibre: "[8,5 × 8,5 m]",
+  espacioLibre: "8,5 × 8,5 m",
   precio: "$69.990",
 };
 
@@ -17,7 +17,7 @@ export const DESDE_HORAS = "3 horas";
 /** Valor de cada hora adicional sobre el bloque base. */
 export const HORA_EXTRA = "$10.000";
 /** Modelo 3D a escala real (scripts/generar-modelo-3d.mjs). Al cambiarlo, súbele la versión al nombre: /modelos se guarda 7 días en caché. */
-export const MODELO_3D = "/modelos/megatobogan-v6.glb";
+export const MODELO_3D = "/modelos/megatobogan-v7.glb";
 
 export type Comuna = {
   nombre: string;

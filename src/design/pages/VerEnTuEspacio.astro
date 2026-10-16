@@ -12,9 +12,9 @@ import Wordmark from "../components/Wordmark.astro";
 
 const poster = await getImage({ src: portada, width: 900, height: 900, fit: "cover", position: "center", format: "webp", quality: 78 });
 const PASOS = [
-  "Toca «Verlo en tu espacio» y permite usar la cámara",
-  "Apunta al suelo y mueve el celular despacio",
-  "El Megatobogán aparece a tamaño real, camina alrededor para ver si cabe",
+  "Ve al lugar del evento, toca «Verlo en tu espacio» y permite usar la cámara",
+  "Apunta al suelo, mueve el celular despacio y retrocede unos 10 metros para ver el juego completo",
+  `El recuadro blanco en el suelo es el espacio libre de ${PRODUCTO.espacioLibre} y la flecha amarilla marca el frente, donde baja el tobogán`,
 ];
 ---
 
