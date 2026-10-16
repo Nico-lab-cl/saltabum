@@ -17,6 +17,11 @@ export const DESDE_HORAS = "3 horas";
 /** Valor de cada hora adicional sobre el bloque base. */
 export const HORA_EXTRA = "$10.000";
 /** Modelo 3D a escala real (scripts/generar-modelo-3d.mjs). Al cambiarlo, súbele la versión al nombre: /modelos se guarda 7 días en caché. */
+/** Juegos que se pueden reservar en la agenda (precio del bloque base en pesos). El Megatobogán es el primero de varios. */
+export const PRODUCTOS = [{ id: "megatobogan", nombre: PRODUCTO.nombre, precio: Number(DESDE.replace(/\D/g, "")) }] as const;
+/** Abono para reservar, en pesos. */
+export const ABONO = 10000;
+
 export const MODELO_3D = "/modelos/megatobogan-v7.glb";
 
 export type Comuna = {
@@ -25,16 +30,18 @@ export type Comuna = {
   precio: string;
   titulo: string;
   tono: "gratis" | "pago" | "convenir";
+  /** Valor del despacho en pesos (lo usa la agenda para calcular el total). */
+  despacho: number;
 };
 
 // Ordenadas por la costa, de norte a sur y hacia el interior.
 export const COMUNAS: Comuna[] = [
-  { nombre: "Concón", zonas: "Costa de Montemar e Higuerillas", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago" },
-  { nombre: "Viña del Mar", zonas: "Reñaca, Jardín del Mar, Forestal", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis" },
-  { nombre: "Valparaíso", zonas: "Nuestra base, Curauma y Placilla", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis" },
-  { nombre: "Quilpué", zonas: "Todo Quilpué", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago" },
-  { nombre: "Villa Alemana", zonas: "Toda Villa Alemana", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago" },
-  { nombre: "Limache / Olmué", zonas: "Todo Limache y Olmué", precio: "+$7.000", titulo: "+$7.000 de despacho", tono: "pago" },
+  { nombre: "Concón", zonas: "Costa de Montemar e Higuerillas", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago", despacho: 5000 },
+  { nombre: "Viña del Mar", zonas: "Reñaca, Jardín del Mar, Forestal", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis", despacho: 0 },
+  { nombre: "Valparaíso", zonas: "Nuestra base, Curauma y Placilla", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis", despacho: 0 },
+  { nombre: "Quilpué", zonas: "Todo Quilpué", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago", despacho: 5000 },
+  { nombre: "Villa Alemana", zonas: "Toda Villa Alemana", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago", despacho: 5000 },
+  { nombre: "Limache / Olmué", zonas: "Todo Limache y Olmué", precio: "+$7.000", titulo: "+$7.000 de despacho", tono: "pago", despacho: 7000 },
 ];
 
 export const TONO_BG: Record<Comuna["tono"], string> = {

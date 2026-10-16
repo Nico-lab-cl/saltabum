@@ -1,26 +1,31 @@
 ---
-// Calendario de reservas: el cliente ve los horarios libres, elige uno y reserva.
-// Datos y envío: src/lib/client/reservas.ts (API /api/disponibilidad y /api/reservas).
+// Agenda de reservas: el cliente elige el día en el calendario y después arma su arriendo: juego, hora de inicio
+// (cada 30 minutos entre 09:00 y 22:00), cuántas horas (3 más hasta 3 adicionales) y la comuna para el despacho.
+// Ve el total al tiro y reserva. Reglas y precios: src/lib/reservas.ts. Datos y envío: src/lib/client/reservas.ts.
 import Turnstile from "@/components/core/Turnstile.astro";
-import { BLOQUES } from "@/lib/reservas";
-import { COMUNAS } from "../data";
+import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
+import { APERTURA, CIERRE, HORAS_BASE, HORAS_EXTRA_MAX, aHora, pesos } from "@/lib/reservas";
+import { ABONO, COMUNAS, HORA_EXTRA, PRODUCTOS } from "../data";
 import Icon from "../components/Icon.astro";
+import Rayos from "../components/Rayos.astro";
 import WaButton from "../components/WaButton.astro";
 
 const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
 const input =
   "border-noche bg-crema text-noche placeholder:text-noche-suave/70 min-h-12 w-full min-w-0 rounded-xl border-2 px-3.5";
+const titulo = "font-display text-[19px] leading-6 font-semibold";
 ---
 
-<section id="reservar" aria-labelledby="agenda-titulo" class="border-noche bg-arena border-b-2" data-agenda>
+<section id="reservar" aria-labelledby="agenda-titulo" class="border-noche bg-sol text-noche relative isolate overflow-hidden border-b-2" data-agenda>
+  <Rayos x="78%" y="8%" />
   <div class="mx-auto flex max-w-[1320px] flex-col gap-6 px-4 py-10 lg:gap-10 lg:px-10 lg:py-20">
     <div>
-      <p class="text-azul-texto text-xs font-extrabold tracking-[1.2px] uppercase">Reserva en línea</p>
+      <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Reserva en línea</p>
       <h2 id="agenda-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
         Elige tu fecha y horario
       </h2>
-      <p class="text-noche-suave mt-2 max-w-[560px] lg:mt-3 lg:text-lg">
-        Reserva desde la web en minutos, sin formularios complicados ni letra chica
+      <p class="mt-2 max-w-[600px] lg:mt-3 lg:text-lg">
+        Arma tu arriendo en minutos, con la hora que quieras desde las {aHora(APERTURA)} y el total a la vista
       </p>
     </div>
 
@@ -61,42 +66,89 @@ const input =
         </ul>
       </div>
 
-      <!-- Horarios y formulario -->
+      <!-- Arma tu arriendo -->
       <div class="border-noche bg-blanco flex flex-col gap-4 rounded-[28px] border-2 p-4 lg:flex-1 lg:p-6">
         <div data-paso="dia">
           <p class="font-display text-[22px] leading-7 font-semibold">Elige un día en el calendario</p>
-          <p class="text-noche-suave mt-1.5">Puedes reservar desde mañana, en bloques de 3 horas</p>
+          <p class="text-noche-suave mt-1.5">Puedes reservar desde mañana y después eliges la hora, las horas y tu comuna</p>
           <ul class="mt-4 flex flex-col gap-2">
-            {
-              BLOQUES.map((b) => (
-                <li class="bg-crema flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold">
-                  <Icon name="puntual" size={20} />
-                  {b.inicio} a {b.fin}
-                </li>
-              ))
-            }
+            <li class="bg-crema flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold"><Icon name="puntual" size={20} />Inicio desde las {aHora(APERTURA)}, cada 30 minutos</li>
+            <li class="bg-crema flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold"><Icon name="check" size={20} />{HORAS_BASE} horas, más hasta {HORAS_EXTRA_MAX} adicionales de {HORA_EXTRA}</li>
+            <li class="bg-crema flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold"><Icon name="despacho" size={20} />Despacho según tu comuna, con el total a la vista</li>
           </ul>
         </div>
 
-        <div data-paso="horario" hidden>
-          <p data-dia-titulo class="font-display text-[22px] leading-7 font-semibold first-letter:uppercase"></p>
-          <div data-bloques role="group" aria-label="Horario" class="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-            {
-              BLOQUES.map((b) => (
-                <button
-                  type="button"
-                  data-bloque={b.id}
-                  aria-pressed="false"
-                  class="border-noche bg-verde-burbuja aria-pressed:bg-noche aria-pressed:text-crema aria-pressed:shadow-sol flex min-h-14 cursor-pointer flex-col items-center justify-center rounded-xl border-2 px-3 py-2 font-extrabold disabled:cursor-not-allowed disabled:border-noche/20 disabled:bg-arena disabled:text-noche-suave disabled:line-through"
-                >
-                  {b.inicio} a {b.fin}
-                  <span data-bloque-estado class="text-xs font-semibold">Libre</span>
-                </button>
-              ))
-            }
+        <div data-paso="armar" hidden class="flex flex-col gap-5">
+          <p data-dia-titulo class="font-display text-[24px] leading-7 font-semibold first-letter:uppercase"></p>
+
+          <fieldset class="flex flex-col gap-2">
+            <legend class={titulo}>Juego</legend>
+            <div class="mt-2 grid gap-2">
+              {
+                PRODUCTOS.map((p, i) => (
+                  <label class="border-noche has-checked:bg-noche has-checked:text-crema has-checked:shadow-sol bg-crema flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-xl border-2 px-3.5 py-2.5 font-extrabold">
+                    <span class="flex items-center gap-2.5">
+                      <input type="radio" name="producto" value={p.id} checked={i === 0} class="accent-sol size-4" data-producto />
+                      {p.nombre}
+                    </span>
+                    <span class="text-sm font-semibold">{pesos(p.precio)} · {HORAS_BASE} horas</span>
+                  </label>
+                ))
+              }
+            </div>
+          </fieldset>
+
+          <div class="flex flex-col gap-2">
+            <p class={titulo}>¿Cuántas horas?</p>
+            <div class="flex items-center gap-3">
+              <button type="button" data-menos aria-label="Una hora menos" class="border-noche bg-crema flex size-12 cursor-pointer items-center justify-center rounded-full border-2 text-2xl font-extrabold disabled:cursor-not-allowed disabled:opacity-30">−</button>
+              <p class="min-w-[150px] text-center">
+                <span data-horas class="font-display text-[28px] leading-8 font-bold">{HORAS_BASE}</span>
+                <span class="font-extrabold"> horas</span>
+                <span data-horas-extra class="text-noche-suave block text-sm">Sin horas adicionales</span>
+              </p>
+              <button type="button" data-mas aria-label="Una hora más" class="border-noche bg-crema flex size-12 cursor-pointer items-center justify-center rounded-full border-2 text-2xl font-extrabold disabled:cursor-not-allowed disabled:opacity-30">+</button>
+            </div>
           </div>
 
-          <form data-reserva class="group mt-5 grid grid-cols-2 gap-3.5" hidden>
+          <div class="flex flex-col gap-2">
+            <p class={titulo}>Hora de inicio</p>
+            <div data-inicios role="group" aria-label="Hora de inicio" class="grid grid-cols-4 gap-2 sm:grid-cols-5"></div>
+            <p data-inicio-resumen class="text-noche-suave text-sm">Elige a qué hora quieres que esté listo el juego</p>
+            <WhatsAppLink
+              placement="agenda-noche"
+              message="Hola, mi evento dura toda la noche o pasa de las 22:00 y quiero cotizar un juego inflable. Vengo de saltabum.cl"
+              class="border-noche bg-crema mt-1 flex min-h-12 items-center gap-2.5 rounded-xl border-2 border-dashed px-3.5 py-2 text-sm font-extrabold no-underline"
+            >
+              <Icon name="whatsapp" size={20} class="shrink-0" />
+              <span>¿Tu evento dura toda la noche o pasa de las {aHora(CIERRE)}? Cotízalo con nosotros por WhatsApp</span>
+            </WhatsAppLink>
+          </div>
+
+          <label class="flex flex-col gap-2">
+            <span class={titulo}>Comuna del evento</span>
+            <select data-comuna class={input}>
+              <option value="">Elige tu comuna</option>
+              {COMUNAS.map((c) => <option value={c.nombre}>{c.nombre} · {c.despacho ? `despacho ${pesos(c.despacho)}` : "despacho gratis"}</option>)}
+            </select>
+          </label>
+
+          <!-- Total -->
+          <div class="border-noche bg-crema rounded-[20px] border-2 p-4">
+            <p class={titulo}>Tu arriendo</p>
+            <dl class="mt-2 flex flex-col gap-1.5 text-[15px]">
+              <div class="flex justify-between gap-3"><dt data-linea-base>Arriendo por {HORAS_BASE} horas</dt><dd data-precio-base class="font-extrabold"></dd></div>
+              <div class="flex justify-between gap-3"><dt data-linea-extra>Horas adicionales</dt><dd data-precio-extra class="font-extrabold"></dd></div>
+              <div class="flex justify-between gap-3"><dt data-linea-despacho>Despacho</dt><dd data-precio-despacho class="font-extrabold"></dd></div>
+              <div class="border-noche/20 mt-1 flex items-end justify-between gap-3 border-t-2 border-dashed pt-2">
+                <dt class="font-extrabold">Total</dt>
+                <dd data-precio-total class="font-display text-[30px] leading-8 font-bold"></dd>
+              </div>
+            </dl>
+            <p class="text-noche-suave mt-2 text-sm">Reservas con {pesos(ABONO)} de abono, que se descuentan del total</p>
+          </div>
+
+          <form data-reserva class="group grid grid-cols-2 gap-3.5">
             <label class="col-span-2 flex flex-col gap-1.5 font-bold sm:col-span-1">
               Nombre
               <input name="nombre" required autocomplete="name" placeholder="Ej.: Camila Rojas" class={input} />
@@ -105,13 +157,7 @@ const input =
               Teléfono
               <input name="telefono" type="tel" required autocomplete="tel" inputmode="tel" placeholder="+56 9 1234 5678" class={input} />
             </label>
-            <label class="col-span-2 flex flex-col gap-1.5 font-bold sm:col-span-1">
-              Comuna
-              <select name="comuna" required class={input}>
-                {COMUNAS.map((c) => <option>{c.nombre}</option>)}
-              </select>
-            </label>
-            <label class="col-span-2 flex flex-col gap-1.5 font-bold sm:col-span-1">
+            <label class="col-span-2 flex flex-col gap-1.5 font-bold">
               <span>Dirección <span class="text-noche-suave font-normal">(opcional)</span></span>
               <input name="direccion" autocomplete="street-address" class={input} />
             </label>
@@ -127,12 +173,12 @@ const input =
             <button
               type="submit"
               data-reserva-boton
-              class="bounce bg-rojo-texto border-noche shadow-pop col-span-2 min-h-14 cursor-pointer rounded-full border-2 px-6 text-[17px] font-extrabold text-white group-data-[state=sending]:pointer-events-none group-data-[state=sending]:opacity-75"
+              class="bounce bg-rojo-texto border-noche shadow-pop col-span-2 min-h-14 cursor-pointer rounded-full border-2 px-6 text-[17px] leading-[22px] font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60 group-data-[state=sending]:pointer-events-none group-data-[state=sending]:opacity-75"
             >
-              Reservar
+              Elige la hora y tu comuna
             </button>
             <p data-reserva-mensaje aria-live="polite" class="text-noche-suave col-span-2 text-sm">
-              Después te escribimos por WhatsApp para confirmar con el abono de $10.000
+              Después te escribimos por WhatsApp para confirmar con el abono de {pesos(ABONO)}
             </p>
           </form>
         </div>
@@ -154,7 +200,17 @@ const input =
 
 <script>
   import { cargarDisponibilidad, enviarReserva, type Disponibilidad } from "@/lib/client/reservas";
-  import { BLOQUES, claveHorario, etiquetaBloque } from "@/lib/reservas";
+  import {
+    HORAS_BASE,
+    HORAS_EXTRA_MAX,
+    aHora,
+    calcularPrecio,
+    estaLibre,
+    etiquetaHorario,
+    iniciosPosibles,
+    pesos,
+    VALOR_HORA_EXTRA,
+  } from "@/lib/reservas";
 
   const root = document.querySelector<HTMLElement>("[data-agenda]");
   if (root) iniciar(root);
@@ -167,10 +223,16 @@ const input =
     const btnSiguiente = $<HTMLButtonElement>("[data-mes-siguiente]");
     const estado = $<HTMLElement>("[data-agenda-estado]");
     const pasoDia = $<HTMLElement>('[data-paso="dia"]');
-    const pasoHorario = $<HTMLElement>('[data-paso="horario"]');
+    const pasoArmar = $<HTMLElement>('[data-paso="armar"]');
     const pasoListo = $<HTMLElement>('[data-paso="listo"]');
     const tituloDia = $<HTMLElement>("[data-dia-titulo]");
-    const botonesBloque = [...root.querySelectorAll<HTMLButtonElement>("[data-bloque]")];
+    const gridInicios = $<HTMLElement>("[data-inicios]");
+    const resumenInicio = $<HTMLElement>("[data-inicio-resumen]");
+    const textoHoras = $<HTMLElement>("[data-horas]");
+    const textoExtra = $<HTMLElement>("[data-horas-extra]");
+    const btnMenos = $<HTMLButtonElement>("[data-menos]");
+    const btnMas = $<HTMLButtonElement>("[data-mas]");
+    const selComuna = $<HTMLSelectElement>("[data-comuna]");
     const form = $<HTMLFormElement>("[data-reserva]");
     const botonReservar = $<HTMLButtonElement>("[data-reserva-boton]");
     const mensaje = $<HTMLElement>("[data-reserva-mensaje]");
@@ -183,10 +245,14 @@ const input =
 
     let disp: Disponibilidad | undefined;
     let mes = ""; // "YYYY-MM"
-    let diaElegido: string | undefined;
-    let bloqueElegido: string | undefined;
+    let dia: string | undefined;
+    let inicio: number | undefined;
+    let horas = HORAS_BASE;
+    const producto = () => root.querySelector<HTMLInputElement>("[data-producto]:checked")?.value ?? "megatobogan";
 
-    const libres = (fecha: string) => BLOQUES.filter((b) => !disp?.ocupados.has(claveHorario(fecha, b.id))).length;
+    /** Horas de inicio libres ese día para el juego y la duración elegidos. */
+    const libres = (fecha: string, h = horas) =>
+      iniciosPosibles(h).filter((m) => estaLibre(fecha, producto(), m, h, disp?.ocupados ?? []));
 
     function pintarMes() {
       if (!disp) return;
@@ -208,12 +274,13 @@ const input =
         boton.textContent = String(d);
         boton.dataset.fecha = fecha;
         const fuera = fecha < disp.desde || fecha > disp.hasta;
-        const n = fuera ? 0 : libres(fecha);
-        const tipo = fuera ? "fuera" : n === 0 ? "lleno" : n === 1 ? "pocos" : "libre";
+        // El color del día se calcula con la duración base (3 horas).
+        const n = fuera ? 0 : libres(fecha, HORAS_BASE).length;
+        const tipo = fuera ? "fuera" : n === 0 ? "lleno" : n < 8 ? "pocos" : "libre";
         boton.dataset.estado = tipo;
         boton.disabled = tipo === "fuera" || tipo === "lleno";
-        boton.setAttribute("aria-pressed", String(fecha === diaElegido));
-        const textoEstado = { fuera: "no disponible", lleno: "sin horarios", pocos: "queda 1 horario", libre: `${n} horarios libres` }[tipo];
+        boton.setAttribute("aria-pressed", String(fecha === dia));
+        const textoEstado = { fuera: "no disponible", lleno: "sin horarios", pocos: "quedan pocos horarios", libre: "con horarios libres" }[tipo];
         boton.setAttribute("aria-label", `${fechaLarga.format(aFecha(fecha))}, ${textoEstado}`);
         boton.className =
           "min-h-11 cursor-pointer rounded-xl border-2 text-[15px] font-extrabold aria-pressed:bg-noche aria-pressed:text-crema aria-pressed:border-noche aria-pressed:shadow-sol disabled:cursor-not-allowed lg:min-h-13 lg:text-base " +
@@ -229,31 +296,83 @@ const input =
     }
 
     function elegirDia(fecha: string) {
-      diaElegido = fecha;
-      bloqueElegido = undefined;
+      dia = fecha;
       pasoDia.hidden = true;
       pasoListo.hidden = true;
-      pasoHorario.hidden = false;
-      form.hidden = true;
+      pasoArmar.hidden = false;
       tituloDia.textContent = fechaLarga.format(aFecha(fecha));
-      for (const b of botonesBloque) {
-        const ocupado = disp?.ocupados.has(claveHorario(fecha, b.dataset.bloque!)) ?? false;
-        b.disabled = ocupado;
-        b.setAttribute("aria-pressed", "false");
-        b.querySelector("[data-bloque-estado]")!.textContent = ocupado ? "Ocupado" : "Libre";
-      }
       gridDias.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.fecha === fecha)));
+      pintarInicios();
     }
 
-    for (const b of botonesBloque) {
-      b.addEventListener("click", () => {
-        bloqueElegido = b.dataset.bloque;
-        botonesBloque.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-        form.hidden = false;
-        botonReservar.textContent = `Reservar de ${etiquetaBloque(bloqueElegido!)}`;
-        form.querySelector<HTMLInputElement>('[name="nombre"]')?.focus();
-      });
+    /** Dibuja las horas de inicio de la duración elegida; las que chocan con otra reserva quedan tachadas. */
+    function pintarInicios() {
+      if (!dia) return;
+      const ok = new Set(libres(dia));
+      if (inicio !== undefined && !ok.has(inicio)) inicio = undefined;
+      gridInicios.replaceChildren(
+        ...iniciosPosibles(horas).map((m) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = aHora(m);
+          b.disabled = !ok.has(m);
+          b.setAttribute("aria-pressed", String(m === inicio));
+          b.setAttribute("aria-label", `${aHora(m)}${b.disabled ? ", ocupado" : ""}`);
+          b.className =
+            "border-noche bg-verde-burbuja aria-pressed:bg-noche aria-pressed:text-crema aria-pressed:shadow-sol min-h-11 cursor-pointer rounded-xl border-2 text-[15px] font-extrabold disabled:cursor-not-allowed disabled:border-noche/20 disabled:bg-arena disabled:text-noche-suave disabled:line-through";
+          b.addEventListener("click", () => {
+            inicio = m;
+            pintarInicios();
+          });
+          return b;
+        }),
+      );
+      if (ok.size === 0) resumenInicio.textContent = "Con esta duración no quedan horarios ese día, prueba con menos horas o con otro día";
+      else if (inicio === undefined) resumenInicio.textContent = "Elige a qué hora quieres que esté listo el juego";
+      else resumenInicio.textContent = `De ${etiquetaHorario(inicio, inicio + horas * 60)}`;
+      actualizar();
     }
+
+    function cambiarHoras(delta: number) {
+      horas = Math.min(HORAS_BASE + HORAS_EXTRA_MAX, Math.max(HORAS_BASE, horas + delta));
+      pintarInicios();
+    }
+
+    /** Duración, desglose del precio y texto del botón. */
+    function actualizar() {
+      const extra = horas - HORAS_BASE;
+      textoHoras.textContent = String(horas);
+      textoExtra.textContent = extra ? `${extra} adicional${extra > 1 ? "es" : ""} de ${pesos(VALOR_HORA_EXTRA)}` : "Sin horas adicionales";
+      btnMenos.disabled = horas <= HORAS_BASE;
+      btnMas.disabled = horas >= HORAS_BASE + HORAS_EXTRA_MAX;
+
+      const comuna = selComuna.value || undefined;
+      const p = calcularPrecio(producto(), horas, comuna);
+      $<HTMLElement>("[data-precio-base]").textContent = pesos(p.base);
+      $<HTMLElement>("[data-linea-extra]").textContent = extra ? `${extra} hora${extra > 1 ? "s" : ""} adicional${extra > 1 ? "es" : ""}` : "Horas adicionales";
+      $<HTMLElement>("[data-precio-extra]").textContent = extra ? pesos(p.extras) : "$0";
+      $<HTMLElement>("[data-linea-despacho]").textContent = comuna ? `Despacho a ${comuna}` : "Despacho";
+      $<HTMLElement>("[data-precio-despacho]").textContent = comuna ? pesos(p.despacho) : "Elige tu comuna";
+      $<HTMLElement>("[data-precio-total]").textContent = `$${p.total.toLocaleString("es-CL")}`;
+
+      const listo = dia && inicio !== undefined && comuna;
+      botonReservar.disabled = !listo;
+      botonReservar.textContent = listo
+        ? `Reservar de ${etiquetaHorario(inicio!, inicio! + horas * 60)}`
+        : inicio === undefined
+          ? "Elige la hora de inicio"
+          : "Elige tu comuna";
+    }
+
+    btnMenos.addEventListener("click", () => cambiarHoras(-1));
+    btnMas.addEventListener("click", () => cambiarHoras(1));
+    selComuna.addEventListener("change", actualizar);
+    root.querySelectorAll("[data-producto]").forEach((r) =>
+      r.addEventListener("change", () => {
+        pintarMes();
+        pintarInicios();
+      }),
+    );
 
     btnAnterior.addEventListener("click", () => cambiarMes(-1));
     btnSiguiente.addEventListener("click", () => cambiarMes(1));
@@ -265,42 +384,50 @@ const input =
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (!diaElegido || !bloqueElegido || form.dataset.state === "sending") return;
+      const comuna = selComuna.value;
+      if (!dia || inicio === undefined || !comuna || form.dataset.state === "sending") return;
       form.dataset.state = "sending";
       botonReservar.disabled = true;
       mensaje.textContent = "Reservando…";
       const data = new FormData(form);
       const txt = (k: string) => (typeof data.get(k) === "string" ? (data.get(k) as string) : undefined);
+      const fecha = dia;
+      const desde = inicio;
       const r = await enviarReserva({
-        fecha: diaElegido,
-        bloque: bloqueElegido as never,
+        fecha,
+        producto: producto() as never,
+        inicio: aHora(desde),
+        horas,
         nombre: txt("nombre") ?? "",
         telefono: txt("telefono") ?? "",
-        comuna: txt("comuna") ?? "",
+        comuna,
         direccion: txt("direccion"),
         mensaje: txt("mensaje"),
         turnstile_token: txt("cf-turnstile-response"),
         website: txt("website"),
       });
       form.dataset.state = "idle";
-      botonReservar.disabled = false;
       window.turnstile?.reset();
 
       if (r.ok) {
-        disp?.ocupados.add(claveHorario(diaElegido, bloqueElegido));
+        const fin = desde + horas * 60;
+        disp?.ocupados.push({ fecha, producto: producto(), inicio: desde, fin });
+        const total = calcularPrecio(producto(), horas, comuna).total;
         root.querySelector("[data-listo-detalle]")!.textContent =
-          `${fechaLarga.format(aFecha(diaElegido))}, de ${etiquetaBloque(bloqueElegido)}, te escribimos por WhatsApp para confirmar con el abono de $10.000`;
-        pasoHorario.hidden = true;
+          `${fechaLarga.format(aFecha(fecha))}, de ${etiquetaHorario(desde, fin)} en ${comuna}, total ${pesos(total)}. Te escribimos por WhatsApp para confirmar con el abono`;
+        pasoArmar.hidden = true;
         pasoListo.hidden = false;
         form.reset();
+        inicio = undefined;
         mensaje.textContent = mensajeInicial;
         pintarMes();
         return;
       }
+      actualizar();
       if (r.error === "ocupado") {
         mensaje.textContent = "Ese horario se acaba de tomar, elige otro";
         await recargar();
-        elegirDia(diaElegido);
+        elegirDia(fecha);
         return;
       }
       mensaje.textContent =
@@ -322,6 +449,7 @@ const input =
         estado.textContent = "No pudimos cargar la disponibilidad, escríbenos por WhatsApp";
       }
     }
+    actualizar();
     void recargar();
   }
 </script>

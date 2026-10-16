@@ -9,6 +9,7 @@ import QRCode from "qrcode";
 import portada from "../assets/megatobogan-real-frente.jpg";
 import { MODELO_3D, PRODUCTO } from "../data";
 import { RUTAS } from "../seo";
+import Cielo from "../components/Cielo.astro";
 import Icon from "../components/Icon.astro";
 import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
 
@@ -38,9 +39,10 @@ const REQUISITOS = [
 ];
 ---
 
-<section id="patio" aria-labelledby="patio-titulo" class="border-noche bg-celeste border-b-2">
-  <div class="mx-auto flex max-w-[1320px] flex-col gap-6 px-4 py-10 lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:py-20">
-    <div class="flex flex-col gap-5 lg:min-w-0 lg:flex-1 lg:gap-6">
+<section id="patio" aria-labelledby="patio-titulo" class="border-noche bg-celeste text-noche relative isolate overflow-hidden border-b-2" data-cielo>
+  <Cielo />
+  <div data-cielo-contenido class="pointer-events-none mx-auto flex max-w-[1320px] flex-col gap-6 px-4 py-10 md:max-w-[680px] lg:max-w-[1320px] lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:py-20">
+    <div class="pointer-events-auto flex flex-col gap-5 lg:min-w-0 lg:flex-1 lg:gap-6">
       <div>
         <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Medidas</p>
         <h2 id="patio-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
@@ -85,7 +87,7 @@ const REQUISITOS = [
       </WhatsAppLink>
     </div>
 
-    <div class="lg:min-w-0 lg:flex-1">
+    <div class="pointer-events-auto lg:min-w-0 lg:flex-1">
       <div class="border-noche bg-blanco shadow-pop-l relative overflow-hidden rounded-[28px] border-2">
         <model-viewer
           data-modelo-3d

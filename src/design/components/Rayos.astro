@@ -1,0 +1,42 @@
+---
+// Fondo de rayos de sol: un estallido de franjas amarillas que gira muy lento detrás del contenido, como el sol
+// de una fiesta al aire libre. Va en una sección `relative isolate overflow-hidden bg-sol`.
+// Las franjas alternan `sol` con un amarillo un poco más claro, así se nota sin restarle contraste al texto noche.
+interface Props {
+  /** Dónde queda el centro del sol, en porcentaje de la sección. */
+  x?: string;
+  y?: string;
+}
+const { x = "50%", y = "12%" } = Astro.props;
+---
+
+<div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+  <div class="rayos-giro" style={`left: ${x}; top: ${y}`}></div>
+  <div class="rayos-sol" style={`left: ${x}; top: ${y}`}></div>
+</div>
+
+<style>
+  .rayos-giro {
+    position: absolute;
+    width: 260vmax;
+    aspect-ratio: 1;
+    translate: -50% -50%;
+    background: repeating-conic-gradient(from 0deg, #ffc23a 0deg 7.5deg, #ffcf5c 7.5deg 15deg);
+    animation: rayos-girar 180s linear infinite;
+  }
+  .rayos-sol {
+    position: absolute;
+    width: clamp(160px, 22vw, 300px);
+    aspect-ratio: 1;
+    translate: -50% -50%;
+    border-radius: 9999px;
+    background: #ffd56e;
+    box-shadow: 0 0 0 clamp(18px, 2.4vw, 32px) rgb(255 213 110 / 0.5);
+  }
+  @keyframes rayos-girar {
+    to { rotate: 360deg; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rayos-giro { animation: none; }
+  }
+</style>

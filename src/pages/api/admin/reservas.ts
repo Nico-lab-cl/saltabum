@@ -1,9 +1,9 @@
 // Panel de reservas (/admin): requiere el secreto ADMIN_TOKEN en el header Authorization.
 //   GET  → reservas y bloqueos desde hoy (con datos de contacto)
-//   POST → { accion: "bloquear" | "liberar", fecha, bloque | "todos" }
+//   POST → { accion: "bloquear", fecha, desde?, hasta? } (sin horas, el día completo) o { accion: "liberar", id }
 import type { APIRoute } from "astro";
 import { ADMIN_TOKEN } from "astro:env/server";
-import { BLOQUE_IDS, bloqueoSchema, hoyChile } from "@/lib/reservas";
+import { aMinutos, bloqueoSchema, hoyChile } from "@/lib/reservas";
 import { bloquear, liberar, listarDesde } from "@/lib/server/reservas-db";
 
 export const prerender = false;
@@ -46,9 +46,14 @@ export const POST: APIRoute = async ({ request }) => {
   }
   if (!parsed.success) return json(422, { ok: false, error: "validation" });
 
-  const { accion, fecha, bloque } = parsed.data;
-  const bloques = bloque === "todos" ? BLOQUE_IDS : [bloque];
-  if (accion === "bloquear") await bloquear(fecha, bloques);
-  else await liberar(fecha, bloques);
+  const pedido = parsed.data;
+  if (pedido.accion === "liberar") {
+    await liberar(pedido.id);
+    return json(200, { ok: true });
+  }
+  const inicio = pedido.desde ? aMinutos(pedido.desde) : 0;
+  const fin = pedido.hasta ? aMinutos(pedido.hasta) : 24 * 60;
+  if (fin <= inicio) return json(422, { ok: false, error: "rango" });
+  await bloquear(pedido.fecha, inicio, fin);
   return json(200, { ok: true });
 };

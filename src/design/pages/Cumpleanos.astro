@@ -2,7 +2,7 @@
 // /arriendo-juegos-inflables-cumpleanos/ — pillar «arriendo de juegos para cumpleaños».
 import { Image } from "astro:assets";
 import fotoDerecha from "../assets/megatobogan-derecha.jpg";
-import { BLOQUES } from "@/lib/reservas";
+import { APERTURA, aHora } from "@/lib/reservas";
 import { COMUNAS, DESDE, DESDE_HORAS, HORA_EXTRA, PRODUCTO } from "../data";
 import { RUTAS, type Pregunta } from "../seo";
 import CtaFinal from "../components/CtaFinal.astro";
@@ -20,7 +20,7 @@ interface Props {
 const { migas, preguntas } = Astro.props;
 
 const PASOS = [
-  { t: "Eliges fecha y horario", d: `Bloques de 3 horas, ${BLOQUES.map((b) => b.inicio).join(", ")}, desde el día siguiente` },
+  { t: "Eliges fecha y horario", d: `Desde las ${aHora(APERTURA)}, la hora que quieras cada 30 minutos, desde el día siguiente` },
   { t: "Reservas con $10.000", d: "El saldo se paga el día del cumpleaños" },
   { t: "Llegamos, montamos y anclamos", d: "En 30 minutos, antes de que lleguen los invitados" },
   { t: "Los niños saltan y retiramos", d: `${DESDE_HORAS} de juego y cada hora adicional por ${HORA_EXTRA}` },

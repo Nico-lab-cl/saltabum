@@ -1,9 +1,12 @@
 ---
-// Panel interno de reservas: ver reservas, bloquear días u horarios y liberar (cancelar).
+// Panel interno de reservas: ver reservas, bloquear un día completo o un rango de horas y liberar (cancelar).
 // Protegido por el secreto ADMIN_TOKEN (se pide al entrar y se guarda solo en esta pestaña).
 // Sin tracking ni banner de cookies, y fuera del sitemap (noindex).
 import "@/styles/global.css";
-import { BLOQUES } from "@/lib/reservas";
+import { APERTURA, CIERRE, PASO, aHora } from "@/lib/reservas";
+
+const HORAS: string[] = [];
+for (let m = APERTURA; m <= CIERRE; m += PASO) HORAS.push(aHora(m));
 ---
 
 <!doctype html>
@@ -28,26 +31,32 @@ import { BLOQUES } from "@/lib/reservas";
       </form>
 
       <section data-panel hidden class="flex flex-col gap-6">
-        <form data-bloqueo class="border-noche bg-blanco grid gap-3 rounded-[20px] border-2 p-5 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
+        <form data-bloqueo class="border-noche bg-blanco grid gap-3 rounded-[20px] border-2 p-5 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
           <label class="flex flex-col gap-1.5 font-bold">
             Fecha
             <input name="fecha" type="date" required class="border-noche min-h-12 rounded-xl border-2 px-3" />
           </label>
           <label class="flex flex-col gap-1.5 font-bold">
-            Horario
-            <select name="bloque" class="border-noche min-h-12 rounded-xl border-2 px-3">
-              <option value="todos">Todo el día</option>
-              {BLOQUES.map((b) => <option value={b.id}>{b.inicio} a {b.fin}</option>)}
+            Desde
+            <select name="desde" class="border-noche min-h-12 rounded-xl border-2 px-3">
+              <option value="">Todo el día</option>
+              {HORAS.map((h) => <option>{h}</option>)}
             </select>
           </label>
-          <button name="accion" value="bloquear" class="bg-rojo-texto min-h-12 cursor-pointer rounded-full px-5 font-extrabold text-white">Bloquear</button>
-          <button name="accion" value="liberar" class="border-noche min-h-12 cursor-pointer rounded-full border-2 px-5 font-extrabold">Liberar</button>
+          <label class="flex flex-col gap-1.5 font-bold">
+            Hasta
+            <select name="hasta" class="border-noche min-h-12 rounded-xl border-2 px-3">
+              <option value="">Todo el día</option>
+              {HORAS.map((h) => <option>{h}</option>)}
+            </select>
+          </label>
+          <button class="bg-rojo-texto min-h-12 cursor-pointer rounded-full px-5 font-extrabold text-white">Bloquear</button>
         </form>
         <p data-estado class="text-noche-suave text-sm" aria-live="polite"></p>
         <div class="border-noche bg-blanco overflow-x-auto rounded-[20px] border-2">
           <table class="w-full text-left text-sm">
             <thead class="bg-arena">
-              <tr><th class="p-3">Fecha</th><th class="p-3">Horario</th><th class="p-3">Estado</th><th class="p-3">Cliente</th><th class="p-3">Comuna y dirección</th><th class="p-3"></th></tr>
+              <tr><th class="p-3">Fecha</th><th class="p-3">Horario</th><th class="p-3">Estado</th><th class="p-3">Cliente</th><th class="p-3">Comuna y dirección</th><th class="p-3">Total</th><th class="p-3"></th></tr>
             </thead>
             <tbody data-filas></tbody>
           </table>
@@ -56,11 +65,15 @@ import { BLOQUES } from "@/lib/reservas";
     </main>
 
     <script>
-      import { etiquetaBloque } from "@/lib/reservas";
+      import { etiquetaHorario, pesos } from "@/lib/reservas";
 
       type Fila = {
+        id: number;
         fecha: string;
-        bloque: string;
+        producto: string;
+        inicio: number;
+        fin: number;
+        total: number | null;
         estado: string;
         nombre: string | null;
         telefono: string | null;
@@ -106,10 +119,11 @@ import { BLOQUES } from "@/lib/reservas";
             tr.className = "border-noche/10 border-t align-top";
             const celdas = [
               fechaLarga.format(new Date(`${f.fecha}T12:00:00Z`)),
-              etiquetaBloque(f.bloque),
+              f.inicio === 0 && f.fin === 24 * 60 ? "Todo el día" : etiquetaHorario(f.inicio, f.fin),
               f.estado === "reservado" ? "Reservado" : "Bloqueado",
               [f.nombre, f.telefono, f.mensaje].filter(Boolean).join(" · "),
               [f.comuna, f.direccion].filter(Boolean).join(", "),
+              f.total ? pesos(f.total) : "",
             ];
             for (const texto of celdas) {
               const td = document.createElement("td");
@@ -124,7 +138,7 @@ import { BLOQUES } from "@/lib/reservas";
             boton.textContent = f.estado === "reservado" ? "Cancelar" : "Liberar";
             boton.addEventListener("click", async () => {
               if (f.estado === "reservado" && !confirm(`¿Cancelar la reserva de ${f.nombre ?? "este cliente"}?`)) return;
-              await api({ method: "POST", body: JSON.stringify({ accion: "liberar", fecha: f.fecha, bloque: f.bloque }) });
+              await api({ method: "POST", body: JSON.stringify({ accion: "liberar", id: f.id }) });
               void cargar();
             });
             td.append(boton);
@@ -144,12 +158,13 @@ import { BLOQUES } from "@/lib/reservas";
       bloqueo.addEventListener("submit", async (e) => {
         e.preventDefault();
         const data = new FormData(bloqueo);
-        const accion = (e.submitter as HTMLButtonElement | null)?.value ?? "bloquear";
+        const desde = String(data.get("desde") ?? "");
+        const hasta = String(data.get("hasta") ?? "");
         const res = await api({
           method: "POST",
-          body: JSON.stringify({ accion, fecha: data.get("fecha"), bloque: data.get("bloque") }),
+          body: JSON.stringify({ accion: "bloquear", fecha: data.get("fecha"), ...(desde && hasta ? { desde, hasta } : {}) }),
         });
-        estado.textContent = res.ok ? (accion === "bloquear" ? "Bloqueado" : "Liberado") : "No se pudo guardar";
+        estado.textContent = res.ok ? "Bloqueado" : "No se pudo guardar (revisa que «hasta» sea después de «desde»)";
         void cargar();
       });
 

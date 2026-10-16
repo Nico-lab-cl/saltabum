@@ -1,6 +1,6 @@
-// Cliente del calendario de reservas: lee la disponibilidad y envía la reserva a /api/reservas.
+// Cliente de la agenda de reservas: lee los horarios tomados y envía la reserva a /api/reservas.
 // La conversión se registra con trackConversion("lead") y el mismo event_id que recibe el CRM.
-import type { ReservaInput } from "@/lib/reservas";
+import type { Ocupado, ReservaInput } from "@/lib/reservas";
 import { getAttribution } from "./attribution";
 import { hasMarketingConsent } from "./consent";
 import { newEventId, trackConversion } from "./track";
@@ -8,8 +8,8 @@ import { newEventId, trackConversion } from "./track";
 export interface Disponibilidad {
   desde: string;
   hasta: string;
-  /** Claves "YYYY-MM-DD|HH:MM" de los horarios tomados. */
-  ocupados: Set<string>;
+  /** Horarios tomados (reservas y bloqueos), en minutos. */
+  ocupados: Ocupado[];
 }
 
 export async function cargarDisponibilidad(): Promise<Disponibilidad> {
@@ -18,15 +18,15 @@ export async function cargarDisponibilidad(): Promise<Disponibilidad> {
     ok?: boolean;
     desde?: string;
     hasta?: string;
-    ocupados?: string[];
+    ocupados?: Ocupado[];
   };
   if (!res.ok || !body.ok || !body.desde || !body.hasta) throw new Error("disponibilidad");
-  return { desde: body.desde, hasta: body.hasta, ocupados: new Set(body.ocupados ?? []) };
+  return { desde: body.desde, hasta: body.hasta, ocupados: body.ocupados ?? [] };
 }
 
 export type DatosReserva = Pick<
   ReservaInput,
-  "fecha" | "bloque" | "nombre" | "telefono" | "comuna" | "direccion" | "mensaje" | "turnstile_token" | "website"
+  "fecha" | "producto" | "inicio" | "horas" | "nombre" | "telefono" | "comuna" | "direccion" | "mensaje" | "turnstile_token" | "website"
 >;
 
 export type ResultadoReserva = { ok: true } | { ok: false; error: string };

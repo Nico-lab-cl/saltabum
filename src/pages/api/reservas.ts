@@ -1,8 +1,9 @@
-// POST /api/reservas — toma un horario del calendario. Valida, verifica Turnstile, guarda en D1
-// (la clave primaria impide reservar dos veces el mismo horario) y avisa al CRM si está configurado.
+// POST /api/reservas — toma un horario de la agenda. Valida, verifica Turnstile, calcula el total, guarda en D1
+// (el INSERT rechaza horarios que choquen con otra reserva del mismo juego) y avisa al CRM si está configurado.
 import type { APIRoute } from "astro";
 import { CRM_WEBHOOK_SECRET, CRM_WEBHOOK_URL, TURNSTILE_SECRET_KEY } from "astro:env/server";
-import { etiquetaBloque, rangoReservable, reservaSchema } from "@/lib/reservas";
+import { PRODUCTOS } from "@design/data";
+import { aMinutos, calcularPrecio, etiquetaHorario, pesos, rangoReservable, reservaSchema } from "@/lib/reservas";
 import { sendToCrm } from "@/lib/server/crm";
 import { sha256Hex } from "@/lib/server/crypto";
 import { crearReserva, reservasRecientes } from "@/lib/server/reservas-db";
@@ -55,6 +56,10 @@ export const POST: APIRoute = async ({ request }) => {
     console.warn("[reservas] TURNSTILE_SECRET_KEY no configurado: solo límite por IP");
   }
 
+  const inicio = aMinutos(r.inicio);
+  const fin = inicio + r.horas * 60;
+  const precio = calcularPrecio(r.producto, r.horas, r.comuna);
+
   // Huella de la IP (no se guarda la IP) para limitar reservas en serie.
   const ipHash = ip ? await sha256Hex(`reservas:${ip}`) : null;
 
@@ -65,7 +70,10 @@ export const POST: APIRoute = async ({ request }) => {
     }
     tomado = await crearReserva({
       fecha: r.fecha,
-      bloque: r.bloque,
+      producto: r.producto,
+      inicio,
+      fin,
+      total: precio.total,
       nombre: r.nombre,
       telefono: r.telefono,
       comuna: r.comuna,
@@ -89,8 +97,12 @@ export const POST: APIRoute = async ({ request }) => {
       contact: { nombre: r.nombre, telefono: r.telefono, mensaje: r.mensaje },
       extra: {
         fecha: r.fecha,
-        horario: etiquetaBloque(r.bloque),
+        horario: etiquetaHorario(inicio, fin),
+        horas: String(r.horas),
+        juego: PRODUCTOS.find((p) => p.id === r.producto)?.nombre ?? r.producto,
         comuna: r.comuna,
+        despacho: pesos(precio.despacho),
+        total: pesos(precio.total),
         ...(r.direccion ? { direccion: r.direccion } : {}),
       },
       attribution: r.attribution,
