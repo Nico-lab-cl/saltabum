@@ -1,5 +1,6 @@
 ---
 import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
+import { SITE } from "@/config/site";
 import Wordmark from "../components/Wordmark.astro";
 import { COMUNAS_SEO, NAV, RUTAS } from "../seo";
 ---
@@ -45,6 +46,15 @@ import { COMUNAS_SEO, NAV, RUTAS } from "../seo";
       <ul class="text-[15px]">
         <li><WhatsAppLink placement="footer" class="text-crema inline-flex min-h-11 items-center underline">WhatsApp</WhatsAppLink></li>
         <li><a href="mailto:contacto@saltabum.cl" class="text-crema inline-flex min-h-11 items-center underline">contacto@saltabum.cl</a></li>
+        {
+          SITE.redes.map((r) => (
+            <li>
+              <a href={r.url} target="_blank" rel="noopener" class="text-crema inline-flex min-h-11 items-center underline">
+                {r.nombre}
+              </a>
+            </li>
+          ))
+        }
       </ul>
     </div>
   </div>

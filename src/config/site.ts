@@ -10,6 +10,12 @@ export const SITE = {
   email: "contacto@saltabum.cl",
   telefono: "+56 9 6344 4133",
   telefonoE164: "+56963444133",
+  // Perfiles en redes (footer y sameAs del JSON-LD)
+  redes: [
+    { nombre: "Instagram", url: "https://www.instagram.com/saltabum/" },
+    { nombre: "Facebook", url: "https://www.facebook.com/people/Saltabum/61595570129262/" },
+    { nombre: "TikTok", url: "https://www.tiktok.com/@saltabum" },
+  ],
   lang: "es-CL",
   defaultTitle: "Saltabum · Arriendo de juegos inflables en Valparaíso",
   defaultDescription:

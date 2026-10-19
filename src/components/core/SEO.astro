@@ -51,6 +51,7 @@ const grafo = JSON.stringify({
       },
       areaServed: SITE.comunas.map((name) => ({ "@type": "City", name })),
       knowsLanguage: "es-CL",
+      sameAs: SITE.redes.map((r) => r.url),
     },
     {
       "@type": "WebSite",

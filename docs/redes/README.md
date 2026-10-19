@@ -26,7 +26,7 @@ Instagram está conectado a la página en Meta Business Suite, así que cada pub
 - `maqueta-instagram/`: la maqueta del perfil (también publicada en https://claude.ai/artifact/UGwQqHGmtdUChvVQhRdRpL).
 - `exportes/publicaciones/`: 15 imágenes de 1080 × 1350 para las 9 publicaciones. Hay 6 del juego y 3 carruseles fijados de 3 láminas cada uno.
 - `exportes/historias/`: 21 historias de 1080 × 1920. El número inicial es la destacada: 1 Reservar, 2 Precios, 3 Comunas, 4 Inflables, 5 Instituciones, 6 Clientes, 7 Seguridad, 8 Preguntas.
-- `exportes/portadas-destacadas/`: las 8 portadas de las destacadas, cada una sobre foto real con anillo blanco e ícono.
+- `exportes/portadas-destacadas/`: las 8 portadas de las destacadas, planas como en la maqueta: círculo de color, anillo crema e ícono de línea.
 - `exportes/perfil/`: la foto de perfil con el logotipo y la portada de Facebook.
 - `exportes/calendario.md`: el orden de publicación y el texto de cada publicación.
 - `exportes/encargo-publicar.md`: el encargo para que Claude publique todo con Claude in Chrome.
