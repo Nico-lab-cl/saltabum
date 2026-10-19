@@ -1,12 +1,14 @@
 ---
 import { COMUNAS, mensajeWhatsapp, PRODUCTO, TONO_BG } from "../data";
+import Mapa from "../components/Mapa.astro";
 import WaButton from "../components/WaButton.astro";
 import { COMUNAS_SEO } from "../seo";
 
 const inicial = COMUNAS[0];
 ---
 
-<section id="despacho" aria-labelledby="despacho-titulo" data-despacho>
+<section id="despacho" aria-labelledby="despacho-titulo" class="border-noche bg-verde-burbuja text-noche relative isolate overflow-hidden border-b-2" data-despacho>
+  <Mapa />
   <div class="mx-auto max-w-[1320px] px-4 py-10 lg:px-10 lg:py-20">
     <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between lg:gap-4">
       <div>
@@ -60,7 +62,7 @@ const inicial = COMUNAS[0];
       {
         COMUNAS_SEO.map((c) => (
           <li>
-            <a href={`/juegos-inflables-${c.slug}/`} class="text-azul-texto inline-flex min-h-11 items-center px-1 font-bold underline">
+            <a href={`/juegos-inflables-${c.slug}/`} class="text-noche inline-flex min-h-11 items-center px-1 font-bold underline">
               Juegos inflables en {c.titulo}
             </a>
           </li>

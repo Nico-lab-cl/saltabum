@@ -1,33 +1,37 @@
 ---
 import { FAQS } from "../data";
+import Burbujas from "../components/Burbujas.astro";
 import Icon from "../components/Icon.astro";
 import WaButton from "../components/WaButton.astro";
 ---
 
-<section id="preguntas" aria-labelledby="faq-titulo" class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-11 lg:flex-row lg:items-start lg:gap-14 lg:px-10 lg:py-20">
-  <div class="lg:flex-1">
-    <h2 id="faq-titulo" class="font-display text-[32px] leading-9 font-semibold lg:text-5xl lg:leading-[52px]">Preguntas sin letra chica</h2>
-    <p class="text-noche-suave mt-3.5 mb-5.5 hidden lg:block">¿No está tu pregunta? Escríbenos y te respondemos en minutos</p>
-    <WaButton placement="faq" size="m" class="max-lg:hidden">Preguntar por WhatsApp</WaButton>
-    <a href="/preguntas-frecuentes/" class="text-azul-texto mt-3 flex min-h-11 items-center font-extrabold underline">Ver todas las preguntas frecuentes</a>
-  </div>
-  <div class="flex flex-col gap-2.5 lg:flex-[2] lg:gap-3" data-acordeon>
-    {
-      FAQS.map((f, i) => (
-        <details
-          name="faq"
-          open={i === 0}
-          class="group border-noche bg-blanco open:shadow-pop overflow-hidden rounded-[20px] border-2 lg:rounded-[22px]"
-        >
-          <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 py-3 pr-3.5 pl-4 text-base leading-[22px] font-extrabold lg:min-h-16 lg:py-3.5 lg:pr-4.5 lg:pl-5.5 lg:text-lg [&::-webkit-details-marker]:hidden">
-            {f.q}
-            <span class="bg-arena group-open:bg-sol flex size-8 shrink-0 items-center justify-center rounded-full transition-transform group-open:rotate-180 motion-reduce:transition-none lg:size-9">
-              <Icon name="chevron" size={18} strokeWidth={2.6} />
-            </span>
-          </summary>
-          <p class="text-noche-suave max-w-[680px] px-4 pb-4 text-[15px] leading-[22px] lg:px-5.5 lg:pb-5 lg:text-[17px] lg:leading-[26px]">{f.a}</p>
-        </details>
-      ))
-    }
+<section id="preguntas" aria-labelledby="faq-titulo" class="border-noche bg-rojo-suave text-noche relative isolate overflow-hidden border-b-2">
+  <Burbujas />
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-11 lg:flex-row lg:items-start lg:gap-14 lg:px-10 lg:py-20">
+    <div class="lg:flex-1">
+      <h2 id="faq-titulo" class="font-display text-[32px] leading-9 font-semibold lg:text-5xl lg:leading-[52px]">Preguntas frecuentes</h2>
+      <p class="text-noche-suave mt-3.5 mb-5.5 hidden lg:block">¿No está tu pregunta? Escríbenos y te respondemos en minutos</p>
+      <WaButton placement="faq" size="m" class="max-lg:hidden">Preguntar por WhatsApp</WaButton>
+      <a href="/preguntas-frecuentes/" class="text-noche mt-3 flex min-h-11 items-center font-extrabold underline">Ver todas las preguntas frecuentes</a>
+    </div>
+    <div class="flex flex-col gap-2.5 lg:flex-[2] lg:gap-3" data-acordeon>
+      {
+        FAQS.map((f, i) => (
+          <details
+            name="faq"
+            open={i === 0}
+            class="group border-noche bg-blanco open:shadow-pop overflow-hidden rounded-[20px] border-2 lg:rounded-[22px]"
+          >
+            <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 py-3 pr-3.5 pl-4 text-base leading-[22px] font-extrabold lg:min-h-16 lg:py-3.5 lg:pr-4.5 lg:pl-5.5 lg:text-lg [&::-webkit-details-marker]:hidden">
+              {f.q}
+              <span class="bg-arena group-open:bg-sol flex size-8 shrink-0 items-center justify-center rounded-full transition-transform group-open:rotate-180 motion-reduce:transition-none lg:size-9">
+                <Icon name="chevron" size={18} strokeWidth={2.6} />
+              </span>
+            </summary>
+            <p class="text-noche-suave max-w-[680px] px-4 pb-4 text-[15px] leading-[22px] lg:px-5.5 lg:pb-5 lg:text-[17px] lg:leading-[26px]">{f.a}</p>
+          </details>
+        ))
+      }
+    </div>
   </div>
 </section>

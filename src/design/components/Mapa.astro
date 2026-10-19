@@ -1,0 +1,58 @@
+---
+// Fondo de mapa para el despacho: una grilla de puntos verdes y, en la franja de abajo, una ruta punteada
+// con tres pines de colores que flotan suave, como el recorrido del camión por las comunas.
+// La ruta y los pines van en el padding inferior para no pasar por detrás del contenido.
+// Va en una sección `relative isolate overflow-hidden bg-verde-burbuja`.
+const PINES = [
+  { x: "12%", c: "#f0462d", d: "0s" },
+  { x: "50%", c: "#ffc23a", d: "-1.4s" },
+  { x: "88%", c: "#2f8fea", d: "-2.8s" },
+];
+---
+
+<div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+  <div class="mapa-puntos absolute inset-0"></div>
+  <svg class="absolute inset-x-0 bottom-3 h-10 w-full lg:bottom-5 lg:h-12" viewBox="0 0 1440 48" preserveAspectRatio="none">
+    <path
+      class="mapa-ruta"
+      d="M-20 30 C 160 6, 300 46, 520 26 S 900 6, 1100 28 S 1340 40, 1460 18"
+      fill="none"
+      stroke="#2db866"
+      stroke-width="5"
+      stroke-linecap="round"
+      stroke-dasharray="1 16"
+      vector-effect="non-scaling-stroke"
+    ></path>
+  </svg>
+  {
+    PINES.map((p) => (
+      <svg class="mapa-pin absolute bottom-6 hidden w-9 -translate-x-1/2 lg:block" style={`left: ${p.x}; --d: ${p.d}`} viewBox="0 0 56 76">
+        <path d="M28 72C14 54 3 43 3 28a25 25 0 0 1 50 0c0 15-11 26-25 44z" fill={p.c} stroke="#1f2a5c" stroke-width="4" />
+        <circle cx="28" cy="28" r="9" fill="#fff6ea" stroke="#1f2a5c" stroke-width="3" />
+      </svg>
+    ))
+  }
+</div>
+
+<style>
+  .mapa-puntos {
+    background-image: radial-gradient(rgb(45 184 102 / 0.28) 1.6px, transparent 1.8px);
+    background-size: 26px 26px;
+  }
+  .mapa-ruta {
+    animation: mapa-avanzar 4s linear infinite;
+  }
+  .mapa-pin {
+    animation: mapa-flotar 4.2s ease-in-out infinite;
+    animation-delay: var(--d);
+  }
+  @keyframes mapa-avanzar {
+    to { stroke-dashoffset: -68; }
+  }
+  @keyframes mapa-flotar {
+    50% { translate: -50% -8px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mapa-ruta, .mapa-pin { animation: none; }
+  }
+</style>
