@@ -178,7 +178,7 @@ export const PREGUNTAS_FRECUENTES: { tema: string; preguntas: Pregunta[] }[] = [
     tema: "Precios y reservas",
     preguntas: [
       { q: "¿Qué precio tienen los juegos inflables en arriendo?", a: `En Saltabum el arriendo parte en ${DESDE} por ${DESDE_HORAS}, con montaje, anclaje y retiro incluidos. Cada hora adicional cuesta ${HORA_EXTRA}.` },
-      { q: "¿Cuánto es el abono para reservar?", a: "Reservas tu fecha con un abono de $10.000. El saldo se paga el día del evento." },
+      { q: "¿Cuánto es el abono para reservar?", a: "Reservas la hora con un abono de $20.000, que se descuenta del total del arriendo. El saldo se paga el día del evento." },
       { q: "¿Cuánto cuesta el despacho?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Concón, Quilpué y Villa Alemana, y $7.000 a Limache y Olmué." },
       { q: "¿Cómo reservo un juego inflable?", a: "Elige el día y el horario en el calendario de la web o escríbenos por WhatsApp. Te confirmamos y coordinamos el abono." },
       { q: "¿Puedo reservar para el mismo día?", a: "No, las reservas se hacen desde el día siguiente para coordinar bien el despacho y el montaje." },

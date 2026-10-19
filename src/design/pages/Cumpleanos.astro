@@ -21,7 +21,7 @@ const { migas, preguntas } = Astro.props;
 
 const PASOS = [
   { t: "Eliges fecha y horario", d: `Desde las ${aHora(APERTURA)}, la hora que quieras cada 30 minutos, desde el día siguiente` },
-  { t: "Reservas con $10.000", d: "El saldo se paga el día del cumpleaños" },
+  { t: "Reservas con $20.000", d: "Se descuentan del total y el saldo se paga el día del cumpleaños" },
   { t: "Llegamos, montamos y anclamos", d: "En 30 minutos, antes de que lleguen los invitados" },
   { t: "Los niños saltan y retiramos", d: `${DESDE_HORAS} de juego y cada hora adicional por ${HORA_EXTRA}` },
 ];
@@ -82,7 +82,7 @@ const PASOS = [
       <div class="border-noche bg-sol shadow-pop rounded-[24px] border-2 p-6">
         <p class="text-sm font-extrabold tracking-[1px] uppercase">Arriendo por {DESDE_HORAS}</p>
         <p class="font-display text-[52px] leading-[56px] font-bold">{DESDE}</p>
-        <p class="mt-2">Hora adicional {HORA_EXTRA} · abono para reservar $10.000</p>
+        <p class="mt-2">Hora adicional {HORA_EXTRA} · abono para reservar $20.000</p>
       </div>
       <ul class="border-noche bg-blanco divide-noche/10 divide-y rounded-[24px] border-2 px-5">
         {

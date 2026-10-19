@@ -20,7 +20,7 @@ export const HORA_EXTRA = "$10.000";
 /** Juegos que se pueden reservar en la agenda (precio del bloque base en pesos). El Megatobogán es el primero de varios. */
 export const PRODUCTOS = [{ id: "megatobogan", nombre: PRODUCTO.nombre, precio: Number(DESDE.replace(/\D/g, "")) }] as const;
 /** Abono para reservar, en pesos. */
-export const ABONO = 10000;
+export const ABONO = 20000;
 
 export const MODELO_3D = "/modelos/megatobogan-v7.glb";
 
@@ -67,9 +67,9 @@ export const CHAT = [
   {
     paso: 2,
     yo: false,
-    titulo: "Reservas con $10.000",
+    titulo: "Reservas con $20.000",
     texto:
-      "¡Hola! Sí, el sábado 14 lo tenemos libre. Despacho a Concón +$5.000, montaje y retiro incluidos. ¿Te lo reservo con $10.000 de abono?",
+      "¡Hola! Sí, el sábado 14 lo tenemos libre. Despacho a Concón +$5.000, montaje y retiro incluidos. ¿Te lo reservo con $20.000 de abono? Se descuentan del total.",
     hora: "19:44",
   },
   {
@@ -94,7 +94,7 @@ export const FAQS = [
     q: "¿Qué pasa si llueve?",
     a: "Reprogramamos a otra fecha disponible sin perder el abono. Avísanos apenas veas el pronóstico.",
   },
-  { q: "¿Cuánto es el abono?", a: "$10.000 para reservar la fecha. El resto se paga el día del evento." },
+  { q: "¿Cuánto es el abono?", a: "$20.000 para reservar la hora, y se descuentan del total del arriendo. El resto se paga el día del evento." },
   { q: "¿Cuánta luz consume?", a: "Menos de $2.000 por evento. Necesitamos un enchufe a menos de 15 m." },
   {
     q: "¿Cuánto espacio necesito?",
