@@ -4,6 +4,8 @@ import {
   PUBLIC_GOOGLE_ADS_LEAD_LABEL,
   PUBLIC_GOOGLE_ADS_WHATSAPP_LABEL,
 } from "astro:env/client";
+import { getAttribution } from "./attribution";
+import { hasMarketingConsent } from "./consent";
 
 export type ConversionType = "lead" | "whatsapp";
 
@@ -33,6 +35,19 @@ export function trackConversion(type: ConversionType, opts: TrackOptions = {}): 
 
   // Meta Pixel
   window.fbq?.("track", META_EVENT[type], params, { eventID: eventId });
+
+  // Meta Conversions API para WhatsApp (los leads ya los reporta su propio endpoint).
+  // sendBeacon sobrevive a que el clic abra WhatsApp y la página se descargue.
+  if (type === "whatsapp" && hasMarketingConsent()) {
+    const body = JSON.stringify({
+      event_name: "Contact",
+      event_id: eventId,
+      page_url: location.href.slice(0, 1000),
+      placement: typeof params.placement === "string" ? params.placement.slice(0, 60) : undefined,
+      fbclid: getAttribution().fbclid,
+    });
+    navigator.sendBeacon?.("/api/evento", new Blob([body], { type: "application/json" }));
+  }
 
   // Google Ads + GA4
   if (window.gtag) {

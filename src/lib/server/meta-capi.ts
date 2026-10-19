@@ -1,13 +1,16 @@
-// Meta Conversions API: envía el Lead desde el servidor con el mismo event_id que el
-// Pixel del navegador, para que Meta lo deduplique y recupere conversiones bloqueadas.
+// Meta Conversions API: envía los eventos desde el servidor con el mismo event_id que el
+// Pixel del navegador, para que Meta los deduplique y recupere conversiones bloqueadas.
 import { sha256Hex } from "./crypto";
 
 const GRAPH_VERSION = "v23.0"; // Revisar cada ~1 año: https://developers.facebook.com/docs/graph-api/changelog
 
-interface MetaLeadEvent {
+export type MetaEventName = "Lead" | "Contact";
+
+interface MetaEvent {
   pixelId: string;
   accessToken: string;
   testEventCode?: string;
+  eventName: MetaEventName;
   eventId: string;
   eventSourceUrl?: string;
   email?: string;
@@ -17,6 +20,7 @@ interface MetaLeadEvent {
   userAgent?: string;
   fbp?: string;
   fbc?: string;
+  customData?: Record<string, string | number>;
 }
 
 const norm = (v: string) => v.trim().toLowerCase();
@@ -27,7 +31,7 @@ function normPhone(phone: string): string {
   return digits.length === 9 ? `56${digits}` : digits;
 }
 
-export async function sendMetaLead(e: MetaLeadEvent): Promise<void> {
+export async function sendMetaEvent(e: MetaEvent): Promise<void> {
   const user_data: Record<string, unknown> = {
     country: [await sha256Hex("cl")],
     client_ip_address: e.ip,
@@ -42,12 +46,13 @@ export async function sendMetaLead(e: MetaLeadEvent): Promise<void> {
   const body = {
     data: [
       {
-        event_name: "Lead",
+        event_name: e.eventName,
         event_time: Math.floor(Date.now() / 1000),
         event_id: e.eventId,
         action_source: "website",
         event_source_url: e.eventSourceUrl,
         user_data,
+        ...(e.customData ? { custom_data: e.customData } : {}),
       },
     ],
     ...(e.testEventCode ? { test_event_code: e.testEventCode } : {}),

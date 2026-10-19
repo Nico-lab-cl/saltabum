@@ -50,7 +50,8 @@ export default defineConfig({
   env: {
     schema: {
       // ---- Públicas: se inyectan en el HTML al compilar (no son secretos) ----
-      PUBLIC_META_PIXEL_ID: envField.string({ context: "client", access: "public", optional: true }),
+      // Pixel «Saltabum saltabum.cl» del portafolio Saltabum (Administrador de eventos). Se puede reemplazar con la variable.
+      PUBLIC_META_PIXEL_ID: envField.string({ context: "client", access: "public", default: "1413656430383762" }),
       PUBLIC_GOOGLE_ADS_ID: envField.string({ context: "client", access: "public", optional: true }), // AW-XXXXXXXXX
       PUBLIC_GOOGLE_ADS_LEAD_LABEL: envField.string({ context: "client", access: "public", optional: true }),
       PUBLIC_GOOGLE_ADS_WHATSAPP_LABEL: envField.string({

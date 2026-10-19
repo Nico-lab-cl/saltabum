@@ -11,7 +11,7 @@ import {
 } from "astro:env/server";
 import { leadSchema } from "@/lib/lead-schema";
 import { sendToCrm, type CrmLeadPayload } from "@/lib/server/crm";
-import { buildFbc, sendMetaLead } from "@/lib/server/meta-capi";
+import { buildFbc, sendMetaEvent } from "@/lib/server/meta-capi";
 import { verifyTurnstile } from "@/lib/server/turnstile";
 
 export const prerender = false;
@@ -80,10 +80,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const capi =
     lead.consent && PUBLIC_META_PIXEL_ID && META_CAPI_ACCESS_TOKEN
-      ? sendMetaLead({
+      ? sendMetaEvent({
           pixelId: PUBLIC_META_PIXEL_ID,
           accessToken: META_CAPI_ACCESS_TOKEN,
           testEventCode: META_CAPI_TEST_EVENT_CODE,
+          eventName: "Lead",
           eventId: lead.event_id,
           eventSourceUrl: lead.page_url,
           email: lead.email,
@@ -93,6 +94,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           userAgent,
           fbp: cookies.get("_fbp")?.value,
           fbc: buildFbc(cookies.get("_fbc")?.value, lead.attribution.fbclid),
+          customData: { form: lead.form_name },
         }).catch((err) => console.error("[lead] Meta CAPI:", String(err)))
       : Promise.resolve();
 

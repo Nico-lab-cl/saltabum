@@ -1,11 +1,19 @@
 // POST /api/reservas — toma un horario de la agenda. Valida, verifica Turnstile, calcula el total, guarda en D1
 // (el INSERT rechaza horarios que choquen con otra reserva del mismo juego) y avisa al CRM si está configurado.
 import type { APIRoute } from "astro";
-import { CRM_WEBHOOK_SECRET, CRM_WEBHOOK_URL, TURNSTILE_SECRET_KEY } from "astro:env/server";
+import { PUBLIC_META_PIXEL_ID } from "astro:env/client";
+import {
+  CRM_WEBHOOK_SECRET,
+  CRM_WEBHOOK_URL,
+  META_CAPI_ACCESS_TOKEN,
+  META_CAPI_TEST_EVENT_CODE,
+  TURNSTILE_SECRET_KEY,
+} from "astro:env/server";
 import { PRODUCTOS } from "@design/data";
 import { aMinutos, calcularPrecio, etiquetaHorario, pesos, rangoReservable, reservaSchema } from "@/lib/reservas";
 import { sendToCrm } from "@/lib/server/crm";
 import { sha256Hex } from "@/lib/server/crypto";
+import { buildFbc, sendMetaEvent } from "@/lib/server/meta-capi";
 import { crearReserva, reservasRecientes } from "@/lib/server/reservas-db";
 import { verifyTurnstile } from "@/lib/server/turnstile";
 
@@ -21,7 +29,7 @@ const json = (status: number, data: Record<string, unknown>) =>
     headers: { "content-type": "application/json", "cache-control": "no-store" },
   });
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   const origin = request.headers.get("origin");
   if (origin && new URL(origin).host !== new URL(request.url).host) {
     return json(403, { ok: false, error: "origin" });
@@ -85,6 +93,25 @@ export const POST: APIRoute = async ({ request }) => {
     return json(503, { ok: false, error: "db" });
   }
   if (!tomado) return json(409, { ok: false, error: "ocupado" });
+
+  // Lead a Meta Conversions API con el mismo event_id que dispara el Pixel en el navegador.
+  if (r.consent && PUBLIC_META_PIXEL_ID && META_CAPI_ACCESS_TOKEN) {
+    await sendMetaEvent({
+      pixelId: PUBLIC_META_PIXEL_ID,
+      accessToken: META_CAPI_ACCESS_TOKEN,
+      testEventCode: META_CAPI_TEST_EVENT_CODE,
+      eventName: "Lead",
+      eventId: r.event_id,
+      eventSourceUrl: r.page_url,
+      phone: r.telefono,
+      firstName: r.nombre,
+      ip,
+      userAgent: request.headers.get("user-agent") ?? undefined,
+      fbp: cookies.get("_fbp")?.value,
+      fbc: buildFbc(cookies.get("_fbc")?.value, r.attribution?.fbclid),
+      customData: { form: "reserva", value: precio.total, currency: "CLP" },
+    }).catch((err) => console.error("[reservas] Meta CAPI:", String(err), r.event_id));
+  }
 
   // El CRM es un aviso extra: si falla, la reserva igual queda guardada.
   if (CRM_WEBHOOK_URL) {
