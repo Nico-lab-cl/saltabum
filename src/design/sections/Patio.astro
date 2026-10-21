@@ -48,10 +48,10 @@ const REQUISITOS = [
         <h2 id="patio-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
           ¿Cabe en tu espacio?
         </h2>
-        <p class="mt-2 lg:mt-3 lg:text-lg">Gíralo en 3D o ponlo en tu espacio con la cámara del celular, a tamaño real</p>
+        <p class="mt-2 lg:mt-3 lg:text-lg">Gíralo en 3D o míralo en tu patio a tamaño real</p>
       </div>
 
-      <dl class="grid grid-cols-2 gap-2.5">
+      <dl class="hidden grid-cols-2 gap-2.5 lg:grid">
         {
           MEDIDAS.map((m) => (
             <div class="border-noche bg-blanco flex items-center gap-3 rounded-2xl border-2 px-3.5 py-3">
@@ -65,7 +65,7 @@ const REQUISITOS = [
         }
       </dl>
 
-      <ul class="flex flex-col gap-2.5 font-semibold">
+      <ul class="hidden flex-col gap-2.5 font-semibold lg:flex">
         {
           REQUISITOS.map((texto) => (
             <li class="flex items-start gap-2.5">
@@ -123,7 +123,7 @@ const REQUISITOS = [
           Arrastra para girar · tamaño real
         </p>
       </div>
-      <p class="mt-3 text-sm lg:hidden">
+      <p class="mt-3 hidden text-sm">
         En el celular, toca «Verlo en tu espacio», apunta al suelo y retrocede unos 10 metros. El Megatobogán aparece a tamaño real, con el espacio libre marcado en el suelo, para que veas si cabe
       </p>
       <!-- En computador no hay realidad aumentada: un QR abre esta misma sección en el celular. -->

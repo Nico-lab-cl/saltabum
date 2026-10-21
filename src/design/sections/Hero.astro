@@ -11,15 +11,17 @@ import WaButton from "../components/WaButton.astro";
   <div class="mx-auto flex min-h-[620px] max-w-[1320px] flex-col justify-center gap-5 px-4 pt-10 pb-12 lg:min-h-[min(760px,82vh)] lg:px-10 lg:py-20">
     <div class="flex max-w-[640px] flex-col gap-5">
       <h1 class="font-display text-[38px] leading-[1.08] font-semibold tracking-tight lg:text-[clamp(46px,4.6vw,68px)] lg:leading-[1.04]">
-        Arriendo de juegos inflables en la <span class="text-sol">V Región</span> de Valparaíso
+        <span class="lg:hidden">Juegos inflables en la <span class="text-sol">V Región</span></span>
+        <span class="hidden lg:inline">Arriendo de juegos inflables en la <span class="text-sol">V Región</span> de Valparaíso</span>
       </h1>
       <p class="text-lg leading-[26px] lg:text-[21px] lg:leading-[31px]">
-        <span class="block">Juegos inflables para cumpleaños y eventos <strong class="font-extrabold">desde {DESDE} por {DESDE_HORAS}</strong>, con despacho, montaje, anclaje y retiro incluidos</span>
-        <span class="mt-1 block">Tú organizas el evento y nosotros llevamos la diversión</span>
+        <span class="block lg:hidden"><strong class="font-extrabold">Desde {DESDE} por {DESDE_HORAS}</strong>, con montaje incluido</span>
+        <span class="hidden lg:block">Juegos inflables para cumpleaños y eventos <strong class="font-extrabold">desde {DESDE} por {DESDE_HORAS}</strong>, con despacho, montaje, anclaje y retiro incluidos</span>
+        <span class="mt-1 hidden lg:block">Tú organizas el evento y nosotros llevamos la diversión</span>
       </p>
 
       <div class="flex flex-col gap-3 sm:flex-row lg:mt-1 lg:gap-3.5">
-        <WaButton placement="hero" size="l" class="text-center leading-[22px]">Consultar disponibilidad por WhatsApp</WaButton>
+        <WaButton placement="hero" size="l" class="text-center leading-[22px]"><span class="lg:hidden">Consultar por WhatsApp</span><span class="hidden lg:inline">Consultar disponibilidad por WhatsApp</span></WaButton>
         <a
           href="#megatobogan"
           class="bounce border-crema text-crema hover:bg-crema hover:text-noche inline-flex min-h-12 items-center justify-center rounded-full border-2 px-7 font-extrabold whitespace-nowrap no-underline lg:min-h-15 lg:text-lg"
@@ -31,7 +33,7 @@ import WaButton from "../components/WaButton.astro";
       <dl class="border-crema/30 mt-1 grid max-w-[460px] grid-cols-2 gap-2.5 border-t-2 border-dashed pt-4 lg:mt-2 lg:pt-5">
         <div class="flex flex-col gap-0.5">
           <dt class="font-display text-2xl leading-7 font-bold lg:text-[34px] lg:leading-10">+15</dt>
-          <dd class="text-[13px] leading-[17px] lg:text-sm">eventos en la V Región de Valparaíso</dd>
+          <dd class="text-[13px] leading-[17px] lg:text-sm">eventos en la V Región</dd>
         </div>
         <div class="flex flex-col gap-0.5">
           <dt class="font-display text-2xl leading-7 font-bold lg:text-[34px] lg:leading-10">30</dt>

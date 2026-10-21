@@ -10,14 +10,14 @@ const SELLOS = [
 ---
 
 <section aria-label="Por qué confiar en Saltabum" class="bg-noche text-crema">
-  <ul class="mx-auto grid max-w-[1320px] grid-cols-2 gap-x-3.5 gap-y-5 px-4 py-6 lg:grid-cols-4 lg:gap-8 lg:px-10 lg:py-9">
+  <ul class="mx-auto grid max-w-[1320px] grid-cols-2 gap-x-3.5 gap-y-4 px-4 py-5 lg:grid-cols-4 lg:gap-8 lg:px-10 lg:py-9">
     {
       SELLOS.map((s) => (
         <li class="flex flex-col gap-1 lg:flex-row lg:items-start lg:gap-3.5">
           <Icon name={s.icon} size={26} strokeWidth={2.4} class="text-sol shrink-0 lg:mt-0.5 lg:size-8" />
           <span class="flex flex-col gap-1">
             <strong class="leading-5 font-extrabold lg:text-lg lg:leading-6">{s.titulo}</strong>
-            <span class="text-sm leading-[19px] lg:text-[15px] lg:leading-[21px]">{s.texto}</span>
+            <span class="hidden text-sm leading-[19px] lg:block lg:text-[15px] lg:leading-[21px]">{s.texto}</span>
           </span>
         </li>
       ))

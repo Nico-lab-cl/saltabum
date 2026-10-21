@@ -39,18 +39,26 @@ const VIDEOS = [
 const {
   solo,
   titulo = "Así están nuestros inflables",
-  bajada = "Videos reales grabados por nosotros, para que veas cómo llegan a tu evento",
+  bajada = "Grabados por nosotros, así llegan a tu evento",
   fondo = "blanco",
 } = Astro.props;
 const lista = solo ? VIDEOS.filter((v) => solo.includes(v.id)) : VIDEOS;
-const columnas = lista.length === 1 ? "max-w-[420px]" : lista.length === 2 ? "sm:grid-cols-2 max-w-[860px]" : "sm:grid-cols-3";
+// En celular, con más de un video, es un carrusel horizontal (se desliza con el dedo) para no alargar la página.
+const columnas =
+  lista.length === 1
+    ? "grid max-w-[420px]"
+    : [
+        "-mx-4 flex snap-x snap-mandatory overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0",
+        lista.length === 2 ? "sm:grid-cols-2 max-w-[860px]" : "sm:grid-cols-3",
+      ].join(" ");
+const tarjeta = lista.length === 1 ? "" : "w-[68vw] max-w-[280px] shrink-0 snap-center sm:w-auto sm:max-w-none";
 ---
 
 <Seccion titulo={titulo} eyebrow="Videos reales" bajada={bajada} fondo={fondo}>
-  <ul class:list={["grid gap-5 lg:gap-7", columnas]}>
+  <ul class:list={["gap-4 sm:gap-5 lg:gap-7", columnas]} aria-label="Videos de los inflables">
     {
       lista.map((v) => (
-        <li class="flex flex-col gap-3">
+        <li class:list={["flex flex-col gap-3", tarjeta]}>
           <div class="border-noche bg-noche shadow-pop relative aspect-[9/16] overflow-hidden rounded-[28px] border-2">
             <video
               data-video-inflable
@@ -71,14 +79,14 @@ const columnas = lista.length === 1 ? "max-w-[420px]" : lista.length === 2 ? "sm
             </span>
           </div>
           <div>
-            <h3 class="font-display text-2xl leading-7 font-semibold">{v.nombre}</h3>
-            <p class="text-noche-suave mt-1">{v.detalle}</p>
+            <h3 class="font-display text-xl leading-6 font-semibold sm:text-2xl sm:leading-7">{v.nombre}</h3>
+            <p class="text-noche-suave mt-1 hidden sm:block">{v.detalle}</p>
           </div>
-          <div class="flex flex-wrap gap-2.5">
+          <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-2.5">
             {v.href && (
               <a
                 href={v.href}
-                class="bounce border-noche bg-sol text-noche inline-flex min-h-12 flex-1 items-center justify-center rounded-full border-2 px-5 font-extrabold no-underline"
+                class="bounce border-noche bg-sol text-noche inline-flex min-h-12 flex-1 items-center justify-center rounded-full border-2 px-5 font-extrabold whitespace-nowrap no-underline"
               >
                 Ver ficha
               </a>

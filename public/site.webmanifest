@@ -1,0 +1,29 @@
+{
+  "name": "Saltabum y Entretenciones",
+  "short_name": "Saltabum",
+  "description": "Arriendo de juegos inflables en la Región de Valparaíso",
+  "lang": "es-CL",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFF6EA",
+  "theme_color": "#FFC23A",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

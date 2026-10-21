@@ -52,7 +52,7 @@ const INCLUYE = [
       <div class="pointer-events-auto lg:hidden">
         <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Nuestro inflable</p>
         <p class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold">{PRODUCTO.nombre}</p>
-        <p class="mt-2">Rojo, amarillo, azul y verde, con tobogán, túneles y arcos, para niños de {PRODUCTO.edad}</p>
+        <p class="mt-2">Tobogán doble y túneles, de {PRODUCTO.edad}</p>
       </div>
 
       <div class="pointer-events-auto flex flex-col gap-2.5 lg:gap-3">
@@ -110,8 +110,8 @@ const INCLUYE = [
 
       <dl class="pointer-events-auto grid grid-cols-2 gap-2 lg:grid-cols-3 lg:gap-3">
         {
-          DATOS.map((d) => (
-            <div class="border-noche bg-crema text-noche rounded-xl border-2 px-3 py-2.5 lg:rounded-2xl lg:px-4 lg:py-3">
+          DATOS.map((d, i) => (
+            <div class:list={["border-noche bg-crema text-noche rounded-xl border-2 px-3 py-2.5 lg:rounded-2xl lg:px-4 lg:py-3", i >= 4 && "hidden lg:block"]}>
               <dt class="text-noche-suave text-xs font-extrabold tracking-[1px] uppercase">{d.label}</dt>
               <dd class="font-display mt-0.5 text-xl leading-[26px] font-semibold">{d.valor}</dd>
             </div>
@@ -127,17 +127,17 @@ const INCLUYE = [
         </div>
         <ul class="flex flex-col gap-2 font-semibold">
           {
-            INCLUYE.map((texto) => (
-              <li class="flex items-start gap-2">
+            INCLUYE.map((texto, i) => (
+              <li class:list={["items-start gap-2", i >= 3 ? "hidden lg:flex" : "flex"]}>
                 <Icon name="check" size={22} strokeWidth={3} class="mt-px shrink-0" />
                 {texto}
               </li>
             ))
           }
         </ul>
-        <WaButton placement="ficha" size="l" class="text-center leading-[22px]">Consultar disponibilidad por WhatsApp</WaButton>
+        <WaButton placement="ficha" size="l" class="text-center leading-[22px]"><span class="lg:hidden">Consultar por WhatsApp</span><span class="hidden lg:inline">Consultar disponibilidad por WhatsApp</span></WaButton>
         <a href={RUTAS.megatobogan} class="text-noche inline-flex min-h-11 items-center font-extrabold underline">Ver ficha completa del Megatobogán</a>
-        <p class="text-sm leading-5">
+        <p class="hidden text-sm leading-5 lg:block">
           Concón, Quilpué y Villa Alemana +$5.000 de despacho, Limache y Olmué +$7.000.
           <a href="#despacho" class="text-noche font-extrabold underline">Ver tu comuna</a>
         </p>

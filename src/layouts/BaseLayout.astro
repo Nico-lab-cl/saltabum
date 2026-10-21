@@ -17,7 +17,11 @@ type Props = SEOProps;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- Verificación del dominio en Meta Business (portafolio Saltabum) -->
     <meta name="facebook-domain-verification" content="nl7nemsi54vr1uwin20089ymy3n2hl" />
+    <!-- Íconos: monograma oficial (saltabum_logo/Favicon). ICO para navegadores antiguos y para Google, SVG para el resto. -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <SEO {...Astro.props} />
     <Tracking />
     <slot name="head" />
