@@ -1,5 +1,5 @@
-// POST /api/admin/login — { usuario, clave, codigo, turnstile_token? } → abre la sesión del panel (cookie __Host-).
-// Respuestas genéricas: nunca dice si falló el usuario, la contraseña o el código.
+// POST /api/admin/login — { clave, codigo?, turnstile_token? } → abre la sesión del panel (cookie __Host-).
+// Respuesta genérica si la contraseña no sirve. «codigo» solo si la cuenta tiene segundo factor.
 import type { APIRoute } from "astro";
 import { TURNSTILE_SECRET_KEY } from "astro:env/server";
 import { z } from "zod";
@@ -15,9 +15,8 @@ const json = (status: number, data: Record<string, unknown>) =>
   });
 
 const schema = z.object({
-  usuario: z.string().min(1).max(64),
   clave: z.string().min(1).max(256),
-  codigo: z.string().max(10),
+  codigo: z.string().max(10).optional(),
   turnstile_token: z.string().max(4096).optional(),
 });
 
@@ -40,7 +39,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!(await verifyTurnstile(TURNSTILE_SECRET_KEY, datos.data.turnstile_token, ip))) return json(403, { ok: false, error: "captcha" });
   }
 
-  const r = await ingresar(request, cookies, datos.data.usuario, datos.data.clave, datos.data.codigo);
+  const r = await ingresar(request, cookies, datos.data.clave, datos.data.codigo);
   if (!r.ok) return json(r.motivo === "bloqueado" ? 429 : 401, { ok: false, error: r.motivo });
   return json(200, { ok: true, usuario: r.usuario });
 };

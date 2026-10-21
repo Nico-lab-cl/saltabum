@@ -1,8 +1,8 @@
-// Seguridad del panel /admin: usuarios con contraseña (PBKDF2) y segundo factor (TOTP), sesiones en D1 con cookie
-// __Host- HttpOnly/Secure/SameSite=Strict, límite de intentos por conexión y por usuario, y registro de auditoría.
+// Seguridad del panel /admin: se entra solo con contraseña (huella PBKDF2), con segundo factor TOTP opcional por
+// usuario, sesiones en D1 con cookie __Host- HttpOnly/Secure/SameSite=Strict, límite de intentos y auditoría.
 //
-// Secreto ADMIN_USUARIOS (uno por línea o separados por coma):  usuario:pbkdf2$100000$<sal>$<huella>:<totp-base32>
-// Se genera con:  node scripts/admin-usuario.mjs
+// Secreto ADMIN_USUARIOS (uno por línea o separados por coma):  nombre:pbkdf2$100000$<sal>$<huella>[:<totp-base32>]
+// La línea se genera en la misma página /admin mientras el panel no está configurado (o con scripts/admin-usuario.mjs).
 import type { AstroCookies } from "astro";
 import { ADMIN_USUARIOS } from "astro:env/server";
 import { baseReservas } from "./reservas-db";
@@ -36,7 +36,7 @@ interface Usuario {
   iteraciones: number;
   sal: Uint8Array;
   huella: Uint8Array;
-  totp: string;
+  totp: string | null;
 }
 
 function usuarios(): Usuario[] {
@@ -47,8 +47,8 @@ function usuarios(): Usuario[] {
     .flatMap((linea) => {
       const [nombre, hash, totp] = linea.split(":");
       const partes = hash?.split("$");
-      if (!nombre || !totp || partes?.length !== 4 || partes[0] !== "pbkdf2") return [];
-      return [{ nombre: nombre.toLowerCase(), iteraciones: Number(partes[1]), sal: deB64(partes[2]!), huella: deB64(partes[3]!), totp }];
+      if (!nombre || partes?.length !== 4 || partes[0] !== "pbkdf2") return [];
+      return [{ nombre: nombre.toLowerCase(), iteraciones: Number(partes[1]), sal: deB64(partes[2]!), huella: deB64(partes[3]!), totp: totp || null }];
     });
 }
 
@@ -136,12 +136,15 @@ export function mismoOrigen(request: Request): boolean {
 
 // ---------- Ingreso ----------
 
-export type ResultadoIngreso = { ok: true; usuario: string } | { ok: false; motivo: "credenciales" | "bloqueado" };
+export type ResultadoIngreso = { ok: true; usuario: string } | { ok: false; motivo: "credenciales" | "bloqueado" | "codigo" };
 
-export async function ingresar(request: Request, cookies: AstroCookies, usuario: string, clave: string, codigo: string): Promise<ResultadoIngreso> {
+/** Clave del límite por cuenta: como se entra solo con contraseña, todos los intentos cuentan para el panel. */
+const CUENTA = "panel";
+
+export async function ingresar(request: Request, cookies: AstroCookies, clave: string, codigo = ""): Promise<ResultadoIngreso> {
   const d = await db();
   const ipHash = await huellaIp(request);
-  const nombre = usuario.trim().toLowerCase().slice(0, 64);
+  const nombre = CUENTA;
   const ahora = Date.now();
 
   // Limpieza de intentos viejos y freno a la fuerza bruta.
@@ -159,15 +162,17 @@ export async function ingresar(request: Request, cookies: AstroCookies, usuario:
     return { ok: false, motivo: "bloqueado" };
   }
 
-  // Siempre se calcula la huella, aunque el usuario no exista, para no revelar qué usuarios existen por el tiempo.
-  const u = usuarios().find((x) => x.nombre === nombre);
-  const sal = u?.sal ?? crypto.getRandomValues(new Uint8Array(16));
-  const huella = await pbkdf2(clave, sal, u?.iteraciones ?? ITERACIONES);
-  const claveOk = !!u && iguales(huella, u.huella);
-  const contador = u && claveOk ? await verificarTotp(u.totp, codigo.trim()) : null;
+  // Se compara contra todas las cuentas (siempre el mismo trabajo, así el tiempo no revela nada).
+  let u: Usuario | undefined;
+  for (const x of usuarios()) {
+    if (iguales(await pbkdf2(clave, x.sal, x.iteraciones), x.huella)) u ??= x;
+  }
+  // Cuenta con segundo factor: con la contraseña correcta se pide el código (sin contarlo como fallo).
+  if (u?.totp && !codigo.trim()) return { ok: false, motivo: "codigo" };
+  const contador = u?.totp ? await verificarTotp(u.totp, codigo.trim()) : null;
 
-  let ok = claveOk && contador !== null;
-  if (ok && u && contador !== null) {
+  let ok = !!u && (!u.totp || contador !== null);
+  if (ok && u?.totp && contador !== null) {
     // Un código TOTP sirve una sola vez.
     const previo = await d.prepare("SELECT contador FROM admin_totp WHERE usuario = ?").bind(u.nombre).first<{ contador: number }>();
     if (previo && contador <= previo.contador) ok = false;

@@ -120,14 +120,15 @@ Recomendado: regla de redirección en Cloudflare `www.saltabum.cl/*` → `https:
 
 ### Panel de reservas: acceso y seguridad
 
-- Cada persona tiene usuario, contraseña y código de verificación de 6 dígitos (Google Authenticator u otra app).
-  Para crear un usuario: `node scripts/admin-usuario.mjs`. Imprime la línea para el secreto `ADMIN_USUARIOS` (una
-  línea por persona) y la clave para la app. La contraseña nunca se guarda: solo su huella PBKDF2-SHA256.
-- Cargar o cambiar los usuarios: `npx wrangler secret put ADMIN_USUARIOS` y pegar todas las líneas. Para quitar a
-  alguien, se vuelve a cargar sin su línea (sus sesiones se cierran solas).
+- Se entra en `https://saltabum.cl/admin` solo con la contraseña. Mientras no hay contraseña cargada, esa misma página
+  muestra «Crear la contraseña del panel»: la contraseña se convierte en el navegador en una línea cifrada
+  (PBKDF2-SHA256, 100.000 iteraciones, sal aleatoria) que se pega en Cloudflare como secreto `ADMIN_USUARIOS`
+  (Workers & Pages → saltabum → Settings → Variables and Secrets). La contraseña nunca sale del navegador.
+- Para cambiarla o sumar otra persona, se agrega otra línea al secreto (una por contraseña). Una línea puede llevar al
+  final `:<clave TOTP>` para exigir además un código de 6 dígitos (`node scripts/admin-usuario.mjs` la genera).
 - Sesiones en D1 (`admin_sesiones`) con cookie `__Host-sb_admin` HttpOnly, Secure y SameSite=Strict. Se cierran
   tras 2 horas sin uso o 12 horas en total, y quedan atadas al navegador que las abrió.
-- Límite de intentos: 5 fallos por conexión cada 15 minutos y 10 por usuario cada hora. Cada código sirve una vez.
+- Límite de intentos: 5 fallos por conexión cada 15 minutos y 10 en total cada hora. Cada código TOTP sirve una vez.
 - CSRF: se exige el mismo origen y el encabezado `x-saltabum-admin`. CSP estricta y sin caché en `public/_headers`.
 - Auditoría en la tabla `admin_auditoria` (ingresos, fallos, bloqueos, cancelaciones y pagos):
   `npx wrangler d1 execute saltabum-reservas --remote --command "SELECT * FROM admin_auditoria ORDER BY id DESC LIMIT 50"`

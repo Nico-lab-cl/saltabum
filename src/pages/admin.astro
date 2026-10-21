@@ -35,18 +35,13 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
       <form data-login class="border-noche bg-blanco flex max-w-[440px] flex-col gap-4 rounded-[20px] border-2 p-6" autocomplete="on">
         <p class="font-display text-2xl font-semibold">Ingresar al panel</p>
         <label class="flex flex-col gap-1.5 font-bold">
-          Usuario
-          <input name="usuario" required maxlength="64" autocomplete="username" autocapitalize="none" spellcheck="false" class={campo} />
-        </label>
-        <label class="flex flex-col gap-1.5 font-bold">
           Contraseña
-          <input name="clave" type="password" required maxlength="256" autocomplete="current-password" class={campo} />
+          <input name="clave" type="password" required maxlength="256" autocomplete="current-password" autofocus class={campo} />
         </label>
-        <label class="flex flex-col gap-1.5 font-bold">
+        <label data-campo-codigo hidden class="flex flex-col gap-1.5 font-bold">
           Código de verificación
           <input
             name="codigo"
-            required
             inputmode="numeric"
             pattern="[0-9]{6}"
             maxlength="6"
@@ -59,6 +54,35 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
         <button class="bg-noche text-crema min-h-12 cursor-pointer rounded-full px-6 font-extrabold disabled:opacity-50">Entrar</button>
         <p data-error class="text-rojo-texto text-sm font-bold" aria-live="assertive"></p>
       </form>
+
+      <section data-configurar hidden class="border-noche bg-blanco flex max-w-[640px] flex-col gap-4 rounded-[20px] border-2 p-6">
+        <p class="font-display text-2xl font-semibold">Crear la contraseña del panel</p>
+        <p class="text-noche-suave">
+          El panel todavía no tiene contraseña. Escríbela aquí: se transforma en una clave cifrada en este mismo navegador y
+          la contraseña no se envía a ningún lado.
+        </p>
+        <form data-crear class="flex flex-col gap-3">
+          <label class="flex flex-col gap-1.5 font-bold">
+            Contraseña (mínimo 12 caracteres, una frase larga es lo más seguro)
+            <input name="nueva" type="password" required minlength="12" maxlength="256" autocomplete="new-password" class={campo} />
+          </label>
+          <label class="flex flex-col gap-1.5 font-bold">
+            Repite la contraseña
+            <input name="repetir" type="password" required minlength="12" maxlength="256" autocomplete="new-password" class={campo} />
+          </label>
+          <button class="bg-noche text-crema min-h-12 cursor-pointer rounded-full px-6 font-extrabold disabled:opacity-50">Generar clave cifrada</button>
+          <p data-crear-error class="text-rojo-texto text-sm font-bold" aria-live="assertive"></p>
+        </form>
+        <div data-resultado hidden class="flex flex-col gap-3">
+          <p class="font-bold">Copia esta línea y pégala en Cloudflare como el secreto <code>ADMIN_USUARIOS</code></p>
+          <textarea data-linea readonly rows="4" class="border-noche bg-crema rounded-xl border-2 p-3 font-mono text-xs break-all"></textarea>
+          <button data-copiar type="button" class="border-noche min-h-12 cursor-pointer rounded-full border-2 px-6 font-extrabold">Copiar</button>
+          <p class="text-noche-suave text-sm">
+            Cuando la guardes en Cloudflare, recarga esta página y entra con tu contraseña. Esta línea no permite entrar por
+            sí sola, pero guárdala solo en Cloudflare.
+          </p>
+        </div>
+      </section>
 
       <section data-panel hidden class="flex flex-col gap-6">
         <form data-bloqueo class="border-noche bg-blanco grid gap-3 rounded-[20px] border-2 p-5 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
@@ -139,9 +163,13 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
           headers: { "x-saltabum-admin": "1", "content-type": "application/json" },
         });
 
+      const configurar = $("[data-configurar]");
+      const campoCodigo = $("[data-campo-codigo]");
+
       function mostrarLogin(mensaje = "") {
         panel.hidden = true;
         cajaUsuario.hidden = true;
+        configurar.hidden = true;
         login.hidden = false;
         errorLogin.textContent = mensaje;
         filas.replaceChildren();
@@ -212,10 +240,14 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
       async function cargar() {
         const res = await api("/api/admin/reservas");
         if (res.status === 401) return mostrarLogin();
-        if (!res.ok) {
-          mostrarLogin(res.status === 503 ? "El panel no está configurado (faltan los usuarios o la base de datos)" : "No se pudo cargar el panel");
+        if (res.status === 503) {
+          // Sin contraseña cargada: se muestra el asistente para crearla.
+          login.hidden = true;
+          panel.hidden = true;
+          configurar.hidden = false;
           return;
         }
+        if (!res.ok) return mostrarLogin("No se pudo cargar el panel");
         const { filas: datos, usuario } = (await res.json()) as { filas: Fila[]; usuario: string };
         login.hidden = true;
         login.reset();
@@ -259,15 +291,19 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
         const res = await api("/api/admin/login", {
           method: "POST",
           body: JSON.stringify({
-            usuario: String(datos.get("usuario") ?? ""),
             clave: String(datos.get("clave") ?? ""),
-            codigo: String(datos.get("codigo") ?? ""),
+            codigo: String(datos.get("codigo") ?? "") || undefined,
             turnstile_token: String(datos.get("cf-turnstile-response") ?? "") || undefined,
           }),
         }).catch(() => null);
         btn.disabled = false;
         (window as { turnstile?: { reset: () => void } }).turnstile?.reset();
         if (res?.ok) return void cargar();
+        if (res?.status === 401 && ((await res.json().catch(() => ({}))) as { error?: string }).error === "codigo") {
+          campoCodigo.hidden = false;
+          errorLogin.textContent = "Escribe el código de 6 dígitos de tu app";
+          return;
+        }
         login.querySelector<HTMLInputElement>("[name=clave]")!.value = "";
         login.querySelector<HTMLInputElement>("[name=codigo]")!.value = "";
         errorLogin.textContent =
@@ -277,7 +313,7 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
               ? "No se pudo verificar que eres una persona, recarga la página"
               : res?.status === 503
                 ? "El panel no está configurado"
-                : "Usuario, contraseña o código incorrectos";
+                : "Contraseña incorrecta";
       });
 
       $("[data-salir]").addEventListener("click", async () => {
@@ -293,6 +329,32 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
         const res = await enviar({ accion: "bloquear", fecha: data.get("fecha"), ...(desde && hasta ? { desde, hasta } : {}) });
         estado.textContent = res.ok ? "Bloqueado" : "No se pudo guardar (revisa que «hasta» sea después de «desde»)";
         void cargar();
+      });
+
+      // Genera la línea del secreto ADMIN_USUARIOS en el navegador (PBKDF2-SHA256, 100.000 iteraciones, sal aleatoria).
+      const crear = $<HTMLFormElement>("[data-crear]");
+      crear.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const datos = new FormData(crear);
+        const clave = String(datos.get("nueva") ?? "");
+        const error = $("[data-crear-error]");
+        if (clave.length < 12) return void (error.textContent = "Usa al menos 12 caracteres");
+        if (clave !== String(datos.get("repetir") ?? "")) return void (error.textContent = "Las contraseñas no coinciden");
+        error.textContent = "";
+        const sal = crypto.getRandomValues(new Uint8Array(16));
+        const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(clave), "PBKDF2", false, ["deriveBits"]);
+        const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: sal, iterations: 100_000 }, key, 256);
+        const b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u));
+        $<HTMLTextAreaElement>("[data-linea]").value = ["saltabum:pbkdf2", "100000", b64(sal), b64(new Uint8Array(bits))].join("$");
+        crear.reset();
+        crear.hidden = true;
+        $("[data-resultado]").hidden = false;
+      });
+      $("[data-copiar]").addEventListener("click", async () => {
+        const linea = $<HTMLTextAreaElement>("[data-linea]");
+        linea.select();
+        await navigator.clipboard?.writeText(linea.value).catch(() => document.execCommand("copy"));
+        $("[data-copiar]").textContent = "Copiada";
       });
 
       void cargar();
