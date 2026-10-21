@@ -4,7 +4,10 @@ import { sha256Hex } from "./crypto";
 
 const GRAPH_VERSION = "v23.0"; // Revisar cada ~1 año: https://developers.facebook.com/docs/graph-api/changelog
 
-export type MetaEventName = "Lead" | "Contact";
+export type MetaEventName = "Lead" | "Contact" | "Purchase";
+
+/** Dónde ocurrió la conversión. "chat": venta cerrada por WhatsApp (pago confirmado en el panel). */
+export type MetaActionSource = "website" | "chat";
 
 interface MetaEvent {
   pixelId: string;
@@ -12,6 +15,9 @@ interface MetaEvent {
   testEventCode?: string;
   eventName: MetaEventName;
   eventId: string;
+  actionSource?: MetaActionSource;
+  /** Comuna del cliente (se envía normalizada y con hash). */
+  city?: string;
   eventSourceUrl?: string;
   email?: string;
   phone?: string;
@@ -42,6 +48,10 @@ export async function sendMetaEvent(e: MetaEvent): Promise<void> {
   if (e.email) user_data.em = [await sha256Hex(norm(e.email))];
   if (e.phone) user_data.ph = [await sha256Hex(normPhone(e.phone))];
   if (e.firstName) user_data.fn = [await sha256Hex(norm(e.firstName.split(/\s+/)[0] ?? ""))];
+  if (e.city) {
+    const ciudad = norm(e.city).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]/g, "");
+    if (ciudad) user_data.ct = [await sha256Hex(ciudad)];
+  }
 
   const body = {
     data: [
@@ -49,7 +59,7 @@ export async function sendMetaEvent(e: MetaEvent): Promise<void> {
         event_name: e.eventName,
         event_time: Math.floor(Date.now() / 1000),
         event_id: e.eventId,
-        action_source: "website",
+        action_source: e.actionSource ?? "website",
         event_source_url: e.eventSourceUrl,
         user_data,
         ...(e.customData ? { custom_data: e.customData } : {}),

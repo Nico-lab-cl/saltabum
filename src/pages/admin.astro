@@ -1,12 +1,15 @@
 ---
-// Panel interno de reservas: ver reservas, bloquear un día completo o un rango de horas y liberar (cancelar).
-// Protegido por el secreto ADMIN_TOKEN (se pide al entrar y se guarda solo en esta pestaña).
+// Panel interno de reservas: ver reservas, marcar pagos (se informan a Meta como compra), bloquear un día completo
+// o un rango de horas y liberar (cancelar). Acceso con usuario, contraseña y código de verificación (TOTP).
+// La seguridad vive en src/lib/server/admin-auth.ts y los encabezados en public/_headers (/admin).
 // Sin tracking ni banner de cookies, y fuera del sitemap (noindex).
 import "@/styles/global.css";
+import Turnstile from "@/components/core/Turnstile.astro";
 import { APERTURA, CIERRE, PASO, aHora } from "@/lib/reservas";
 
 const HORAS: string[] = [];
 for (let m = APERTURA; m <= CIERRE; m += PASO) HORAS.push(aHora(m));
+const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
 ---
 
 <!doctype html>
@@ -15,19 +18,46 @@ for (let m = APERTURA; m <= CIERRE; m += PASO) HORAS.push(aHora(m));
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Reservas · Saltabum</title>
   </head>
   <body class="bg-crema text-noche">
-    <main class="mx-auto flex max-w-[960px] flex-col gap-6 px-4 py-8">
-      <h1 class="font-display text-4xl font-semibold">Reservas</h1>
+    <main class="mx-auto flex max-w-[1040px] flex-col gap-6 px-4 py-8">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="font-display text-4xl font-semibold">Reservas</h1>
+        <div data-usuario hidden class="flex items-center gap-3">
+          <span class="text-noche-suave text-sm" data-nombre></span>
+          <button data-salir class="border-noche min-h-11 cursor-pointer rounded-full border-2 px-5 font-extrabold">Cerrar sesión</button>
+        </div>
+      </div>
 
-      <form data-login class="border-noche bg-blanco flex flex-col gap-3 rounded-[20px] border-2 p-5 sm:flex-row sm:items-end">
-        <label class="flex flex-1 flex-col gap-1.5 font-bold">
-          Contraseña del panel
-          <input name="token" type="password" required autocomplete="current-password" class="border-noche min-h-12 rounded-xl border-2 px-3.5" />
+      <form data-login class="border-noche bg-blanco flex max-w-[440px] flex-col gap-4 rounded-[20px] border-2 p-6" autocomplete="on">
+        <p class="font-display text-2xl font-semibold">Ingresar al panel</p>
+        <label class="flex flex-col gap-1.5 font-bold">
+          Usuario
+          <input name="usuario" required maxlength="64" autocomplete="username" autocapitalize="none" spellcheck="false" class={campo} />
         </label>
-        <button class="bg-noche text-crema min-h-12 cursor-pointer rounded-full px-6 font-extrabold">Entrar</button>
+        <label class="flex flex-col gap-1.5 font-bold">
+          Contraseña
+          <input name="clave" type="password" required maxlength="256" autocomplete="current-password" class={campo} />
+        </label>
+        <label class="flex flex-col gap-1.5 font-bold">
+          Código de verificación
+          <input
+            name="codigo"
+            required
+            inputmode="numeric"
+            pattern="[0-9]{6}"
+            maxlength="6"
+            autocomplete="one-time-code"
+            placeholder="6 dígitos de tu app"
+            class={campo}
+          />
+        </label>
+        <Turnstile />
+        <button class="bg-noche text-crema min-h-12 cursor-pointer rounded-full px-6 font-extrabold disabled:opacity-50">Entrar</button>
+        <p data-error class="text-rojo-texto text-sm font-bold" aria-live="assertive"></p>
       </form>
 
       <section data-panel hidden class="flex flex-col gap-6">
@@ -56,11 +86,18 @@ for (let m = APERTURA; m <= CIERRE; m += PASO) HORAS.push(aHora(m));
         <div class="border-noche bg-blanco overflow-x-auto rounded-[20px] border-2">
           <table class="w-full text-left text-sm">
             <thead class="bg-arena">
-              <tr><th class="p-3">Fecha</th><th class="p-3">Horario</th><th class="p-3">Estado</th><th class="p-3">Cliente</th><th class="p-3">Comuna y dirección</th><th class="p-3">Total</th><th class="p-3"></th></tr>
+              <tr>
+                <th class="p-3">Fecha</th><th class="p-3">Horario</th><th class="p-3">Estado</th><th class="p-3">Cliente</th>
+                <th class="p-3">Comuna y dirección</th><th class="p-3">Total</th><th class="p-3">Pago</th><th class="p-3"></th>
+              </tr>
             </thead>
             <tbody data-filas></tbody>
           </table>
         </div>
+        <p class="text-noche-suave text-xs">
+          Al marcar una reserva como pagada se informa a Meta como venta, para medir qué anuncios traen clientes reales.
+          La sesión se cierra sola tras 2 horas sin uso.
+        </p>
       </section>
     </main>
 
@@ -80,79 +117,172 @@ for (let m = APERTURA; m <= CIERRE; m += PASO) HORAS.push(aHora(m));
         comuna: string | null;
         direccion: string | null;
         mensaje: string | null;
+        pagado: number | null;
+        pagado_en: string | null;
+        pagado_por: string | null;
       };
-      const CLAVE = "saltabum-admin-token";
-      const login = document.querySelector<HTMLFormElement>("[data-login]")!;
-      const panel = document.querySelector<HTMLElement>("[data-panel]")!;
-      const filas = document.querySelector<HTMLElement>("[data-filas]")!;
-      const estado = document.querySelector<HTMLElement>("[data-estado]")!;
-      const bloqueo = document.querySelector<HTMLFormElement>("[data-bloqueo]")!;
+      const $ = <T extends HTMLElement>(s: string) => document.querySelector<T>(s)!;
+      const login = $<HTMLFormElement>("[data-login]");
+      const errorLogin = $("[data-error]");
+      const panel = $("[data-panel]");
+      const filas = $("[data-filas]");
+      const estado = $("[data-estado]");
+      const bloqueo = $<HTMLFormElement>("[data-bloqueo]");
+      const cajaUsuario = $("[data-usuario]");
       const fechaLarga = new Intl.DateTimeFormat("es-CL", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
-      const token = () => sessionStorage.getItem(CLAVE) ?? "";
-      const api = (init?: RequestInit) =>
-        fetch("/api/admin/reservas", {
+      // Encabezado propio: un sitio ajeno no puede enviarlo (defensa CSRF junto con SameSite=Strict y el origen).
+      const api = (ruta: string, init?: RequestInit) =>
+        fetch(ruta, {
           ...init,
-          headers: { authorization: `Bearer ${token()}`, "content-type": "application/json" },
+          credentials: "same-origin",
+          headers: { "x-saltabum-admin": "1", "content-type": "application/json" },
         });
 
+      function mostrarLogin(mensaje = "") {
+        panel.hidden = true;
+        cajaUsuario.hidden = true;
+        login.hidden = false;
+        errorLogin.textContent = mensaje;
+        filas.replaceChildren();
+      }
+
+      function celda(texto: string) {
+        const td = document.createElement("td");
+        td.className = "p-3";
+        td.textContent = texto;
+        return td;
+      }
+
+      function boton(texto: string, clase: string, accion: () => void) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = `cursor-pointer font-bold underline ${clase}`;
+        b.textContent = texto;
+        b.addEventListener("click", accion);
+        return b;
+      }
+
+      async function enviar(datos: Record<string, unknown>) {
+        const res = await api("/api/admin/reservas", { method: "POST", body: JSON.stringify(datos) });
+        if (res.status === 401) mostrarLogin("Tu sesión expiró, vuelve a ingresar");
+        return res;
+      }
+
+      function celdaPago(f: Fila) {
+        const td = celda("");
+        if (f.estado !== "reservado") return td;
+        if (f.pagado) {
+          td.textContent = `Pagada ${pesos(f.pagado)}`;
+          td.title = `Por ${f.pagado_por ?? "?"} el ${f.pagado_en ? new Date(f.pagado_en).toLocaleString("es-CL") : "?"}`;
+          td.classList.add("font-bold");
+          return td;
+        }
+        td.append(
+          boton("Marcar pagada", "text-azul-texto", () => {
+            // Pide el monto en la misma celda (abono o total), sin ventanas emergentes.
+            const input = document.createElement("input");
+            input.type = "number";
+            input.min = "1000";
+            input.step = "10";
+            input.value = String(f.total ?? 20000);
+            input.className = "border-noche w-28 rounded-lg border-2 px-2 py-1";
+            input.setAttribute("aria-label", "Monto pagado en pesos");
+            const ok = boton("Confirmar", "text-azul-texto ml-2", async () => {
+              const monto = Math.round(Number(input.value));
+              if (!(monto >= 1000)) return void (estado.textContent = "Escribe el monto pagado en pesos");
+              ok.disabled = true;
+              const res = await enviar({ accion: "pagada", id: f.id, monto });
+              const data = (await res.json().catch(() => ({}))) as { meta?: string };
+              estado.textContent = res.ok
+                ? data.meta === "enviada"
+                  ? "Pago guardado y enviado a Meta"
+                  : "Pago guardado (Meta no está configurado o no respondió)"
+                : "No se pudo guardar el pago";
+              void cargar();
+            });
+            const cancelar = boton("Cancelar", "text-noche-suave ml-2", () => void cargar());
+            td.replaceChildren(input, ok, cancelar);
+            input.focus();
+          }),
+        );
+        return td;
+      }
+
       async function cargar() {
-        const res = await api();
-        if (res.status === 401) {
-          sessionStorage.removeItem(CLAVE);
-          estado.textContent = "";
-          panel.hidden = true;
-          login.hidden = false;
-          alert("Contraseña incorrecta");
-          return;
-        }
+        const res = await api("/api/admin/reservas");
+        if (res.status === 401) return mostrarLogin();
         if (!res.ok) {
-          estado.textContent = "El panel no está configurado (falta ADMIN_TOKEN o la base de datos)";
+          mostrarLogin(res.status === 503 ? "El panel no está configurado (faltan los usuarios o la base de datos)" : "No se pudo cargar el panel");
           return;
         }
-        const { filas: datos } = (await res.json()) as { filas: Fila[] };
+        const { filas: datos, usuario } = (await res.json()) as { filas: Fila[]; usuario: string };
         login.hidden = true;
+        login.reset();
         panel.hidden = false;
+        cajaUsuario.hidden = false;
+        $("[data-nombre]").textContent = `Sesión de ${usuario}`;
         filas.replaceChildren(
           ...datos.map((f) => {
             const tr = document.createElement("tr");
             tr.className = "border-noche/10 border-t align-top";
-            const celdas = [
-              fechaLarga.format(new Date(`${f.fecha}T12:00:00Z`)),
-              f.inicio === 0 && f.fin === 24 * 60 ? "Todo el día" : etiquetaHorario(f.inicio, f.fin),
-              f.estado === "reservado" ? "Reservado" : "Bloqueado",
-              [f.nombre, f.telefono, f.mensaje].filter(Boolean).join(" · "),
-              [f.comuna, f.direccion].filter(Boolean).join(", "),
-              f.total ? pesos(f.total) : "",
-            ];
-            for (const texto of celdas) {
-              const td = document.createElement("td");
-              td.className = "p-3";
-              td.textContent = texto;
-              tr.append(td);
-            }
-            const td = document.createElement("td");
-            td.className = "p-3";
-            const boton = document.createElement("button");
-            boton.className = "text-rojo-texto cursor-pointer font-bold underline";
-            boton.textContent = f.estado === "reservado" ? "Cancelar" : "Liberar";
-            boton.addEventListener("click", async () => {
-              if (f.estado === "reservado" && !confirm(`¿Cancelar la reserva de ${f.nombre ?? "este cliente"}?`)) return;
-              await api({ method: "POST", body: JSON.stringify({ accion: "liberar", id: f.id }) });
-              void cargar();
-            });
-            td.append(boton);
+            tr.append(
+              celda(fechaLarga.format(new Date(`${f.fecha}T12:00:00Z`))),
+              celda(f.inicio === 0 && f.fin === 24 * 60 ? "Todo el día" : etiquetaHorario(f.inicio, f.fin)),
+              celda(f.estado === "reservado" ? "Reservado" : "Bloqueado"),
+              celda([f.nombre, f.telefono, f.mensaje].filter(Boolean).join(" · ")),
+              celda([f.comuna, f.direccion].filter(Boolean).join(", ")),
+              celda(f.total ? pesos(f.total) : ""),
+              celdaPago(f),
+            );
+            const td = celda("");
+            td.append(
+              boton(f.estado === "reservado" ? "Cancelar" : "Liberar", "text-rojo-texto", async () => {
+                if (f.estado === "reservado" && !confirm(`¿Cancelar la reserva de ${f.nombre ?? "este cliente"}?`)) return;
+                await enviar({ accion: "liberar", id: f.id });
+                void cargar();
+              }),
+            );
             tr.append(td);
             return tr;
           }),
         );
-        estado.textContent = datos.length ? "" : "No hay reservas ni bloqueos desde hoy";
+        if (!datos.length) estado.textContent = "No hay reservas ni bloqueos desde hoy";
       }
 
-      login.addEventListener("submit", (e) => {
+      login.addEventListener("submit", async (e) => {
         e.preventDefault();
-        sessionStorage.setItem(CLAVE, String(new FormData(login).get("token") ?? ""));
-        void cargar();
+        const datos = new FormData(login);
+        const btn = login.querySelector("button")!;
+        btn.disabled = true;
+        errorLogin.textContent = "";
+        const res = await api("/api/admin/login", {
+          method: "POST",
+          body: JSON.stringify({
+            usuario: String(datos.get("usuario") ?? ""),
+            clave: String(datos.get("clave") ?? ""),
+            codigo: String(datos.get("codigo") ?? ""),
+            turnstile_token: String(datos.get("cf-turnstile-response") ?? "") || undefined,
+          }),
+        }).catch(() => null);
+        btn.disabled = false;
+        (window as { turnstile?: { reset: () => void } }).turnstile?.reset();
+        if (res?.ok) return void cargar();
+        login.querySelector<HTMLInputElement>("[name=clave]")!.value = "";
+        login.querySelector<HTMLInputElement>("[name=codigo]")!.value = "";
+        errorLogin.textContent =
+          res?.status === 429
+            ? "Demasiados intentos. Espera unos minutos antes de volver a probar"
+            : res?.status === 403
+              ? "No se pudo verificar que eres una persona, recarga la página"
+              : res?.status === 503
+                ? "El panel no está configurado"
+                : "Usuario, contraseña o código incorrectos";
+      });
+
+      $("[data-salir]").addEventListener("click", async () => {
+        await api("/api/admin/logout", { method: "POST" }).catch(() => null);
+        mostrarLogin("Sesión cerrada");
       });
 
       bloqueo.addEventListener("submit", async (e) => {
@@ -160,15 +290,12 @@ for (let m = APERTURA; m <= CIERRE; m += PASO) HORAS.push(aHora(m));
         const data = new FormData(bloqueo);
         const desde = String(data.get("desde") ?? "");
         const hasta = String(data.get("hasta") ?? "");
-        const res = await api({
-          method: "POST",
-          body: JSON.stringify({ accion: "bloquear", fecha: data.get("fecha"), ...(desde && hasta ? { desde, hasta } : {}) }),
-        });
+        const res = await enviar({ accion: "bloquear", fecha: data.get("fecha"), ...(desde && hasta ? { desde, hasta } : {}) });
         estado.textContent = res.ok ? "Bloqueado" : "No se pudo guardar (revisa que «hasta» sea después de «desde»)";
         void cargar();
       });
 
-      if (token()) void cargar();
+      void cargar();
     </script>
   </body>
 </html>

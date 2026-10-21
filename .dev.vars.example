@@ -13,5 +13,5 @@ META_CAPI_TEST_EVENT_CODE=
 CRM_WEBHOOK_URL=
 CRM_WEBHOOK_SECRET=
 
-# Contraseña del panel de reservas (/admin). Usa una larga y aleatoria.
-ADMIN_TOKEN=
+# Usuarios del panel de reservas (/admin), uno por línea. Se generan con:  node scripts/admin-usuario.mjs
+ADMIN_USUARIOS=

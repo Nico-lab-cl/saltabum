@@ -71,8 +71,9 @@ export default defineConfig({
       META_CAPI_TEST_EVENT_CODE: envField.string({ context: "server", access: "secret", optional: true }),
       CRM_WEBHOOK_URL: envField.string({ context: "server", access: "secret", optional: true }),
       CRM_WEBHOOK_SECRET: envField.string({ context: "server", access: "secret", optional: true }),
-      // Contraseña del panel de reservas (/admin)
-      ADMIN_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
+      // Usuarios del panel de reservas (/admin): «usuario:pbkdf2$…:<totp>», uno por línea. Se generan con
+      // node scripts/admin-usuario.mjs (ver src/lib/server/admin-auth.ts).
+      ADMIN_USUARIOS: envField.string({ context: "server", access: "secret", optional: true }),
     },
   },
 });

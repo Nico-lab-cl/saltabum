@@ -87,7 +87,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       comuna: r.comuna,
       direccion: r.direccion ?? null,
       mensaje: r.mensaje ?? null,
-    }, ipHash);
+    }, ipHash, r.consent
+      ? { fbp: cookies.get("_fbp")?.value ?? null, fbc: buildFbc(cookies.get("_fbc")?.value, r.attribution?.fbclid) ?? null }
+      : undefined);
   } catch (err) {
     console.error("[reservas] D1:", String(err));
     return json(503, { ok: false, error: "db" });

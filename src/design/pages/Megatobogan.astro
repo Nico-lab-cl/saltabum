@@ -10,6 +10,7 @@ import PaginaSeo, { type Miga } from "../layouts/PaginaSeo.astro";
 import Agenda from "../sections/Agenda.astro";
 import Ficha from "../sections/Ficha.astro";
 import Patio from "../sections/Patio.astro";
+import Videos from "../sections/Videos.astro";
 
 interface Props {
   migas: Miga[];
@@ -28,6 +29,7 @@ const { migas, preguntas } = Astro.props;
     mensaje={`Hola, quiero consultar la disponibilidad del ${PRODUCTO.nombre}. Vengo de saltabum.cl`}
   />
   <Ficha />
+  <Videos solo={["megatobogan"]} titulo={`El ${PRODUCTO.nombre} en video`} bajada="Video real grabado por nosotros, para que veas cómo llega a tu evento" fondo="crema" />
   <Patio />
   <Agenda />
   <Seccion titulo={`Preguntas sobre el ${PRODUCTO.nombre}`} fondo="crema">

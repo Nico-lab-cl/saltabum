@@ -70,7 +70,7 @@ npx wrangler secret put TURNSTILE_SECRET_KEY
 npx wrangler secret put META_CAPI_ACCESS_TOKEN
 npx wrangler secret put CRM_WEBHOOK_URL
 npx wrangler secret put CRM_WEBHOOK_SECRET
-npx wrangler secret put ADMIN_TOKEN   # contraseña del panel de reservas (/admin)
+npx wrangler secret put ADMIN_USUARIOS   # usuarios del panel /admin (ver «Panel de reservas»)
 ```
 
 En producción, si falta `TURNSTILE_SECRET_KEY` o `CRM_WEBHOOK_URL`, `/api/lead` responde 503
@@ -115,8 +115,22 @@ Recomendado: regla de redirección en Cloudflare `www.saltabum.cl/*` → `https:
 - Las reservas se guardan en Cloudflare D1 (binding `DB`, base `saltabum-reservas`). Wrangler la crea sola en el
   primer deploy y el Worker crea la tabla al primer uso. La clave primaria (fecha + bloque) impide reservas dobles.
 - Antispam: Turnstile si está configurado y, siempre, máximo 3 reservas por conexión cada 24 horas.
-- Panel: `https://saltabum.cl/admin` (contraseña = secreto `ADMIN_TOKEN`). Ahí se ven las reservas con sus datos,
-  se bloquean días u horarios y se cancelan reservas.
+- Panel: `https://saltabum.cl/admin`. Ahí se ven las reservas con sus datos, se marcan pagos (se informan a Meta como
+  compra cerrada por chat), se bloquean días u horarios y se cancelan reservas.
+
+### Panel de reservas: acceso y seguridad
+
+- Cada persona tiene usuario, contraseña y código de verificación de 6 dígitos (Google Authenticator u otra app).
+  Para crear un usuario: `node scripts/admin-usuario.mjs`. Imprime la línea para el secreto `ADMIN_USUARIOS` (una
+  línea por persona) y la clave para la app. La contraseña nunca se guarda: solo su huella PBKDF2-SHA256.
+- Cargar o cambiar los usuarios: `npx wrangler secret put ADMIN_USUARIOS` y pegar todas las líneas. Para quitar a
+  alguien, se vuelve a cargar sin su línea (sus sesiones se cierran solas).
+- Sesiones en D1 (`admin_sesiones`) con cookie `__Host-sb_admin` HttpOnly, Secure y SameSite=Strict. Se cierran
+  tras 2 horas sin uso o 12 horas en total, y quedan atadas al navegador que las abrió.
+- Límite de intentos: 5 fallos por conexión cada 15 minutos y 10 por usuario cada hora. Cada código sirve una vez.
+- CSRF: se exige el mismo origen y el encabezado `x-saltabum-admin`. CSP estricta y sin caché en `public/_headers`.
+- Auditoría en la tabla `admin_auditoria` (ingresos, fallos, bloqueos, cancelaciones y pagos):
+  `npx wrangler d1 execute saltabum-reservas --remote --command "SELECT * FROM admin_auditoria ORDER BY id DESC LIMIT 50"`
 
 ## Contrato del webhook al CRM
 

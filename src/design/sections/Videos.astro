@@ -1,0 +1,114 @@
+---
+// Videos reales de los inflables (public/videos). Se reproducen sin sonido solo mientras están en pantalla.
+// Al cambiar un video, súbele la versión al nombre: /videos se guarda 7 días en caché.
+import { PRODUCTO } from "../data";
+import { RUTAS } from "../seo";
+import Seccion from "../components/Seccion.astro";
+import WaButton from "../components/WaButton.astro";
+
+interface Props {
+  /** Muestra solo estos videos (por id). Sin esto, van todos. */
+  solo?: string[];
+  titulo?: string;
+  bajada?: string;
+  fondo?: "crema" | "blanco" | "arena" | "celeste" | "verde";
+}
+
+const VIDEOS = [
+  {
+    id: "megatobogan",
+    nombre: PRODUCTO.nombre,
+    detalle: "Tobogán doble, túneles y muro para escalar",
+    archivo: "megatobogan-v1",
+    href: RUTAS.megatobogan,
+  },
+  {
+    id: "castillo-naranjo",
+    nombre: "Castillo inflable naranjo",
+    detalle: "Castillo con tobogán y obstáculos adentro",
+    archivo: "castillo-naranjo-v1",
+  },
+  {
+    id: "castillo-rayas",
+    nombre: "Castillo inflable de rayas",
+    detalle: "Castillo con tobogán y circuito de obstáculos",
+    archivo: "castillo-rayas-v1",
+  },
+];
+
+const {
+  solo,
+  titulo = "Así están nuestros inflables",
+  bajada = "Videos reales grabados por nosotros, para que veas cómo llegan a tu evento",
+  fondo = "blanco",
+} = Astro.props;
+const lista = solo ? VIDEOS.filter((v) => solo.includes(v.id)) : VIDEOS;
+const columnas = lista.length === 1 ? "max-w-[420px]" : lista.length === 2 ? "sm:grid-cols-2 max-w-[860px]" : "sm:grid-cols-3";
+---
+
+<Seccion titulo={titulo} eyebrow="Videos reales" bajada={bajada} fondo={fondo}>
+  <ul class:list={["grid gap-5 lg:gap-7", columnas]}>
+    {
+      lista.map((v) => (
+        <li class="flex flex-col gap-3">
+          <div class="border-noche bg-noche shadow-pop relative aspect-[9/16] overflow-hidden rounded-[28px] border-2">
+            <video
+              data-video-inflable
+              class="size-full object-cover"
+              poster={`/videos/${v.archivo}.webp`}
+              muted
+              loop
+              playsinline
+              preload="none"
+              width="720"
+              height="1280"
+              aria-label={`Video real del ${v.nombre}`}
+            >
+              <source src={`/videos/${v.archivo}.mp4`} type="video/mp4" />
+            </video>
+            <span class="bg-noche text-crema absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-[11px] leading-[18px] font-extrabold tracking-[1px] uppercase">
+              Video real
+            </span>
+          </div>
+          <div>
+            <h3 class="font-display text-2xl leading-7 font-semibold">{v.nombre}</h3>
+            <p class="text-noche-suave mt-1">{v.detalle}</p>
+          </div>
+          <div class="flex flex-wrap gap-2.5">
+            {v.href && (
+              <a
+                href={v.href}
+                class="bounce border-noche bg-sol text-noche inline-flex min-h-12 flex-1 items-center justify-center rounded-full border-2 px-5 font-extrabold no-underline"
+              >
+                Ver ficha
+              </a>
+            )}
+            <WaButton placement={`videos-${v.id}`} size="m" class="flex-1" message={`Hola, quiero consultar el ${v.nombre}. Lo vi en saltabum.cl`}>
+              Consultar
+            </WaButton>
+          </div>
+        </li>
+      ))
+    }
+  </ul>
+</Seccion>
+
+<script>
+  // Cada video se descarga y reproduce solo cuando se ve en pantalla, y se pausa al salir.
+  const videos = [...document.querySelectorAll<HTMLVideoElement>("[data-video-inflable]")];
+  const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (quieto) videos.forEach((v) => (v.controls = true));
+  else if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver(
+      (entradas) => {
+        for (const e of entradas) {
+          const v = e.target as HTMLVideoElement;
+          if (e.isIntersecting) void v.play().catch(() => (v.controls = true));
+          else v.pause();
+        }
+      },
+      { threshold: 0.35 },
+    );
+    videos.forEach((v) => io.observe(v));
+  } else videos.forEach((v) => (v.controls = true));
+</script>

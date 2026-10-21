@@ -21,6 +21,16 @@ export interface FilaAgenda {
   mensaje: string | null;
   total: number | null;
   creado: string;
+  /** Monto pagado (abono o total) cuando se marca como pagada en el panel. */
+  pagado: number | null;
+  pagado_en: string | null;
+  pagado_por: string | null;
+}
+
+/** Datos para medir la venta en Meta (solo si el cliente aceptó las cookies de medición al reservar). */
+export interface MedicionReserva {
+  fbp: string | null;
+  fbc: string | null;
 }
 
 const ESQUEMA = `CREATE TABLE IF NOT EXISTS agenda (
@@ -39,6 +49,15 @@ const ESQUEMA = `CREATE TABLE IF NOT EXISTS agenda (
   ip_hash TEXT,
   creado TEXT NOT NULL
 )`;
+
+// Columnas agregadas después (ALTER TABLE falla si ya existen, y se ignora).
+const COLUMNAS_NUEVAS = [
+  "pagado INTEGER",
+  "pagado_en TEXT",
+  "pagado_por TEXT",
+  "fbp TEXT",
+  "fbc TEXT",
+];
 
 // Traspaso único desde la tabla anterior «reservas» (bloques fijos de 3 horas: 10:00, 13:30 y 17:00).
 // Solo corre si «agenda» está vacía; si «reservas» no existe, falla y se ignora.
@@ -60,6 +79,7 @@ export async function baseReservas(): Promise<D1Database> {
     await db.prepare(ESQUEMA).run();
     await db.prepare("CREATE INDEX IF NOT EXISTS agenda_fecha ON agenda (fecha)").run();
     await db.prepare(TRASPASO).run().catch(() => undefined);
+    for (const c of COLUMNAS_NUEVAS) await db.prepare(`ALTER TABLE agenda ADD COLUMN ${c}`).run().catch(() => undefined);
   })();
   await tablaLista;
   return db;
@@ -80,14 +100,15 @@ export async function horariosOcupados(
 
 /** Intenta tomar un horario. Devuelve false si choca con otra reserva o bloqueo del mismo juego. */
 export async function crearReserva(
-  fila: Omit<FilaAgenda, "id" | "estado" | "creado">,
+  fila: Omit<FilaAgenda, "id" | "estado" | "creado" | "pagado" | "pagado_en" | "pagado_por">,
   ipHash: string | null,
+  medicion?: MedicionReserva,
 ): Promise<boolean> {
   const db = await baseReservas();
   const res = await db
     .prepare(
-      `INSERT INTO agenda (fecha, producto, inicio, fin, estado, nombre, telefono, comuna, direccion, mensaje, total, ip_hash, creado)
-       SELECT ?, ?, ?, ?, 'reservado', ?, ?, ?, ?, ?, ?, ?, ?
+      `INSERT INTO agenda (fecha, producto, inicio, fin, estado, nombre, telefono, comuna, direccion, mensaje, total, ip_hash, creado, fbp, fbc)
+       SELECT ?, ?, ?, ?, 'reservado', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE NOT EXISTS (
          SELECT 1 FROM agenda
          WHERE fecha = ? AND (producto = ? OR producto = 'todos') AND inicio < ? AND fin > ?
@@ -106,6 +127,8 @@ export async function crearReserva(
       fila.total,
       ipHash,
       new Date().toISOString(),
+      medicion?.fbp ?? null,
+      medicion?.fbc ?? null,
       fila.fecha,
       fila.producto,
       fila.fin + MARGEN,
@@ -130,7 +153,7 @@ export async function listarDesde(desde: string): Promise<FilaAgenda[]> {
   const db = await baseReservas();
   const { results } = await db
     .prepare(
-      "SELECT id, fecha, producto, inicio, fin, estado, nombre, telefono, comuna, direccion, mensaje, total, creado FROM agenda WHERE fecha >= ? ORDER BY fecha, inicio",
+      "SELECT id, fecha, producto, inicio, fin, estado, nombre, telefono, comuna, direccion, mensaje, total, creado, pagado, pagado_en, pagado_por FROM agenda WHERE fecha >= ? ORDER BY fecha, inicio",
     )
     .bind(desde)
     .all<FilaAgenda>();
@@ -150,4 +173,20 @@ export async function bloquear(fecha: string, inicio: number, fin: number): Prom
 export async function liberar(id: number): Promise<void> {
   const db = await baseReservas();
   await db.prepare("DELETE FROM agenda WHERE id = ?").bind(id).run();
+}
+
+/** Una reserva con sus datos de medición, para enviar la venta a Meta. */
+export async function obtenerReserva(id: number): Promise<(FilaAgenda & MedicionReserva) | null> {
+  const db = await baseReservas();
+  return db.prepare("SELECT * FROM agenda WHERE id = ? AND estado = 'reservado'").bind(id).first<FilaAgenda & MedicionReserva>();
+}
+
+/** Marca una reserva como pagada (solo la primera vez). Devuelve false si ya estaba pagada o no existe. */
+export async function marcarPagada(id: number, monto: number, usuario: string): Promise<boolean> {
+  const db = await baseReservas();
+  const res = await db
+    .prepare("UPDATE agenda SET pagado = ?, pagado_en = ?, pagado_por = ? WHERE id = ? AND estado = 'reservado' AND pagado IS NULL")
+    .bind(monto, new Date().toISOString(), usuario, id)
+    .run();
+  return Number(res.meta.changes ?? 0) > 0;
 }
