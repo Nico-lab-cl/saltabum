@@ -59,8 +59,10 @@ export default defineConfig({
         access: "public",
         optional: true,
       }),
-      PUBLIC_GA4_ID: envField.string({ context: "client", access: "public", optional: true }), // G-XXXXXXXXXX
-      PUBLIC_CLARITY_ID: envField.string({ context: "client", access: "public", optional: true }),
+      // Propiedad «saltabum.cl» de Google Analytics 4 (cuenta Saltabum). Se puede reemplazar con la variable.
+      PUBLIC_GA4_ID: envField.string({ context: "client", access: "public", default: "G-3TTJNV5MR5" }),
+      // Proyecto «saltabum.cl» en Microsoft Clarity. Se puede reemplazar con la variable.
+      PUBLIC_CLARITY_ID: envField.string({ context: "client", access: "public", default: "z12kisbdh0" }),
       // WhatsApp de Saltabum (+56 9 6344 4133). Se puede reemplazar con la variable de entorno.
       PUBLIC_WHATSAPP_NUMBER: envField.string({ context: "client", access: "public", default: "56963444133" }),
       PUBLIC_TURNSTILE_SITE_KEY: envField.string({ context: "client", access: "public", optional: true }),
