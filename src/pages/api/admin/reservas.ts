@@ -1,5 +1,5 @@
 // Panel de reservas (/admin): requiere sesión iniciada (ver src/lib/server/admin-auth.ts).
-//   GET  → usuario de la sesión, reservas y bloqueos desde hoy (con datos de contacto) y escaneos de los QR
+//   GET  → usuario de la sesión y reservas y bloqueos desde hoy (con datos de contacto)
 //   POST → { accion: "bloquear", fecha, desde?, hasta? } · { accion: "liberar", id } · { accion: "pagada", id, monto }
 // «pagada» guarda el pago y lo envía a Meta (Conversions API) como compra cerrada por chat, para medir ventas reales.
 import type { APIRoute } from "astro";
@@ -9,7 +9,6 @@ import { PRODUCTOS } from "@design/data";
 import { aMinutos, bloqueoSchema, hoyChile } from "@/lib/reservas";
 import { auditar, mismoOrigen, panelConfigurado, sesion } from "@/lib/server/admin-auth";
 import { sendMetaEvent } from "@/lib/server/meta-capi";
-import { resumenEscaneos } from "@/lib/server/qr-db";
 import { bloquear, liberar, listarDesde, marcarPagada, obtenerReserva } from "@/lib/server/reservas-db";
 
 export const prerender = false;
@@ -25,8 +24,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
   if (!mismoOrigen(request)) return json(403, { ok: false, error: "origen" });
   const usuario = await sesion(request, cookies);
   if (!usuario) return json(401, { ok: false, error: "sin_sesion" });
-  const [filas, qr] = await Promise.all([listarDesde(hoyChile()), resumenEscaneos().catch(() => [])]);
-  return json(200, { ok: true, usuario, hoy: hoyChile(), filas, qr });
+  return json(200, { ok: true, usuario, hoy: hoyChile(), filas: await listarDesde(hoyChile()) });
 };
 
 export const POST: APIRoute = async ({ request, cookies }) => {

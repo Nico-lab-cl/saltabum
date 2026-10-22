@@ -5,6 +5,7 @@
 // Sin tracking ni banner de cookies, y fuera del sitemap (noindex).
 import "@/styles/global.css";
 import Turnstile from "@/components/core/Turnstile.astro";
+import PanelQr from "@/components/admin/PanelQr.astro";
 import { APERTURA, CIERRE, PASO, aHora } from "@/lib/reservas";
 
 const HORAS: string[] = [];
@@ -23,7 +24,7 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
     <title>Reservas · Saltabum</title>
   </head>
   <body class="bg-crema text-noche">
-    <main class="mx-auto flex max-w-[1040px] flex-col gap-6 px-4 py-8">
+    <main class="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 py-8">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h1 class="font-display text-4xl font-semibold">Reservas</h1>
         <div data-usuario hidden class="flex items-center gap-3">
@@ -122,22 +123,9 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
           Al marcar una reserva como pagada se informa a Meta como venta, para medir qué anuncios traen clientes reales.
           La sesión se cierra sola tras 2 horas sin uso.
         </p>
-        <div class="flex flex-col gap-3">
-          <h2 class="font-display text-2xl font-semibold">Escaneos de códigos QR</h2>
-          <div class="border-noche bg-blanco overflow-x-auto rounded-[20px] border-2">
-            <table class="w-full text-left text-sm">
-              <thead class="bg-arena">
-                <tr><th class="p-3">Campaña</th><th class="p-3">Total</th><th class="p-3">Últimos 7 días</th><th class="p-3">Último escaneo</th></tr>
-              </thead>
-              <tbody data-qr></tbody>
-            </table>
-          </div>
-          <p class="text-noche-suave text-xs">
-            Cada QR apunta a saltabum.cl/qr o saltabum.cl/qr/campaña. Se cuentan todos los escaneos, aunque la persona no acepte
-            cookies.
-          </p>
-        </div>
       </section>
+
+      <PanelQr />
     </main>
 
     <script>
@@ -188,6 +176,7 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
         login.hidden = false;
         errorLogin.textContent = mensaje;
         filas.replaceChildren();
+        document.dispatchEvent(new Event("panel:cerrado"));
       }
 
       function celda(texto: string) {
@@ -263,30 +252,9 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
           return;
         }
         if (!res.ok) return mostrarLogin("No se pudo cargar el panel");
-        const {
-          filas: datos,
-          usuario,
-          qr = [],
-        } = (await res.json()) as {
-          filas: Fila[];
-          usuario: string;
-          qr?: { codigo: string; total: number; ultimos7: number; ultimo: string }[];
-        };
-        $("[data-qr]").replaceChildren(
-          ...(qr.length
-            ? qr.map((q) => {
-                const tr = document.createElement("tr");
-                tr.className = "border-noche/10 border-t";
-                tr.append(
-                  celda(q.codigo),
-                  celda(String(q.total)),
-                  celda(String(q.ultimos7 ?? 0)),
-                  celda(new Date(q.ultimo).toLocaleString("es-CL")),
-                );
-                return tr;
-              })
-            : [Object.assign(document.createElement("tr"), { innerHTML: '<td class="p-3" colspan="4">Todavía no hay escaneos</td>' })]),
-        );
+        const { filas: datos, usuario } = (await res.json()) as { filas: Fila[]; usuario: string };
+        // La sección de los QR (PanelQr) carga sus datos cuando hay sesión.
+        if (panel.hidden) document.dispatchEvent(new Event("panel:listo"));
         login.hidden = true;
         login.reset();
         panel.hidden = false;
