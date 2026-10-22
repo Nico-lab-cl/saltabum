@@ -122,6 +122,21 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
           Al marcar una reserva como pagada se informa a Meta como venta, para medir qué anuncios traen clientes reales.
           La sesión se cierra sola tras 2 horas sin uso.
         </p>
+        <div class="flex flex-col gap-3">
+          <h2 class="font-display text-2xl font-semibold">Escaneos de códigos QR</h2>
+          <div class="border-noche bg-blanco overflow-x-auto rounded-[20px] border-2">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-arena">
+                <tr><th class="p-3">Campaña</th><th class="p-3">Total</th><th class="p-3">Últimos 7 días</th><th class="p-3">Último escaneo</th></tr>
+              </thead>
+              <tbody data-qr></tbody>
+            </table>
+          </div>
+          <p class="text-noche-suave text-xs">
+            Cada QR apunta a saltabum.cl/qr o saltabum.cl/qr/campaña. Se cuentan todos los escaneos, aunque la persona no acepte
+            cookies.
+          </p>
+        </div>
       </section>
     </main>
 
@@ -248,7 +263,30 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
           return;
         }
         if (!res.ok) return mostrarLogin("No se pudo cargar el panel");
-        const { filas: datos, usuario } = (await res.json()) as { filas: Fila[]; usuario: string };
+        const {
+          filas: datos,
+          usuario,
+          qr = [],
+        } = (await res.json()) as {
+          filas: Fila[];
+          usuario: string;
+          qr?: { codigo: string; total: number; ultimos7: number; ultimo: string }[];
+        };
+        $("[data-qr]").replaceChildren(
+          ...(qr.length
+            ? qr.map((q) => {
+                const tr = document.createElement("tr");
+                tr.className = "border-noche/10 border-t";
+                tr.append(
+                  celda(q.codigo),
+                  celda(String(q.total)),
+                  celda(String(q.ultimos7 ?? 0)),
+                  celda(new Date(q.ultimo).toLocaleString("es-CL")),
+                );
+                return tr;
+              })
+            : [Object.assign(document.createElement("tr"), { innerHTML: '<td class="p-3" colspan="4">Todavía no hay escaneos</td>' })]),
+        );
         login.hidden = true;
         login.reset();
         panel.hidden = false;
