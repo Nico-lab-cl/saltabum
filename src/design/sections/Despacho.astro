@@ -1,64 +1,119 @@
 ---
-import { COMUNAS, mensajeWhatsapp, PRODUCTO, TONO_BG } from "../data";
+// Zona de despacho: deja claro a qué comunas de la V Región llegamos, con un mapa real donde cada comuna se pinta
+// según el valor del despacho. Al tocar una comuna (en el mapa o en la lista) se ve el despacho, el total y los
+// botones para consultar o reservar; las comunas de afuera invitan a consultar por WhatsApp.
+import { pesos } from "@/lib/reservas";
+import { BG_TRAMO, COMUNAS, colorTramo, mensajeWhatsapp, PRODUCTO, TRAMOS } from "../data";
+import Icon from "../components/Icon.astro";
 import Mapa from "../components/Mapa.astro";
+import MapaDespacho from "../components/MapaDespacho.astro";
 import WaButton from "../components/WaButton.astro";
 import { COMUNAS_SEO } from "../seo";
 
-const inicial = COMUNAS[0];
+const cantidad = COMUNAS.flatMap((c) => c.mapa ?? [c.nombre]).length;
+const valorDespacho = (d: number) => (d ? `+${pesos(d)}` : "Gratis");
 ---
 
-<section id="despacho" aria-labelledby="despacho-titulo" class="border-noche bg-verde-burbuja text-noche relative isolate overflow-hidden border-b-2" data-despacho>
+<section
+  id="despacho"
+  aria-labelledby="despacho-titulo"
+  class="border-noche bg-verde-burbuja text-noche relative isolate overflow-hidden border-b-2"
+  data-despacho
+>
   <Mapa />
   <div class="mx-auto max-w-[1320px] px-4 py-10 lg:px-10 lg:py-20">
-    <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between lg:gap-4">
-      <div>
-        <p class="text-rojo-texto text-xs font-extrabold tracking-[1.2px] uppercase">Despacho</p>
-        <h2 id="despacho-titulo" class="font-display mt-1.5 text-[32px] leading-9 font-semibold lg:text-5xl lg:leading-[52px]">
-          ¿Llegamos a tu comuna?
-        </h2>
-      </div>
-      <p class="text-noche-suave max-w-[420px]">Marca tu comuna y conoce el despacho, con montaje y retiro siempre incluidos</p>
+    <div class="max-w-[780px]">
+      <p class="text-rojo-texto text-xs font-extrabold tracking-[1.2px] uppercase">Zona de despacho</p>
+      <h2 id="despacho-titulo" class="font-display mt-1.5 text-[32px] leading-9 font-semibold lg:text-5xl lg:leading-[52px]">
+        Llegamos a {cantidad} comunas de la V&nbsp;Región
+      </h2>
+      <p class="text-noche-suave mt-2 lg:mt-3 lg:text-lg">
+        Llevamos, montamos y retiramos el juego en Gran Valparaíso, Marga Marga, Casablanca y Quintay. Toca tu comuna en el mapa para ver el valor del despacho
+      </p>
     </div>
 
-    <div role="radiogroup" aria-label="Tu comuna" class="relative mt-5 flex flex-col gap-2 lg:mt-9 lg:flex-row lg:justify-between lg:gap-3">
-      <span aria-hidden="true" class="border-noche absolute top-6 bottom-6 left-[25px] border-l-[3px] border-dashed lg:top-[31px] lg:right-10 lg:bottom-auto lg:left-10 lg:border-t-[3px] lg:border-l-0"></span>
-      {
-        COMUNAS.map((c, i) => (
-          <button
-            type="button"
-            role="radio"
-            aria-checked={i === 0 ? "true" : "false"}
-            data-comuna={c.nombre}
-            data-titulo={c.titulo}
-            data-zonas={c.zonas}
-            class="group border-noche bg-blanco text-noche aria-checked:bg-noche aria-checked:text-crema aria-checked:shadow-sol relative flex min-h-13 cursor-pointer items-center gap-3.5 rounded-[20px] border-2 py-2 pr-3 pl-3.5 text-left lg:flex-1 lg:flex-col lg:gap-2 lg:rounded-3xl lg:border-transparent lg:bg-transparent lg:px-2.5 lg:pt-4.5 lg:pb-4 lg:text-center lg:aria-checked:border-noche lg:aria-checked:shadow-[0_5px_0_var(--color-sol)]"
+    <div class="mt-6 grid gap-5 lg:mt-10 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:gap-x-10 lg:gap-y-5">
+      <!-- Mapa y leyenda -->
+      <div class="order-1 flex flex-col gap-3 lg:order-none lg:row-span-2">
+        <MapaDespacho />
+        <ul class="flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold" aria-label="Valor del despacho">
+          {
+            TRAMOS.map((t) => (
+              <li class="flex items-center gap-2">
+                <span class:list={["border-noche size-4 rounded border-2", BG_TRAMO[t.color]]} />
+                {t.despacho ? `${valorDespacho(t.despacho)} de despacho` : "Despacho gratis"}
+              </li>
+            ))
+          }
+          <li class="flex items-center gap-2"><span class="border-noche/30 bg-crema size-4 rounded border-2"></span>Fuera de zona, consúltanos</li>
+        </ul>
+      </div>
+
+      <!-- Lista de comunas (también es el control accesible del mapa) -->
+      <div role="radiogroup" aria-label="Tu comuna" class="order-3 grid grid-cols-2 gap-2 lg:order-none">
+        {
+          COMUNAS.map((c, i) => (
+            <button
+              type="button"
+              role="radio"
+              aria-checked="false"
+              tabindex={i === 0 ? 0 : -1}
+              data-comuna={c.nombre}
+              data-zonas={c.zonas}
+              data-despacho={c.despacho}
+              data-color={colorTramo(c.despacho)}
+              class="bounce border-noche bg-blanco aria-checked:bg-noche aria-checked:text-crema aria-checked:shadow-sol flex min-h-14 cursor-pointer items-center gap-2.5 rounded-2xl border-2 px-3 py-2 text-left"
+            >
+              <span class:list={["border-noche size-4 shrink-0 rounded-full border-2", BG_TRAMO[colorTramo(c.despacho)]]} />
+              <span class="min-w-0 flex-1 leading-5 font-extrabold">{c.nombre}</span>
+              <span class="shrink-0 text-sm font-bold">{valorDespacho(c.despacho)}</span>
+            </button>
+          ))
+        }
+      </div>
+
+      <!-- Detalle de la comuna elegida -->
+      <div data-detalle class="border-noche bg-blanco shadow-pop order-2 flex flex-col gap-4 rounded-3xl border-2 p-5 lg:order-none lg:p-6">
+        <div aria-live="polite">
+          <div data-estado="inicio">
+            <p class="font-display text-2xl leading-8 font-semibold">¿Dónde es tu evento?</p>
+            <p class="text-noche-suave mt-1">Toca tu comuna en el mapa o en la lista y te mostramos el despacho y el total</p>
+          </div>
+          <div data-estado="zona" hidden>
+            <span data-out="chip" class="border-noche inline-flex rounded-full border-2 px-2.5 py-0.5 text-sm font-extrabold"></span>
+            <p data-out="comuna" class="font-display mt-2 text-[28px] leading-8 font-semibold"></p>
+            <p data-out="zonas" class="text-noche-suave mt-1"></p>
+            <p class="bg-crema mt-3 flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5">
+              <span class="text-sm leading-5 font-semibold">Valor del despacho</span>
+              <strong data-out="despacho" class="font-display shrink-0 text-2xl leading-7"></strong>
+            </p>
+          </div>
+          <div data-estado="fuera" hidden>
+            <span class="border-noche/40 bg-arena inline-flex rounded-full border-2 px-2.5 py-0.5 text-sm font-extrabold">Fuera de zona</span>
+            <p data-out="comuna" class="font-display mt-2 text-[28px] leading-8 font-semibold"></p>
+            <p class="text-noche-suave mt-1">
+              Por ahora no llegamos a <span data-out="comuna"></span> de forma regular, pero escríbenos y vemos si podemos ir a tu evento
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-col gap-2.5 sm:flex-row lg:flex-col">
+          <WaButton placement="despacho" size="l" message={mensajeWhatsapp(PRODUCTO.nombre)} class="text-center leading-[22px] sm:flex-1">
+            <span data-out="cta">Consultar por WhatsApp</span>
+          </WaButton>
+          <a
+            href="#reservar"
+            data-reservar
+            hidden
+            class="bounce border-noche bg-sol shadow-pop inline-flex min-h-14 items-center justify-center gap-2 rounded-full border-2 px-6 text-[17px] font-extrabold no-underline lg:min-h-15"
           >
-            <span class:list={["border-noche group-aria-checked:border-crema size-[22px] shrink-0 rounded-full border-2 lg:size-6 lg:group-aria-checked:size-7.5", TONO_BG[c.tono]]}></span>
-            <span class="flex-1 lg:flex-none">
-              <strong class="block leading-5 font-extrabold lg:text-[17px]">{c.nombre}</strong>
-              <span class="hidden text-[13px] leading-[18px] opacity-85">{c.zonas}</span>
-            </span>
-            <span class:list={["border-noche group-aria-checked:border-crema text-noche shrink-0 rounded-full border-2 px-2.5 py-0.5 text-sm font-extrabold", TONO_BG[c.tono]]}>
-              {c.precio}
-            </span>
-          </button>
-        ))
-      }
+            Reservar en línea
+            <Icon name="flecha" size={20} strokeWidth={2.6} />
+          </a>
+        </div>
+      </div>
     </div>
 
-    <div
-      aria-live="polite"
-      class="lg:border-noche lg:bg-blanco mt-4 flex flex-col gap-3 lg:mt-8 lg:flex-row lg:items-center lg:gap-6 lg:rounded-3xl lg:border-2 lg:px-7 lg:py-5.5 lg:shadow-[0_5px_0_var(--color-noche)]"
-    >
-      <div class="hidden lg:block lg:flex-1">
-        <strong data-out="titulo" class="font-display block text-3xl leading-[34px] font-semibold">{inicial.titulo}</strong>
-        <span class="text-noche-suave"><span data-out="comuna">{inicial.nombre}</span> · <span data-out="zonas">{inicial.zonas}</span> · montaje y retiro incluidos.</span>
-      </div>
-      <WaButton placement="despacho" size="l" message={mensajeWhatsapp(PRODUCTO.nombre, inicial.nombre)} class="w-full lg:w-auto">
-        Consultar fecha para <span data-out="comuna">{inicial.nombre}</span>
-      </WaButton>
-    </div>
-    <ul class="mt-6 hidden flex-wrap gap-2 lg:flex" aria-label="Juegos inflables por comuna">
+    <ul class="mt-8 hidden flex-wrap gap-2 lg:flex" aria-label="Juegos inflables por comuna">
       {
         COMUNAS_SEO.map((c) => (
           <li>
@@ -73,32 +128,133 @@ const inicial = COMUNAS[0];
 </section>
 
 <script>
+  import { pesos } from "@/lib/reservas";
   import { mensajeWhatsapp, PRODUCTO } from "../data";
 
   document.querySelectorAll<HTMLElement>("[data-despacho]").forEach((root) => {
-    const radios = root.querySelectorAll<HTMLButtonElement>("[role=radio]");
-    const link = root.querySelector<HTMLAnchorElement>("a[data-track]");
-    const select = (btn: HTMLButtonElement) => {
-      radios.forEach((r) => r.setAttribute("aria-checked", String(r === btn)));
-      const { comuna = "", titulo = "", zonas = "" } = btn.dataset;
-      root.querySelectorAll('[data-out="comuna"]').forEach((el) => (el.textContent = comuna));
-      root.querySelectorAll('[data-out="titulo"]').forEach((el) => (el.textContent = titulo));
-      root.querySelectorAll('[data-out="zonas"]').forEach((el) => (el.textContent = zonas));
-      if (link) {
-        const url = new URL(link.href);
-        url.search = `?text=${encodeURIComponent(mensajeWhatsapp(PRODUCTO.nombre, comuna))}`;
-        link.href = url.toString();
-      }
-    };
-    radios.forEach((btn) => btn.addEventListener("click", () => select(btn)));
+    const radios = [...root.querySelectorAll<HTMLButtonElement>("[role=radio]")];
+    const link = root.querySelector<HTMLAnchorElement>("[data-detalle] a[data-track]");
+    const reservar = root.querySelector<HTMLAnchorElement>("[data-reservar]")!;
+    const chip = root.querySelector<HTMLElement>('[data-out="chip"]')!;
+    const mapa = root.querySelector<HTMLElement>("[data-mapa]")!;
+    const tierra = mapa.querySelector<SVGGElement>("#mapa-tierra")!;
+    const resalte = mapa.querySelector<SVGGElement>("[data-mapa-resalte]")!;
+    const sel = mapa.querySelector<HTMLElement>("[data-mapa-sel]")!;
+    const tip = mapa.querySelector<HTMLElement>("[data-mapa-tip]")!;
+    const [vx, vy, vw, vh] = mapa.querySelector("svg")!.getAttribute("viewBox")!.split(" ").map(Number);
+
+    const out = (clave: string, texto: string) => root.querySelectorAll(`[data-out="${clave}"]`).forEach((el) => (el.textContent = texto));
+    const estado = (cual: "zona" | "fuera") => root.querySelectorAll<HTMLElement>("[data-estado]").forEach((el) => (el.hidden = el.dataset.estado !== cual));
+    const caminos = (attr: string, valor: string) => [...tierra.querySelectorAll<SVGPathElement>(`[${attr}="${CSS.escape(valor)}"]`)];
+
+    function mensaje(texto: string) {
+      if (!link) return;
+      const url = new URL(link.href);
+      url.search = `?text=${encodeURIComponent(texto)}`;
+      link.href = url.toString();
+    }
+
+    /** Destaca las comunas en el mapa (al frente, con borde grueso) y pone el nombre de la primera en una etiqueta oscura. */
+    function marcar(paths: SVGPathElement[]) {
+      tierra.querySelectorAll("[data-activa]").forEach((p) => p.removeAttribute("data-activa"));
+      paths.forEach((p) => p.setAttribute("data-activa", ""));
+      resalte.replaceChildren(
+        ...paths.map((p) => {
+          const borde = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          borde.setAttribute("d", p.getAttribute("d")!);
+          borde.setAttribute("vector-effect", "non-scaling-stroke");
+          return borde;
+        }),
+      );
+      const p = paths[0];
+      mapa.querySelectorAll("[data-nombre][data-oculto]").forEach((n) => n.removeAttribute("data-oculto"));
+      sel.hidden = !p;
+      if (!p) return;
+      const nombre = p.dataset.mapaComuna!;
+      mapa.querySelector(`[data-nombre="${CSS.escape(nombre)}"]`)?.setAttribute("data-oculto", "");
+      sel.textContent = nombre;
+      sel.style.left = `${((Number(p.dataset.x) - vx) / vw) * 100}%`;
+      sel.style.top = `${((Number(p.dataset.y) - vy) / vh) * 100}%`;
+      // Reinicia la animación de entrada.
+      sel.style.animation = "none";
+      void sel.offsetWidth;
+      sel.style.animation = "";
+    }
+
+    function elegir(nombre: string) {
+      const btn = radios.find((r) => r.dataset.comuna === nombre);
+      if (!btn) return;
+      radios.forEach((r) => {
+        r.setAttribute("aria-checked", String(r === btn));
+        r.tabIndex = r === btn ? 0 : -1;
+      });
+      const despacho = Number(btn.dataset.despacho);
+      out("comuna", nombre);
+      out("chip", despacho ? `+${pesos(despacho)} de despacho` : "Despacho gratis");
+      chip.style.background = `var(--color-${btn.dataset.color})`;
+      out("zonas", `${btn.dataset.zonas} · montaje y retiro incluidos`);
+      out("despacho", despacho ? pesos(despacho) : "Gratis");
+      out("cta", `Consultar fecha para ${nombre}`);
+      estado("zona");
+      reservar.hidden = false;
+      reservar.dataset.comuna = nombre;
+      mensaje(mensajeWhatsapp(PRODUCTO.nombre, nombre));
+      marcar(caminos("data-zona", nombre));
+    }
+
+    function fuera(nombre: string) {
+      radios.forEach((r, i) => {
+        r.setAttribute("aria-checked", "false");
+        r.tabIndex = i === 0 ? 0 : -1;
+      });
+      out("comuna", nombre);
+      out("cta", `Consultar por ${nombre}`);
+      estado("fuera");
+      reservar.hidden = true;
+      mensaje(`Hola, quiero arrendar un juego inflable en ${nombre}, ¿llegan hasta allá? Vengo de saltabum.cl`);
+      marcar(caminos("data-mapa-comuna", nombre));
+    }
+
+    radios.forEach((btn) => btn.addEventListener("click", () => elegir(btn.dataset.comuna!)));
     // Flechas para moverse dentro del radiogroup.
     root.addEventListener("keydown", (e) => {
-      const i = [...radios].findIndex((r) => r === document.activeElement);
+      const i = radios.findIndex((r) => r === document.activeElement);
       if (i < 0 || !["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft"].includes(e.key)) return;
       e.preventDefault();
       const next = radios[(i + (e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : radios.length - 1)) % radios.length];
       next.focus();
-      select(next);
+      elegir(next.dataset.comuna!);
+    });
+
+    // Mapa: tocar una comuna.
+    mapa.addEventListener("click", (e) => {
+      const p = (e.target as Element).closest<SVGPathElement>("[data-mapa-comuna]");
+      if (!p) return;
+      if (p.dataset.zona) elegir(p.dataset.zona);
+      else fuera(p.dataset.mapaComuna!);
+    });
+
+    // Con mouse, el nombre de la comuna sigue al cursor.
+    mapa.addEventListener("pointermove", (e) => {
+      const p = (e.target as Element).closest<SVGPathElement>("[data-mapa-comuna]");
+      if (e.pointerType !== "mouse" || !p) {
+        tip.hidden = true;
+        return;
+      }
+      const r = mapa.getBoundingClientRect();
+      const zona = p.dataset.zona && radios.find((b) => b.dataset.comuna === p.dataset.zona);
+      tip.textContent = zona
+        ? `${p.dataset.mapaComuna} · ${Number(zona.dataset.despacho) ? `+${pesos(Number(zona.dataset.despacho))}` : "despacho gratis"}`
+        : `${p.dataset.mapaComuna} · fuera de zona`;
+      tip.style.left = `${e.clientX - r.left}px`;
+      tip.style.top = `${e.clientY - r.top}px`;
+      tip.hidden = false;
+    });
+    mapa.addEventListener("pointerleave", () => (tip.hidden = true));
+
+    // «Reservar en línea» deja la comuna elegida en la agenda.
+    reservar.addEventListener("click", () => {
+      if (reservar.dataset.comuna) document.dispatchEvent(new CustomEvent("saltabum:comuna", { detail: reservar.dataset.comuna }));
     });
   });
 </script>

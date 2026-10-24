@@ -1,0 +1,259 @@
+---
+// Pestaña «Consultas» del panel /admin: los mensajes del formulario de contacto de la web. El equipo los marca como
+// contactados o cerrados, les agrega notas, los elimina o crea la reserva con sus datos (abre el formulario de la
+// pestaña Reservas ya completo). Se actualiza cada 30 segundos aunque la pestaña esté cerrada, para mantener al día
+// el contador de consultas nuevas.
+const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
+---
+
+<section data-consultas-panel class="flex flex-col gap-4">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h2 class="font-display text-3xl font-semibold">Consultas</h2>
+      <p class="text-noche-suave text-sm">Mensajes del formulario de contacto de la web, del más nuevo al más antiguo</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <div role="radiogroup" aria-label="Qué consultas ver" class="border-noche bg-blanco flex rounded-full border-2 p-1">
+        {
+          [
+            ["pendientes", "Por atender"],
+            ["cerrada", "Cerradas"],
+            ["todas", "Todas"],
+          ].map(([id, nombre], i) => (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={i === 0 ? "true" : "false"}
+              data-filtro-consultas={id}
+              class="aria-checked:bg-noche aria-checked:text-crema min-h-9 cursor-pointer rounded-full px-4 text-sm font-extrabold"
+            >
+              {nombre}
+            </button>
+          ))
+        }
+      </div>
+      <input data-consultas-buscar type="search" placeholder="Buscar nombre, teléfono, comuna…" class={`${campo} w-[260px]`} />
+    </div>
+  </div>
+  <p data-consultas-estado class="text-noche-suave text-sm" aria-live="polite"></p>
+  <div data-consultas-lista class="flex flex-col gap-3"></div>
+</section>
+
+<script>
+  type Consulta = {
+    id: number;
+    creado: string;
+    formulario: string;
+    nombre: string;
+    telefono: string | null;
+    email: string | null;
+    mensaje: string | null;
+    extra: string | null;
+    origen: string | null;
+    pagina: string | null;
+    estado: "nueva" | "contactada" | "cerrada";
+    notas: string | null;
+    actualizado: string | null;
+  };
+
+  const root = document.querySelector<HTMLElement>("[data-consultas-panel]")!;
+  const lista = root.querySelector<HTMLElement>("[data-consultas-lista]")!;
+  const estado = root.querySelector<HTMLElement>("[data-consultas-estado]")!;
+  const buscar = root.querySelector<HTMLInputElement>("[data-consultas-buscar]")!;
+  const fechaHora = new Intl.DateTimeFormat("es-CL", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const fechaEvento = new Intl.DateTimeFormat("es-CL", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+
+  const ESTADOS = {
+    nueva: { nombre: "Nueva", clase: "border-rojo-texto bg-rojo-suave text-rojo-texto" },
+    contactada: { nombre: "Contactada", clase: "border-noche bg-sol" },
+    cerrada: { nombre: "Cerrada", clase: "border-noche/40 bg-arena" },
+  } as const;
+
+  let consultas: Consulta[] = [];
+  let filtro = "pendientes";
+  let activo = false;
+  let vistas: Set<number> | undefined;
+
+  const api = (ruta: string, init?: RequestInit) =>
+    fetch(ruta, { ...init, credentials: "same-origin", headers: { "x-saltabum-admin": "1", "content-type": "application/json" } });
+  const leer = (s: string | null) => {
+    try {
+      return s ? (JSON.parse(s) as Record<string, string>) : {};
+    } catch {
+      return {};
+    }
+  };
+  const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const telefonoWa = (t: string) => {
+    const d = t.replace(/\D/g, "");
+    return d.length === 9 ? `56${d}` : d;
+  };
+
+  function el(tag: string, clase: string, texto?: string | null) {
+    const e = document.createElement(tag);
+    e.className = clase;
+    if (texto) e.textContent = texto;
+    return e;
+  }
+  function enlace(href: string, texto: string, clase = "text-azul-texto underline") {
+    const a = el("a", clase, texto) as HTMLAnchorElement;
+    a.href = href;
+    if (href.startsWith("http")) {
+      a.target = "_blank";
+      a.rel = "noopener";
+    }
+    return a;
+  }
+  function boton(texto: string, clase: string, accion: () => void) {
+    const b = el("button", `min-h-9 cursor-pointer rounded-full border-2 px-3 text-sm font-extrabold ${clase}`, texto) as HTMLButtonElement;
+    b.type = "button";
+    b.addEventListener("click", accion);
+    return b;
+  }
+  const avisar = (texto: string) => document.dispatchEvent(new CustomEvent("panel:aviso", { detail: texto }));
+
+  async function cargar() {
+    const res = await api("/api/admin/consultas?limite=500").catch(() => null);
+    if (res?.status === 401) return void document.dispatchEvent(new CustomEvent("panel:sin-sesion"));
+    if (!res?.ok) return void (estado.textContent = "No se pudieron cargar las consultas");
+    const nuevas = ((await res.json()) as { consultas: Consulta[] }).consultas;
+    if (vistas) {
+      const recien = nuevas.filter((c) => !vistas!.has(c.id));
+      if (recien.length === 1) avisar(`Nueva consulta de ${recien[0].nombre}`);
+      else if (recien.length > 1) avisar(`${recien.length} consultas nuevas`);
+    }
+    vistas = new Set(nuevas.map((c) => c.id));
+    consultas = nuevas;
+    document.dispatchEvent(new CustomEvent("panel:contador", { detail: { pestana: "consultas", n: consultas.filter((c) => c.estado === "nueva").length } }));
+    pintar();
+  }
+
+  async function enviar(datos: Record<string, unknown>, mensajeOk: string) {
+    const res = await api("/api/admin/consultas", { method: "POST", body: JSON.stringify(datos) }).catch(() => null);
+    if (res?.status === 401) return void document.dispatchEvent(new CustomEvent("panel:sin-sesion"));
+    avisar(res?.ok ? mensajeOk : "No se pudo guardar, inténtalo de nuevo");
+    void cargar();
+  }
+
+  function pintar() {
+    const q = sinTildes(buscar.value.trim());
+    const visibles = consultas.filter((c) => {
+      if (filtro === "pendientes" && c.estado === "cerrada") return false;
+      if (filtro === "cerrada" && c.estado !== "cerrada") return false;
+      return !q || sinTildes([c.nombre, c.telefono, c.email, c.mensaje, c.notas, c.extra].filter(Boolean).join(" ")).includes(q);
+    });
+    lista.replaceChildren(...visibles.map(tarjeta));
+    estado.textContent = visibles.length
+      ? ""
+      : filtro === "pendientes"
+        ? "No hay consultas por atender"
+        : "No hay consultas en esta vista";
+  }
+
+  function tarjeta(c: Consulta): HTMLElement {
+    const extra = leer(c.extra);
+    const origen = leer(c.origen);
+    const art = el("article", "border-noche bg-blanco grid gap-3 rounded-2xl border-2 p-4 lg:grid-cols-[170px_minmax(0,1fr)_minmax(0,1.2fr)_auto] lg:items-start");
+    if (c.estado === "nueva") art.classList.add("shadow-[0_3px_0_var(--color-rojo-texto)]");
+
+    const cuando = el("div", "flex flex-col gap-1");
+    cuando.append(el("p", "text-sm font-bold first-letter:uppercase", fechaHora.format(new Date(c.creado))));
+    const etiqueta = ESTADOS[c.estado];
+    cuando.append(el("span", `w-fit rounded-full border px-2 text-xs font-extrabold ${etiqueta.clase}`, etiqueta.nombre));
+    const desde = origen.anuncio ? `Anuncio de ${origen.anuncio}` : origen.utm_source ? `${origen.utm_source}${origen.utm_campaign ? ` · ${origen.utm_campaign}` : ""}` : "";
+    if (desde) cuando.append(el("p", "text-noche-suave text-xs font-semibold", desde));
+    art.append(cuando);
+
+    const quien = el("div", "flex min-w-0 flex-col gap-0.5 text-sm");
+    quien.append(el("p", "text-base font-extrabold", c.nombre));
+    if (c.telefono) {
+      const tel = el("p", "flex flex-wrap gap-x-2");
+      tel.append(enlace(`tel:${c.telefono.replace(/[^\d+]/g, "")}`, c.telefono, "font-semibold underline"));
+      tel.append(enlace(`https://wa.me/${telefonoWa(c.telefono)}?text=${encodeURIComponent(`Hola ${c.nombre.split(/\s+/)[0]}, te escribimos de Saltabum por tu consulta.`)}`, "WhatsApp"));
+      quien.append(tel);
+    }
+    if (c.email) quien.append(enlace(`mailto:${c.email}`, c.email, "text-azul-texto truncate underline"));
+    art.append(quien);
+
+    const que = el("div", "flex min-w-0 flex-col gap-1 text-sm");
+    const datos = [extra.comuna, extra.fecha ? `evento el ${fechaEvento.format(new Date(`${extra.fecha}T12:00:00Z`))}` : ""].filter(Boolean).join(" · ");
+    if (datos) que.append(el("p", "font-bold first-letter:uppercase", datos));
+    if (c.mensaje) que.append(el("p", "text-noche-suave italic", `«${c.mensaje}»`));
+
+    // Notas internas: se editan en la misma tarjeta.
+    const notas = el("div", "flex flex-col gap-1");
+    if (c.notas) notas.append(el("p", "bg-sol/25 rounded-lg px-2 py-1", `Nota: ${c.notas}`));
+    const editar = boton(c.notas ? "Editar nota" : "Agregar nota", "border-noche/30 bg-crema w-fit", () => {
+      const area = el("textarea", "border-noche bg-crema w-full rounded-xl border-2 px-3 py-2") as HTMLTextAreaElement;
+      area.rows = 2;
+      area.maxLength = 2000;
+      area.value = c.notas ?? "";
+      area.placeholder = "Ej.: le escribí por WhatsApp, espera confirmar la fecha";
+      const guardar = boton("Guardar nota", "border-noche bg-noche text-crema w-fit", () => void enviar({ accion: "notas", id: c.id, notas: area.value }, "Nota guardada"));
+      notas.replaceChildren(area, guardar);
+      area.focus();
+    });
+    notas.append(editar);
+    que.append(notas);
+    art.append(que);
+
+    const acciones = el("div", "flex flex-wrap gap-2 lg:max-w-[230px] lg:justify-end");
+    acciones.append(
+      boton("Crear reserva", "border-noche bg-verde-burbuja", () => {
+        const [nombre, ...resto] = c.nombre.split(/\s+/);
+        document.dispatchEvent(new CustomEvent("panel:abrir-pestana", { detail: "reservas" }));
+        document.dispatchEvent(
+          new CustomEvent("panel:nueva-reserva", {
+            detail: {
+              nombre,
+              apellido: resto.join(" "),
+              telefono: c.telefono ?? "",
+              email: c.email ?? "",
+              comuna: extra.comuna ?? "",
+              fecha: extra.fecha ?? "",
+              mensaje: c.mensaje ?? "",
+              notas: `Desde la consulta del ${fechaHora.format(new Date(c.creado))}`,
+            },
+          }),
+        );
+      }),
+    );
+    if (c.estado === "nueva") acciones.append(boton("Marcar contactada", "border-noche bg-sol", () => void enviar({ accion: "estado", id: c.id, estado: "contactada" }, "Marcada como contactada")));
+    if (c.estado !== "cerrada") acciones.append(boton("Cerrar", "border-noche bg-crema", () => void enviar({ accion: "estado", id: c.id, estado: "cerrada" }, "Consulta cerrada")));
+    else acciones.append(boton("Reabrir", "border-noche bg-crema", () => void enviar({ accion: "estado", id: c.id, estado: "contactada" }, "Consulta reabierta")));
+    acciones.append(
+      boton("Eliminar", "border-rojo-texto text-rojo-texto bg-blanco", () => {
+        if (!confirm(`¿Eliminar la consulta de ${c.nombre}? Queda guardada en el historial.`)) return;
+        void enviar({ accion: "eliminar", id: c.id }, "Consulta eliminada");
+      }),
+    );
+    art.append(acciones);
+    return art;
+  }
+
+  root.querySelectorAll<HTMLButtonElement>("[data-filtro-consultas]").forEach((b) =>
+    b.addEventListener("click", () => {
+      filtro = b.dataset.filtroConsultas!;
+      root.querySelectorAll("[data-filtro-consultas]").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      pintar();
+    }),
+  );
+  buscar.addEventListener("input", pintar);
+
+  document.addEventListener("panel:listo", () => {
+    activo = true;
+    void cargar();
+  });
+  document.addEventListener("panel:pestana", (e) => {
+    if (activo && (e as CustomEvent<string>).detail === "consultas") void cargar();
+  });
+  setInterval(() => {
+    if (activo && document.visibilityState === "visible") void cargar();
+  }, 30_000);
+  document.addEventListener("panel:cerrado", () => {
+    activo = false;
+    consultas = [];
+    vistas = undefined;
+    lista.replaceChildren();
+  });
+</script>

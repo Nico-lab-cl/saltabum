@@ -26,7 +26,23 @@ export async function cargarDisponibilidad(): Promise<Disponibilidad> {
 
 export type DatosReserva = Pick<
   ReservaInput,
-  "fecha" | "producto" | "inicio" | "horas" | "nombre" | "telefono" | "comuna" | "direccion" | "mensaje" | "turnstile_token" | "website"
+  | "fecha"
+  | "producto"
+  | "inicio"
+  | "horas"
+  | "nombre"
+  | "apellido"
+  | "email"
+  | "telefono"
+  | "empresa"
+  | "comuna"
+  | "direccion"
+  | "depto"
+  | "ciudad"
+  | "region"
+  | "mensaje"
+  | "turnstile_token"
+  | "website"
 >;
 
 export type ResultadoReserva = { ok: true } | { ok: false; error: string };
@@ -52,7 +68,7 @@ export async function enviarReserva(datos: DatosReserva): Promise<ResultadoReser
     trackConversion("lead", {
       eventId,
       params: { form: "reserva" },
-      userData: consent ? { phone_number: normalizarTelefono(datos.telefono) } : undefined,
+      userData: consent ? { phone_number: normalizarTelefono(datos.telefono), email: datos.email || undefined } : undefined,
     });
     return { ok: true };
   } catch {

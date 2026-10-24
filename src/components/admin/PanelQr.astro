@@ -347,6 +347,10 @@ const RANKINGS = [
   });
 
   document.addEventListener("panel:listo", () => void cargar());
+  // El mapa se dibuja con la pestaña oculta: al mostrarla hay que recalcular su tamaño.
+  document.addEventListener("panel:pestana", (e) => {
+    if ((e as CustomEvent<string>).detail === "qr" && mapa) setTimeout(() => mapa!.invalidateSize(), 50);
+  });
   document.addEventListener("panel:cerrado", () => {
     seccion.hidden = true;
     todos = [];

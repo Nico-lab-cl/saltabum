@@ -22,6 +22,7 @@ interface MetaEvent {
   email?: string;
   phone?: string;
   firstName?: string;
+  lastName?: string;
   ip?: string;
   userAgent?: string;
   fbp?: string;
@@ -48,6 +49,7 @@ export async function sendMetaEvent(e: MetaEvent): Promise<void> {
   if (e.email) user_data.em = [await sha256Hex(norm(e.email))];
   if (e.phone) user_data.ph = [await sha256Hex(normPhone(e.phone))];
   if (e.firstName) user_data.fn = [await sha256Hex(norm(e.firstName.split(/\s+/)[0] ?? ""))];
+  if (e.lastName) user_data.ln = [await sha256Hex(norm(e.lastName))];
   if (e.city) {
     const ciudad = norm(e.city).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]/g, "");
     if (ciudad) user_data.ct = [await sha256Hex(ciudad)];

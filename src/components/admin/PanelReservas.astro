@@ -1,0 +1,813 @@
+---
+// Pestaña «Reservas» del panel /admin: resumen, calendario del mes, lista con filtros y buscador, y ventanas para
+// crear, editar, registrar pagos y bloquear horarios. Se actualiza sola cada 20 segundos (y al volver a la pestaña),
+// así lo que se reserva en la web aparece aquí, y lo que se cambia aquí aparece en la agenda pública.
+// Recibe los primeros datos con el evento «panel:listo» (lo dispara src/pages/admin.astro al validar la sesión).
+import { COMUNAS, PRODUCTOS } from "@design/data";
+import { ABONO } from "@/lib/reservas";
+
+const tarjeta = "border-noche bg-blanco rounded-[20px] border-2";
+const campo = "border-noche bg-crema min-h-11 w-full min-w-0 rounded-xl border-2 px-3";
+const etiqueta = "flex flex-col gap-1 text-sm font-bold";
+const botonPrincipal = "bg-noche text-crema inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full px-5 font-extrabold disabled:opacity-50";
+const botonSecundario = "border-noche bg-blanco inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full border-2 px-5 font-extrabold";
+const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+---
+
+<section data-reservas-panel class="flex flex-col gap-5">
+  <!-- Encabezado -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <h2 class="font-display text-3xl font-semibold">Reservas</h2>
+      <span class="bg-verde-burbuja border-verde inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-extrabold">
+        <span class="bg-verde size-2 animate-pulse rounded-full"></span> En vivo
+      </span>
+      <span data-actualizado class="text-noche-suave text-xs"></span>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button type="button" data-abrir-bloqueo class={botonSecundario}>Bloquear horario</button>
+      <button type="button" data-nueva class={botonPrincipal}>+ Nueva reserva</button>
+    </div>
+  </div>
+
+  <!-- Resumen -->
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    {
+      [
+        { id: "proximas", nombre: "Próximas reservas", color: "bg-sol" },
+        { id: "semana", nombre: "Próximos 7 días", color: "bg-celeste" },
+        { id: "cobrar", nombre: "Por cobrar", color: "bg-rosa" },
+        { id: "cobrado", nombre: "Cobrado este mes", color: "bg-verde" },
+      ].map((r) => (
+        <div class={`${tarjeta} flex items-center gap-3 p-4`}>
+          <span class:list={["border-noche size-3 shrink-0 rounded-full border-2", r.color]} />
+          <div class="min-w-0">
+            <p class="text-noche-suave text-xs font-extrabold tracking-[0.6px] uppercase">{r.nombre}</p>
+            <p data-resumen={r.id} class="font-display text-2xl leading-8 font-bold">—</p>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+
+  <!-- Calendario -->
+  <div class={`${tarjeta} p-4 lg:p-5`}>
+    <div class="flex items-center justify-between gap-3">
+      <button type="button" data-mes="-1" aria-label="Mes anterior" class="border-noche bg-crema flex size-10 cursor-pointer items-center justify-center rounded-full border-2 font-extrabold">‹</button>
+      <p data-mes-titulo class="font-display text-2xl font-semibold first-letter:uppercase"></p>
+      <button type="button" data-mes="1" aria-label="Mes siguiente" class="border-noche bg-crema flex size-10 cursor-pointer items-center justify-center rounded-full border-2 font-extrabold">›</button>
+    </div>
+    <div class="mt-3 grid grid-cols-7 gap-1 text-center" aria-hidden="true">
+      {DIAS.map((d) => <span class="text-noche-suave text-xs font-extrabold">{d}</span>)}
+    </div>
+    <div data-calendario class="mt-1 grid grid-cols-7 gap-1"></div>
+    <ul class="text-noche-suave mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold" aria-label="Simbología">
+      <li class="flex items-center gap-1.5"><span class="border-noche bg-verde-burbuja size-3 rounded border"></span>Reservada</li>
+      <li class="flex items-center gap-1.5"><span class="border-noche bg-verde size-3 rounded border"></span>Con pago</li>
+      <li class="flex items-center gap-1.5"><span class="border-noche/40 bloqueo size-3 rounded border"></span>Bloqueado</li>
+    </ul>
+  </div>
+
+  <!-- Lista -->
+  <div class="flex flex-col gap-3">
+    <div class="flex flex-wrap items-center gap-2">
+      <div role="radiogroup" aria-label="Qué reservas ver" class="border-noche bg-blanco flex rounded-full border-2 p-1">
+        {
+          [
+            ["proximas", "Próximas"],
+            ["pasadas", "Pasadas"],
+            ["todas", "Todas"],
+          ].map(([id, nombre], i) => (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={i === 0 ? "true" : "false"}
+              data-filtro={id}
+              class="aria-checked:bg-noche aria-checked:text-crema min-h-9 cursor-pointer rounded-full px-4 text-sm font-extrabold"
+            >
+              {nombre}
+            </button>
+          ))
+        }
+      </div>
+      <input data-buscar type="search" placeholder="Buscar por nombre, teléfono, correo, comuna…" class={`${campo} bg-blanco max-w-[380px] flex-1`} />
+      <button type="button" data-dia-filtro hidden class="bg-sol border-noche inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border-2 px-3 text-sm font-extrabold">
+        <span data-dia-texto></span> <span aria-hidden="true">✕</span><span class="sr-only">Quitar filtro del día</span>
+      </button>
+    </div>
+    <p data-estado class="text-noche-suave text-sm" aria-live="polite"></p>
+    <div data-lista class="flex flex-col gap-3"></div>
+  </div>
+
+  <p class="text-noche-suave text-xs">
+    Al registrar un pago se informa a Meta como venta, para medir qué anuncios traen clientes reales. Todo cambio queda
+    en el historial. La sesión se cierra sola tras 2 horas sin uso.
+  </p>
+
+  <!-- Aviso flotante -->
+  <p data-aviso hidden role="status" class="bg-noche text-crema shadow-pop fixed right-4 bottom-4 z-50 max-w-[360px] rounded-2xl px-4 py-3 text-sm font-bold"></p>
+
+  <!-- Ventana: crear / editar -->
+  <dialog data-ventana-reserva class="border-noche bg-blanco text-noche m-auto max-h-[calc(100dvh-24px)] w-[min(760px,calc(100%-24px))] rounded-[24px] border-2 p-0 backdrop:bg-black/50">
+    <form data-form-reserva novalidate class="flex flex-col">
+      <div class="border-noche/15 flex items-center justify-between gap-3 border-b-2 px-5 py-4">
+        <p data-form-titulo class="font-display text-2xl font-semibold">Nueva reserva</p>
+        <button type="button" data-cerrar aria-label="Cerrar" class="flex size-10 cursor-pointer items-center justify-center rounded-full text-2xl">×</button>
+      </div>
+      <div class="flex flex-col gap-5 overflow-y-auto px-5 py-4">
+        <fieldset class="grid gap-3 sm:grid-cols-4">
+          <legend class="font-display mb-2 text-lg font-semibold">Evento</legend>
+          <label class={`${etiqueta} sm:col-span-2`}>Fecha<input name="fecha" type="date" required class={campo} /></label>
+          <label class={etiqueta}>Inicio<input name="inicio" type="time" step="900" required class={campo} /></label>
+          <label class={etiqueta}>Término<input name="fin" type="time" step="900" required class={campo} /></label>
+          <label class:list={[etiqueta, "sm:col-span-2", PRODUCTOS.length < 2 && "hidden"]}>
+            Juego
+            <select name="producto" class={campo}>{PRODUCTOS.map((p) => <option value={p.id}>{p.nombre}</option>)}</select>
+          </label>
+          <label class={`${etiqueta} sm:col-span-2`}>
+            Comuna (despacho)
+            <input name="comuna" list="panel-comunas" placeholder="Elige o escribe" class={campo} />
+            <datalist id="panel-comunas">{COMUNAS.map((c) => <option value={c.nombre} />)}</datalist>
+          </label>
+          <label class={`${etiqueta} sm:col-span-2`}>
+            Total en pesos
+            <input name="total" type="number" min="0" step="10" required class={campo} />
+            <span class="text-noche-suave text-xs font-semibold">Sugerido: <button type="button" data-usar-sugerido class="text-azul-texto cursor-pointer underline"></button></span>
+          </label>
+        </fieldset>
+
+        <fieldset class="grid gap-3 sm:grid-cols-2">
+          <legend class="font-display mb-2 text-lg font-semibold">Cliente</legend>
+          <label class={etiqueta}>Nombre<input name="nombre" required minlength="2" autocomplete="off" class={campo} /></label>
+          <label class={etiqueta}>Apellido<input name="apellido" autocomplete="off" class={campo} /></label>
+          <label class={etiqueta}>Teléfono<input name="telefono" type="tel" autocomplete="off" class={campo} /></label>
+          <label class={etiqueta}>Correo<input name="email" type="email" autocomplete="off" class={campo} /></label>
+          <label class={`${etiqueta} sm:col-span-2`}>Empresa <span class="sr-only">(opcional)</span><input name="empresa" autocomplete="off" placeholder="Opcional" class={campo} /></label>
+        </fieldset>
+
+        <fieldset class="grid gap-3 sm:grid-cols-3">
+          <legend class="font-display mb-2 text-lg font-semibold">Lugar</legend>
+          <label class={`${etiqueta} sm:col-span-2`}>Dirección<input name="direccion" autocomplete="off" class={campo} /></label>
+          <label class={etiqueta}>Casa, depto<input name="depto" autocomplete="off" class={campo} /></label>
+          <label class={`${etiqueta} sm:col-span-2`}>Ciudad<input name="ciudad" autocomplete="off" class={campo} /></label>
+          <label class={etiqueta}>Región<input name="region" value="Valparaíso" autocomplete="off" class={campo} /></label>
+        </fieldset>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class={etiqueta}>Mensaje del cliente<textarea name="mensaje" rows="3" class={`${campo} py-2`}></textarea></label>
+          <label class={etiqueta}>
+            Notas internas
+            <textarea name="notas" rows="3" placeholder="Solo las ve el equipo" class={`${campo} bg-sol/20 py-2`}></textarea>
+          </label>
+        </div>
+
+        <div data-form-error hidden class="border-rojo-texto bg-rojo-suave rounded-xl border-2 p-3 text-sm font-bold"></div>
+      </div>
+      <div class="border-noche/15 flex flex-wrap items-center justify-end gap-2 border-t-2 px-5 py-4">
+        <button type="button" data-cerrar class={botonSecundario}>Cancelar</button>
+        <button type="button" data-forzar hidden class="bg-rojo-texto inline-flex min-h-11 cursor-pointer items-center rounded-full px-5 font-extrabold text-white">Guardar igual</button>
+        <button type="submit" data-guardar class={botonPrincipal}>Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Ventana: registrar pago -->
+  <dialog data-ventana-pago class="border-noche bg-blanco text-noche m-auto w-[min(440px,calc(100%-24px))] rounded-[24px] border-2 p-0 backdrop:bg-black/50">
+    <form data-form-pago class="flex flex-col gap-4 p-5">
+      <p class="font-display text-2xl font-semibold">Registrar pago</p>
+      <p data-pago-detalle class="text-noche-suave text-sm"></p>
+      <label class={etiqueta}>Monto pagado en pesos<input name="monto" type="number" min="1000" step="10" required class={campo} /></label>
+      <div class="flex flex-wrap gap-2 text-sm">
+        <button type="button" data-monto="abono" class="border-noche bg-crema min-h-9 cursor-pointer rounded-full border-2 px-3 font-bold">Abono ${ABONO.toLocaleString("es-CL")}</button>
+        <button type="button" data-monto="total" class="border-noche bg-crema min-h-9 cursor-pointer rounded-full border-2 px-3 font-bold">Total</button>
+      </div>
+      <p class="text-noche-suave text-xs">Se informa a Meta como venta. Un pago registrado no se puede cambiar desde el panel.</p>
+      <div class="flex justify-end gap-2">
+        <button type="button" data-cerrar class={botonSecundario}>Cancelar</button>
+        <button type="submit" class={botonPrincipal}>Guardar pago</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Ventana: bloquear horario -->
+  <dialog data-ventana-bloqueo class="border-noche bg-blanco text-noche m-auto w-[min(480px,calc(100%-24px))] rounded-[24px] border-2 p-0 backdrop:bg-black/50">
+    <form data-form-bloqueo class="flex flex-col gap-4 p-5">
+      <p class="font-display text-2xl font-semibold">Bloquear horario</p>
+      <p class="text-noche-suave text-sm">Nadie podrá reservar en la web dentro de este horario. Sin horas, se bloquea el día completo.</p>
+      <label class={etiqueta}>Fecha<input name="fecha" type="date" required class={campo} /></label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class={etiqueta}>Desde<input name="desde" type="time" step="1800" class={campo} /></label>
+        <label class={etiqueta}>Hasta<input name="hasta" type="time" step="1800" class={campo} /></label>
+      </div>
+      <p data-bloqueo-error class="text-rojo-texto text-sm font-bold"></p>
+      <div class="flex justify-end gap-2">
+        <button type="button" data-cerrar class={botonSecundario}>Cancelar</button>
+        <button type="submit" class="bg-rojo-texto inline-flex min-h-11 cursor-pointer items-center rounded-full px-5 font-extrabold text-white">Bloquear</button>
+      </div>
+    </form>
+  </dialog>
+</section>
+
+<style>
+  .bloqueo {
+    background: repeating-linear-gradient(135deg, var(--color-arena) 0 5px, #e2d3bd 5px 10px);
+  }
+  :global(.chip-bloqueo) {
+    background: repeating-linear-gradient(135deg, var(--color-arena) 0 5px, #e2d3bd 5px 10px);
+  }
+</style>
+
+<script>
+  import { ABONO, aHora, aMinutos, calcularPrecio, etiquetaHorario, HORAS_BASE, pesos } from "@/lib/reservas";
+  import { PRODUCTOS } from "@design/data";
+
+  type Fila = {
+    id: number;
+    fecha: string;
+    producto: string;
+    inicio: number;
+    fin: number;
+    estado: "reservado" | "bloqueado";
+    nombre: string | null;
+    apellido: string | null;
+    email: string | null;
+    telefono: string | null;
+    empresa: string | null;
+    comuna: string | null;
+    direccion: string | null;
+    depto: string | null;
+    ciudad: string | null;
+    region: string | null;
+    mensaje: string | null;
+    notas: string | null;
+    total: number | null;
+    origen: "web" | "panel" | null;
+    creado: string;
+    actualizado: string | null;
+    pagado: number | null;
+    pagado_en: string | null;
+    pagado_por: string | null;
+  };
+  type Datos = { filas: Fila[]; hoy: string; desde: string; usuario: string };
+
+  const root = document.querySelector<HTMLElement>("[data-reservas-panel]")!;
+  const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+  const $$ = <T extends Element = HTMLElement>(s: string) => [...root.querySelectorAll<T>(s)];
+
+  const ventanaReserva = $<HTMLDialogElement>("[data-ventana-reserva]");
+  const formReserva = $<HTMLFormElement>("[data-form-reserva]");
+  const ventanaPago = $<HTMLDialogElement>("[data-ventana-pago]");
+  const formPago = $<HTMLFormElement>("[data-form-pago]");
+  const ventanaBloqueo = $<HTMLDialogElement>("[data-ventana-bloqueo]");
+  const formBloqueo = $<HTMLFormElement>("[data-form-bloqueo]");
+  const errorForm = $("[data-form-error]");
+  const btnForzar = $<HTMLButtonElement>("[data-forzar]");
+  const estado = $("[data-estado]");
+  const aviso = $("[data-aviso]");
+
+  const fechaCorta = new Intl.DateTimeFormat("es-CL", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  const fechaLarga = new Intl.DateTimeFormat("es-CL", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  const nombreMes = new Intl.DateTimeFormat("es-CL", { month: "long", year: "numeric", timeZone: "UTC" });
+  const horaLocal = new Intl.DateTimeFormat("es-CL", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+  const aFecha = (iso: string) => new Date(`${iso}T12:00:00Z`);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const sumarDias = (f: string, n: number) => {
+    const d = aFecha(f);
+    d.setUTCDate(d.getUTCDate() + n);
+    return iso(d);
+  };
+  const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const cliente = (f: Fila) => [f.nombre, f.apellido].filter(Boolean).join(" ") || "Sin nombre";
+  const horario = (f: Fila) => (f.inicio === 0 && f.fin === 24 * 60 ? "Todo el día" : etiquetaHorario(f.inicio, f.fin));
+  const clp = (n: number) => `$${n.toLocaleString("es-CL")}`;
+
+  let filas: Fila[] = [];
+  let hoy = iso(new Date());
+  let desde = "";
+  let filtro: "proximas" | "pasadas" | "todas" = "proximas";
+  let busqueda = "";
+  let diaElegido: string | undefined;
+  let mes = "";
+  let vistos: Set<number> | undefined;
+  let activo = false;
+  let editando: Fila | undefined;
+  let pagando: Fila | undefined;
+
+  // ── Servidor ──────────────────────────────────────────────────────────────
+  const api = (ruta: string, init?: RequestInit) =>
+    fetch(ruta, { ...init, credentials: "same-origin", headers: { "x-saltabum-admin": "1", "content-type": "application/json" } });
+
+  function sinSesion() {
+    activo = false;
+    document.dispatchEvent(new CustomEvent("panel:sin-sesion"));
+  }
+
+  async function cargar(desdePedido = desde) {
+    const res = await api(`/api/admin/reservas${desdePedido ? `?desde=${desdePedido}` : ""}`).catch(() => null);
+    if (!res) return void (estado.textContent = "Sin conexión, reintentando…");
+    if (res.status === 401) return sinSesion();
+    if (!res.ok) return void (estado.textContent = "No se pudieron cargar las reservas");
+    recibir((await res.json()) as Datos);
+  }
+
+  async function enviar(datos: Record<string, unknown>) {
+    const res = await api("/api/admin/reservas", { method: "POST", body: JSON.stringify(datos) });
+    if (res.status === 401) sinSesion();
+    return res;
+  }
+
+  function recibir(d: Datos) {
+    // Reservas nuevas desde la web desde la última vez: se avisan.
+    if (vistos) {
+      const nuevas = d.filas.filter((f) => !vistos!.has(f.id) && f.estado === "reservado" && f.origen !== "panel");
+      if (nuevas.length === 1) avisar(`Nueva reserva desde la web: ${cliente(nuevas[0])}, ${fechaCorta.format(aFecha(nuevas[0].fecha))} ${horario(nuevas[0])}`);
+      else if (nuevas.length > 1) avisar(`${nuevas.length} reservas nuevas desde la web`);
+    }
+    vistos = new Set(d.filas.map((f) => f.id));
+    filas = d.filas;
+    hoy = d.hoy;
+    desde = d.desde;
+    mes ||= hoy.slice(0, 7);
+    $("[data-actualizado]").textContent = `Actualizado a las ${horaLocal.format(new Date())}`;
+    estado.textContent = "";
+    pintar();
+  }
+
+  let temporizadorAviso: ReturnType<typeof setTimeout> | undefined;
+  function avisar(texto: string) {
+    aviso.textContent = texto;
+    aviso.hidden = false;
+    clearTimeout(temporizadorAviso);
+    temporizadorAviso = setTimeout(() => (aviso.hidden = true), 6000);
+  }
+
+  // ── Pintar ────────────────────────────────────────────────────────────────
+  function pintar() {
+    pintarResumen();
+    pintarCalendario();
+    pintarLista();
+  }
+
+  function pintarResumen() {
+    const reservas = filas.filter((f) => f.estado === "reservado");
+    const proximas = reservas.filter((f) => f.fecha >= hoy);
+    const semana = proximas.filter((f) => f.fecha <= sumarDias(hoy, 6));
+    const porCobrar = proximas.reduce((s, f) => s + Math.max(0, (f.total ?? 0) - (f.pagado ?? 0)), 0);
+    const mesActual = hoy.slice(0, 7);
+    const cobrado = reservas.filter((f) => f.pagado && f.pagado_en?.slice(0, 7) === mesActual).reduce((s, f) => s + (f.pagado ?? 0), 0);
+    $("[data-resumen=proximas]").textContent = String(proximas.length);
+    $("[data-resumen=semana]").textContent = String(semana.length);
+    $("[data-resumen=cobrar]").textContent = clp(porCobrar);
+    $("[data-resumen=cobrado]").textContent = clp(cobrado);
+  }
+
+  function pintarCalendario() {
+    const [y, m] = mes.split("-").map(Number);
+    const primero = new Date(Date.UTC(y, m - 1, 1, 12));
+    $("[data-mes-titulo]").textContent = nombreMes.format(primero);
+    const grilla = $("[data-calendario]");
+    grilla.replaceChildren();
+    const vacios = (primero.getUTCDay() + 6) % 7;
+    for (let i = 0; i < vacios; i++) grilla.append(document.createElement("span"));
+    const diasMes = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const porDia = new Map<string, Fila[]>();
+    for (const f of filas) porDia.set(f.fecha, [...(porDia.get(f.fecha) ?? []), f]);
+
+    for (let d = 1; d <= diasMes; d++) {
+      const fecha = iso(new Date(Date.UTC(y, m - 1, d, 12)));
+      const delDia = (porDia.get(fecha) ?? []).sort((a, b) => a.inicio - b.inicio);
+      const celda = document.createElement("button");
+      celda.type = "button";
+      celda.dataset.dia = fecha;
+      celda.setAttribute("aria-pressed", String(fecha === diaElegido));
+      celda.setAttribute(
+        "aria-label",
+        `${fechaLarga.format(aFecha(fecha))}: ${delDia.length ? delDia.map((f) => (f.estado === "bloqueado" ? `bloqueado ${horario(f)}` : `${horario(f)} ${cliente(f)}`)).join(", ") : "libre"}`,
+      );
+      celda.className = [
+        "flex min-h-14 cursor-pointer flex-col gap-0.5 rounded-xl border-2 p-1 text-left align-top md:min-h-24 md:p-1.5",
+        fecha === diaElegido ? "border-noche bg-sol" : fecha === hoy ? "border-noche bg-crema" : "border-noche/15 bg-blanco hover:border-noche/50",
+        fecha < hoy ? "opacity-60" : "",
+      ].join(" ");
+      const num = document.createElement("span");
+      num.className = `text-xs font-extrabold md:text-sm ${fecha === hoy ? "bg-noche text-crema self-start rounded-full px-1.5" : ""}`;
+      num.textContent = String(d);
+      celda.append(num);
+
+      // Celular: puntos. Escritorio: hasta 3 etiquetas con hora y nombre.
+      const puntos = document.createElement("span");
+      puntos.className = "flex flex-wrap gap-0.5 md:hidden";
+      const chips = document.createElement("span");
+      chips.className = "hidden flex-col gap-0.5 md:flex";
+      delDia.forEach((f, i) => {
+        const color = f.estado === "bloqueado" ? "chip-bloqueo border-noche/40" : f.pagado ? "bg-verde border-noche" : "bg-verde-burbuja border-noche";
+        const p = document.createElement("span");
+        p.className = `size-2 rounded-full border ${color}`;
+        puntos.append(p);
+        if (i < 3) {
+          const c = document.createElement("span");
+          c.className = `truncate rounded-md border px-1 text-[11px] leading-4 font-bold ${color}`;
+          c.textContent = f.estado === "bloqueado" ? `Bloq. ${f.inicio === 0 && f.fin === 1440 ? "día" : aHora(f.inicio)}` : `${aHora(f.inicio)} ${f.nombre ?? ""}`;
+          chips.append(c);
+        }
+      });
+      if (delDia.length > 3) {
+        const mas = document.createElement("span");
+        mas.className = "text-noche-suave text-[11px] font-bold";
+        mas.textContent = `+${delDia.length - 3} más`;
+        chips.append(mas);
+      }
+      celda.append(puntos, chips);
+      celda.addEventListener("click", () => elegirDia(fecha === diaElegido ? undefined : fecha));
+      grilla.append(celda);
+    }
+  }
+
+  function elegirDia(fecha: string | undefined) {
+    diaElegido = fecha;
+    const chip = $<HTMLButtonElement>("[data-dia-filtro]");
+    chip.hidden = !fecha;
+    if (fecha) $("[data-dia-texto]").textContent = `Día: ${fechaCorta.format(aFecha(fecha))}`;
+    pintarCalendario();
+    pintarLista();
+  }
+
+  function visibles(): Fila[] {
+    const q = sinTildes(busqueda.trim());
+    let lista = filas.filter((f) => {
+      if (diaElegido) return f.fecha === diaElegido;
+      if (filtro === "proximas") return f.fecha >= hoy;
+      if (filtro === "pasadas") return f.fecha < hoy;
+      return true;
+    });
+    if (q) {
+      lista = lista.filter((f) =>
+        sinTildes(
+          [f.nombre, f.apellido, f.telefono, f.email, f.empresa, f.comuna, f.ciudad, f.direccion, f.notas, f.mensaje].filter(Boolean).join(" "),
+        ).includes(q),
+      );
+    }
+    const orden = (a: Fila, b: Fila) => a.fecha.localeCompare(b.fecha) || a.inicio - b.inicio;
+    return filtro === "proximas" || diaElegido ? lista.sort(orden) : lista.sort((a, b) => orden(b, a));
+  }
+
+  function pintarLista() {
+    const lista = visibles();
+    const contenedor = $("[data-lista]");
+    contenedor.replaceChildren(...lista.map(tarjetaReserva));
+    if (!lista.length) {
+      const vacio = document.createElement("p");
+      vacio.className = "border-noche/30 text-noche-suave rounded-2xl border-2 border-dashed p-6 text-center";
+      vacio.textContent = diaElegido
+        ? "No hay reservas ni bloqueos este día"
+        : busqueda
+          ? "Ninguna reserva coincide con la búsqueda"
+          : filtro === "proximas"
+            ? "No hay reservas próximas"
+            : "No hay reservas en este período";
+      contenedor.append(vacio);
+    }
+  }
+
+  /** Elemento con texto (sin innerHTML: los datos vienen de clientes). */
+  function el(tag: string, clase: string, texto?: string | null) {
+    const e = document.createElement(tag);
+    e.className = clase;
+    if (texto) e.textContent = texto;
+    return e;
+  }
+
+  function enlace(href: string, texto: string, clase = "text-azul-texto underline") {
+    const a = el("a", clase, texto) as HTMLAnchorElement;
+    a.href = href;
+    if (href.startsWith("http")) {
+      a.target = "_blank";
+      a.rel = "noopener";
+    }
+    return a;
+  }
+
+  function botonAccion(texto: string, clase: string, accion: () => void) {
+    const b = el("button", `min-h-9 cursor-pointer rounded-full border-2 px-3 text-sm font-extrabold ${clase}`, texto) as HTMLButtonElement;
+    b.type = "button";
+    b.addEventListener("click", accion);
+    return b;
+  }
+
+  /** Teléfono chileno a formato wa.me (569XXXXXXXX). */
+  const telefonoWa = (t: string) => {
+    const d = t.replace(/\D/g, "");
+    return d.length === 9 ? `56${d}` : d;
+  };
+
+  function tarjetaReserva(f: Fila): HTMLElement {
+    const art = el("article", "border-noche bg-blanco grid gap-3 rounded-2xl border-2 p-4 lg:grid-cols-[170px_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-start");
+    if (f.estado === "bloqueado") art.classList.add("chip-bloqueo");
+
+    // Fecha y estado
+    const cuando = el("div", "flex flex-col gap-1");
+    cuando.append(el("p", "font-display text-lg leading-6 font-semibold first-letter:uppercase", fechaCorta.format(aFecha(f.fecha))));
+    cuando.append(el("p", "font-bold", horario(f)));
+    const etiquetas = el("div", "flex flex-wrap gap-1");
+    const etiqueta = (t: string, c: string) => etiquetas.append(el("span", `rounded-full border px-2 text-xs font-extrabold ${c}`, t));
+    if (f.estado === "bloqueado") etiqueta("Bloqueado", "border-noche/40 bg-arena");
+    else if (f.pagado && f.total && f.pagado >= f.total) etiqueta("Pagada", "border-noche bg-verde");
+    else if (f.pagado) etiqueta("Con abono", "border-noche bg-verde-burbuja");
+    else etiqueta("Sin pago", "border-noche bg-sol");
+    if (f.estado === "reservado") etiqueta(f.origen === "panel" ? "Panel" : "Web", "border-noche/30 bg-crema");
+    if (f.estado === "reservado" && f.origen !== "panel" && Date.now() - Date.parse(f.creado) < 24 * 3600 * 1000) etiqueta("Nueva", "border-rojo-texto bg-rojo-suave text-rojo-texto");
+    cuando.append(etiquetas);
+    art.append(cuando);
+
+    if (f.estado === "bloqueado") {
+      art.append(el("p", "text-noche-suave lg:col-span-2", "Nadie puede reservar en este horario"));
+      const acciones = el("div", "flex flex-wrap gap-2 lg:justify-end");
+      acciones.append(
+        botonAccion("Liberar", "border-rojo-texto text-rojo-texto bg-blanco", async () => {
+          if (!confirm(`¿Liberar el bloqueo del ${fechaCorta.format(aFecha(f.fecha))} (${horario(f)})?`)) return;
+          const res = await enviar({ accion: "liberar", id: f.id });
+          avisar(res.ok ? "Bloqueo liberado" : "No se pudo liberar");
+          void cargar();
+        }),
+      );
+      art.append(acciones);
+      return art;
+    }
+
+    // Cliente
+    const quien = el("div", "flex min-w-0 flex-col gap-0.5 text-sm");
+    quien.append(el("p", "text-base font-extrabold", cliente(f)));
+    if (f.telefono) {
+      const tel = el("p", "flex flex-wrap gap-x-2");
+      tel.append(enlace(`tel:${f.telefono.replace(/[^\d+]/g, "")}`, f.telefono, "font-semibold underline"));
+      tel.append(enlace(`https://wa.me/${telefonoWa(f.telefono)}?text=${encodeURIComponent(`Hola ${f.nombre ?? ""}, te escribimos de Saltabum por tu reserva del ${fechaCorta.format(aFecha(f.fecha))}.`)}`, "WhatsApp"));
+      quien.append(tel);
+    }
+    if (f.email) quien.append(enlace(`mailto:${f.email}`, f.email, "text-azul-texto truncate underline"));
+    if (f.empresa) quien.append(el("p", "text-noche-suave", `Empresa: ${f.empresa}`));
+    art.append(quien);
+
+    // Lugar, total y notas
+    const donde = el("div", "flex min-w-0 flex-col gap-1 text-sm");
+    const lugar = [f.direccion, f.depto, f.ciudad].filter(Boolean).join(", ");
+    donde.append(el("p", "font-bold", [f.comuna, lugar].filter(Boolean).join(" · ") || "Sin dirección"));
+    const plata = el("p", "", "");
+    plata.textContent = `Total ${f.total != null ? pesos(f.total) : "—"}${f.pagado ? ` · pagado ${clp(f.pagado)}` : ""}`;
+    donde.append(plata);
+    if (f.mensaje) donde.append(el("p", "text-noche-suave italic", `«${f.mensaje}»`));
+    if (f.notas) donde.append(el("p", "bg-sol/25 rounded-lg px-2 py-1", `Nota: ${f.notas}`));
+    art.append(donde);
+
+    // Acciones
+    const acciones = el("div", "flex flex-wrap gap-2 lg:max-w-[220px] lg:justify-end");
+    acciones.append(botonAccion("Editar", "border-noche bg-crema", () => abrirFormulario(f)));
+    if (!f.pagado) acciones.append(botonAccion("Registrar pago", "border-noche bg-verde-burbuja", () => abrirPago(f)));
+    acciones.append(
+      botonAccion("Eliminar", "border-rojo-texto text-rojo-texto bg-blanco", async () => {
+        if (!confirm(`¿Eliminar la reserva de ${cliente(f)} del ${fechaCorta.format(aFecha(f.fecha))}, ${horario(f)}?\n\nEl horario queda libre en la web y la reserva queda guardada en el historial.`)) return;
+        const res = await enviar({ accion: "eliminar", id: f.id });
+        avisar(res.ok ? "Reserva eliminada" : "No se pudo eliminar");
+        void cargar();
+      }),
+    );
+    art.append(acciones);
+    return art;
+  }
+
+  // ── Formulario de reserva ─────────────────────────────────────────────────
+  const campoF = (n: string) => formReserva.elements.namedItem(n) as HTMLInputElement;
+  let totalManual = false;
+
+  function sugerido(): number {
+    const ini = campoF("inicio").value;
+    const fin = campoF("fin").value;
+    if (!ini || !fin) return 0;
+    const horas = Math.max(HORAS_BASE, Math.ceil((aMinutos(fin) - aMinutos(ini)) / 60));
+    return calcularPrecio(campoF("producto").value || PRODUCTOS[0].id, horas, campoF("comuna").value || undefined).total;
+  }
+
+  function actualizarSugerido() {
+    const s = sugerido();
+    $("[data-usar-sugerido]").textContent = s ? clp(s) : "elige el horario";
+    if (!totalManual && s) campoF("total").value = String(s);
+  }
+
+  /** `prellenado`: datos que trae otra pestaña (ej. «Crear reserva» desde una consulta). */
+  function abrirFormulario(f?: Fila, fecha?: string, prellenado: Record<string, string> = {}) {
+    editando = f;
+    formReserva.reset();
+    errorForm.hidden = true;
+    btnForzar.hidden = true;
+    totalManual = !!f;
+    $("[data-form-titulo]").textContent = f ? `Editar reserva de ${cliente(f)}` : "Nueva reserva";
+    const valores: Record<string, string> = f
+      ? {
+          fecha: f.fecha,
+          inicio: aHora(f.inicio),
+          fin: aHora(Math.min(f.fin, 24 * 60 - 1)),
+          producto: f.producto,
+          comuna: f.comuna ?? "",
+          total: String(f.total ?? 0),
+          nombre: f.nombre ?? "",
+          apellido: f.apellido ?? "",
+          telefono: f.telefono ?? "",
+          email: f.email ?? "",
+          empresa: f.empresa ?? "",
+          direccion: f.direccion ?? "",
+          depto: f.depto ?? "",
+          ciudad: f.ciudad ?? "",
+          region: f.region ?? "Valparaíso",
+          mensaje: f.mensaje ?? "",
+          notas: f.notas ?? "",
+        }
+      : {
+          inicio: "10:00",
+          fin: aHora(10 * 60 + HORAS_BASE * 60),
+          region: "Valparaíso",
+          ...Object.fromEntries(Object.entries(prellenado).filter(([, v]) => v)),
+          fecha: prellenado.fecha || fecha || diaElegido || sumarDias(hoy, 1),
+        };
+    for (const [k, v] of Object.entries(valores)) campoF(k).value = v;
+    actualizarSugerido();
+    ventanaReserva.showModal();
+    campoF(f ? "nombre" : "fecha").focus();
+  }
+
+  async function guardar(forzar = false) {
+    const invalido = [...formReserva.querySelectorAll<HTMLInputElement>("input, textarea")].find((i) => !i.checkValidity());
+    if (invalido) return invalido.reportValidity();
+    const v = (n: string) => campoF(n).value.trim();
+    const datos = {
+      fecha: v("fecha"),
+      producto: v("producto") || PRODUCTOS[0].id,
+      inicio: v("inicio"),
+      fin: v("fin"),
+      total: Math.round(Number(v("total")) || 0),
+      nombre: v("nombre"),
+      apellido: v("apellido"),
+      telefono: v("telefono"),
+      email: v("email"),
+      empresa: v("empresa"),
+      comuna: v("comuna"),
+      direccion: v("direccion"),
+      depto: v("depto"),
+      ciudad: v("ciudad"),
+      region: v("region"),
+      mensaje: v("mensaje"),
+      notas: v("notas"),
+    };
+    const boton = $<HTMLButtonElement>("[data-guardar]");
+    boton.disabled = true;
+    const res = await enviar(editando ? { accion: "editar", id: editando.id, datos, forzar } : { accion: "crear", datos, forzar });
+    boton.disabled = false;
+    const cuerpo = (await res.json().catch(() => ({}))) as { error?: string; detalle?: string[]; choques?: Fila[] };
+    if (res.ok) {
+      ventanaReserva.close();
+      avisar(editando ? "Reserva actualizada" : "Reserva creada, ya se ve ocupada en la web");
+      if (!editando) {
+        // Lleva el calendario al día de la reserva nueva.
+        mes = datos.fecha.slice(0, 7);
+        elegirDia(datos.fecha);
+      }
+      return void cargar();
+    }
+    errorForm.hidden = false;
+    btnForzar.hidden = true;
+    if (res.status === 409 && cuerpo.choques) {
+      errorForm.textContent = `Ese horario se cruza con: ${cuerpo.choques
+        .map((c) => (c.estado === "bloqueado" ? `un bloqueo (${horario(c)})` : `${cliente(c)} (${horario(c)})`))
+        .join(", ")}. Entre eventos se dejan 90 minutos para retirar y volver a montar.`;
+      btnForzar.hidden = false;
+    } else if (res.status === 422) {
+      errorForm.textContent = cuerpo.detalle?.join(". ") ?? "Revisa los datos";
+    } else if (res.status === 404) {
+      errorForm.textContent = "Esta reserva ya no existe (puede que otra persona la haya eliminado)";
+    } else if (res.status !== 401) {
+      errorForm.textContent = "No se pudo guardar, inténtalo de nuevo";
+    }
+  }
+
+  // ── Pagos ─────────────────────────────────────────────────────────────────
+  function abrirPago(f: Fila) {
+    pagando = f;
+    formPago.reset();
+    $("[data-pago-detalle]").textContent = `${cliente(f)} · ${fechaCorta.format(aFecha(f.fecha))}, ${horario(f)} · total ${f.total != null ? pesos(f.total) : "sin total"}`;
+    (formPago.elements.namedItem("monto") as HTMLInputElement).value = String(ABONO);
+    ventanaPago.showModal();
+  }
+
+  // ── Eventos ───────────────────────────────────────────────────────────────
+  $$("[data-cerrar]").forEach((b) => b.addEventListener("click", () => b.closest("dialog")?.close()));
+  $("[data-nueva]").addEventListener("click", () => abrirFormulario());
+  $("[data-abrir-bloqueo]").addEventListener("click", () => {
+    formBloqueo.reset();
+    (formBloqueo.elements.namedItem("fecha") as HTMLInputElement).value = diaElegido ?? sumarDias(hoy, 1);
+    $("[data-bloqueo-error]").textContent = "";
+    ventanaBloqueo.showModal();
+  });
+  $$<HTMLButtonElement>("[data-mes]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const [y, m] = mes.split("-").map(Number);
+      mes = iso(new Date(Date.UTC(y, m - 1 + Number(b.dataset.mes), 1, 12))).slice(0, 7);
+      // Si se va a un mes anterior a lo cargado, se piden también esas fechas.
+      if (`${mes}-01` < desde) void cargar(`${mes}-01`);
+      pintarCalendario();
+    }),
+  );
+  $$<HTMLButtonElement>("[data-filtro]").forEach((b) =>
+    b.addEventListener("click", () => {
+      filtro = b.dataset.filtro as typeof filtro;
+      $$("[data-filtro]").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      elegirDia(undefined);
+      // Pasadas y todas: se trae todo el historial de reservas.
+      if (filtro !== "proximas" && desde > "2000-01-01") void cargar("2000-01-01");
+    }),
+  );
+  $<HTMLInputElement>("[data-buscar]").addEventListener("input", (e) => {
+    busqueda = (e.target as HTMLInputElement).value;
+    pintarLista();
+  });
+  $("[data-dia-filtro]").addEventListener("click", () => elegirDia(undefined));
+
+  formReserva.addEventListener("submit", (e) => {
+    e.preventDefault();
+    void guardar();
+  });
+  btnForzar.addEventListener("click", () => void guardar(true));
+  ["inicio", "fin", "producto", "comuna"].forEach((n) => campoF(n).addEventListener("input", actualizarSugerido));
+  campoF("total").addEventListener("input", () => (totalManual = true));
+  $("[data-usar-sugerido]").addEventListener("click", () => {
+    totalManual = false;
+    actualizarSugerido();
+  });
+
+  $$<HTMLButtonElement>("[data-monto]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const monto = b.dataset.monto === "abono" ? ABONO : (pagando?.total ?? ABONO);
+      (formPago.elements.namedItem("monto") as HTMLInputElement).value = String(monto);
+    }),
+  );
+  formPago.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!pagando) return;
+    const monto = Math.round(Number((formPago.elements.namedItem("monto") as HTMLInputElement).value));
+    if (!(monto >= 1000)) return (formPago.elements.namedItem("monto") as HTMLInputElement).reportValidity();
+    const res = await enviar({ accion: "pagada", id: pagando.id, monto });
+    const data = (await res.json().catch(() => ({}))) as { meta?: string };
+    ventanaPago.close();
+    avisar(
+      res.ok
+        ? data.meta === "enviada"
+          ? "Pago guardado y enviado a Meta"
+          : "Pago guardado (Meta no está configurado o no respondió)"
+        : res.status === 409
+          ? "Esta reserva ya tenía un pago registrado"
+          : "No se pudo guardar el pago",
+    );
+    void cargar();
+  });
+
+  formBloqueo.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const data = new FormData(formBloqueo);
+    const fecha = String(data.get("fecha") ?? "");
+    const ini = String(data.get("desde") ?? "");
+    const fin = String(data.get("hasta") ?? "");
+    if (!fecha) return;
+    if ((ini && !fin) || (!ini && fin)) return void ($("[data-bloqueo-error]").textContent = "Completa las dos horas, o deja ambas vacías para el día completo");
+    const res = await enviar({ accion: "bloquear", fecha, ...(ini && fin ? { desde: ini, hasta: fin } : {}) });
+    if (!res.ok) return void ($("[data-bloqueo-error]").textContent = "No se pudo bloquear (revisa que «hasta» sea después de «desde»)");
+    ventanaBloqueo.close();
+    avisar("Horario bloqueado, ya no se puede reservar en la web");
+    void cargar();
+  });
+
+  // ── En vivo ───────────────────────────────────────────────────────────────
+  setInterval(() => {
+    if (activo && document.visibilityState === "visible" && !root.closest("[hidden]")) void cargar();
+  }, 20_000);
+  document.addEventListener("visibilitychange", () => {
+    if (activo && document.visibilityState === "visible") void cargar();
+  });
+  document.addEventListener("panel:pestana", (e) => {
+    if (activo && (e as CustomEvent<string>).detail === "reservas") void cargar();
+  });
+  // «Crear reserva» desde la pestaña Consultas: abre el formulario con los datos de la consulta.
+  document.addEventListener("panel:nueva-reserva", (e) => {
+    if (activo) abrirFormulario(undefined, undefined, (e as CustomEvent<Record<string, string>>).detail);
+  });
+
+  document.addEventListener("panel:listo", (e) => {
+    activo = true;
+    const datos = (e as CustomEvent<Datos | undefined>).detail;
+    if (datos?.filas) recibir(datos);
+    else void cargar();
+  });
+  document.addEventListener("panel:cerrado", () => {
+    activo = false;
+    filas = [];
+    vistos = undefined;
+    $("[data-lista]").replaceChildren();
+    $$<HTMLDialogElement>("dialog").forEach((d) => d.close());
+  });
+</script>

@@ -1,0 +1,188 @@
+---
+// Mapa de la zona de despacho con los límites reales de las comunas (OpenStreetMap, ver scripts/generar-mapa-comunas.mjs).
+// Muestra de cerca Gran Valparaíso, Marga Marga y Casablanca, con las comunas donde llegamos pintadas según el valor del despacho,
+// y en la esquina la V Región completa para ubicarse. Los nombres van en HTML encima del SVG para que se lean igual
+// en celular y escritorio. La interacción (tocar una comuna) la maneja la sección Despacho.
+import { COMUNAS_MAPA, MAPA_ALTO, MAPA_ANCHO, MAPA_PROYECCION } from "../mapa-comunas";
+import { COMUNAS, colorTramo, type Comuna } from "../data";
+
+/** Encuadre de cerca: x, y, ancho, alto (unidades del mapa). Llega por el sur hasta el límite de Casablanca. */
+const VISTA = [0, 470, 460, 420] as const;
+const [vx, vy, vw, vh] = VISTA;
+
+const zonaDe = new Map<string, Comuna>();
+for (const c of COMUNAS) for (const nombre of c.mapa ?? [c.nombre]) zonaDe.set(nombre, c);
+
+const enVista = (x: number, y: number) => x > vx + 12 && x < vx + vw - 12 && y > vy + 10 && y < vy + vh - 10;
+const pos = (x: number, y: number) => `left:${(((x - vx) / vw) * 100).toFixed(2)}%;top:${(((y - vy) / vh) * 100).toFixed(2)}%`;
+
+// Las de afuera primero, para que el borde de las cubiertas quede encima.
+const otras = COMUNAS_MAPA.filter((c) => !zonaDe.has(c.nombre));
+const cubiertas = COMUNAS_MAPA.filter((c) => zonaDe.has(c.nombre));
+/** Vecinas con nombre (solo en pantallas grandes, de contexto). */
+const vecinas = otras.filter((c) => enVista(c.x, c.y));
+
+/** lon/lat → coordenadas del mapa (misma proyección que scripts/generar-mapa-comunas.mjs). */
+const { k, lat0, minX, minY } = MAPA_PROYECCION;
+const punto = (lon: number, lat: number) => [lon * Math.cos((lat0 * Math.PI) / 180) * k - minX, -lat * k - minY] as const;
+/** Localidades que no son comuna pero conviene marcar (Quintay es parte de Casablanca). */
+const LOCALIDADES = [{ nombre: "Quintay", lon: -71.6967, lat: -33.1925 }].map((l) => {
+  const [x, y] = punto(l.lon, l.lat);
+  return { nombre: l.nombre, x, y };
+});
+---
+
+<div data-mapa class="border-noche shadow-pop lg:shadow-pop-l relative overflow-hidden rounded-[28px] border-2 bg-[#e3f4fc] select-none">
+  <svg viewBox={VISTA.join(" ")} class="block h-auto w-full" aria-hidden="true">
+    <defs>
+      <pattern id="mapa-olas" width="26" height="14" patternUnits="userSpaceOnUse">
+        <path d="M1 8q6-5 12 0t12 0" fill="none" stroke="#7fd3f7" stroke-width="1.4" stroke-linecap="round"></path>
+      </pattern>
+    </defs>
+    <rect x={vx} y={vy} width={vw} height={vh} fill="url(#mapa-olas)" opacity="0.55"></rect>
+    <g id="mapa-tierra">
+      {otras.map((c) => <path d={c.d} class="zona-otra" data-mapa-comuna={c.nombre} data-x={c.x} data-y={c.y} vector-effect="non-scaling-stroke" />)}
+      {
+        cubiertas.map((c) => {
+          const zona = zonaDe.get(c.nombre)!;
+          return (
+            <path
+              d={c.d}
+              class="zona"
+              data-mapa-comuna={c.nombre}
+              data-zona={zona.nombre}
+              data-x={c.x}
+              data-y={c.y}
+              style={`--relleno: var(--color-${colorTramo(zona.despacho)})`}
+              vector-effect="non-scaling-stroke"
+            />
+          );
+        })
+      }
+    </g>
+    <!-- Borde de la comuna elegida: va aparte para no cambiar el orden de las comunas -->
+    <g data-mapa-resalte class="pointer-events-none"></g>
+  </svg>
+
+  <!-- Nombres -->
+  <span class="text-azul-texto/70 pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-center text-[10px] leading-tight font-bold tracking-[1px] uppercase italic sm:text-xs" style={pos(50, 805)}>
+    Océano<br />Pacífico
+  </span>
+  {
+    vecinas.map((c) => (
+      <span
+        class="text-noche-suave/80 pointer-events-none absolute hidden -translate-x-1/2 -translate-y-1/2 text-xs font-semibold whitespace-nowrap sm:block"
+        style={pos(c.x, c.y)}
+      >
+        {c.nombre}
+      </span>
+    ))
+  }
+  {
+    cubiertas.map((c) => (
+      <span
+        data-nombre={c.nombre}
+        class="text-noche data-oculto:invisible pointer-events-none absolute w-max max-w-[5.6em] -translate-x-1/2 -translate-y-1/2 text-center text-[11px] leading-[1.1] font-extrabold [text-shadow:0_0_2px_#fff,0_0_4px_#fff] sm:text-[13px] lg:text-sm"
+        style={pos(c.x, c.y)}
+      >
+        {c.nombre}
+      </span>
+    ))
+  }
+
+  {
+    LOCALIDADES.map((l) => (
+      <span class="pointer-events-none absolute flex -translate-x-[5px] -translate-y-1/2 items-center gap-1 sm:-translate-x-1.5" style={pos(l.x, l.y)}>
+        <span class="border-noche bg-blanco size-2.5 shrink-0 rounded-full border-2 sm:size-3" />
+        <span class="text-noche text-[10px] leading-none font-extrabold [text-shadow:0_0_2px_#fff,0_0_4px_#fff] sm:text-xs">{l.nombre}</span>
+      </span>
+    ))
+  }
+
+  <!-- Nombre destacado de la comuna elegida (lo mueve la sección, encima de su nombre normal) -->
+  <span
+    data-mapa-sel
+    hidden
+    class="mapa-sel bg-noche text-crema border-blanco pointer-events-none absolute z-[5] rounded-full border-2 px-2 py-0.5 text-[11px] leading-4 font-extrabold whitespace-nowrap shadow-[0_2px_0_var(--color-noche)] sm:px-2.5 sm:text-[13px] sm:leading-5 lg:text-sm"
+  ></span>
+
+  <!-- Nombre bajo el cursor (escritorio) -->
+  <p data-mapa-tip hidden class="bg-noche text-crema pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+12px)] rounded-lg px-2.5 py-1 text-xs font-extrabold whitespace-nowrap"></p>
+
+  <!-- La V Región completa -->
+  <div class="border-noche absolute top-2 right-2 bg-[#e3f4fc] w-[19%] max-w-[132px] min-w-[64px] rounded-xl border-2 p-1 sm:top-3 sm:right-3 sm:p-1.5">
+    <svg viewBox={`0 0 ${MAPA_ANCHO} ${MAPA_ALTO}`} class="mapa-mini block h-auto w-full" aria-hidden="true">
+      <use href="#mapa-tierra"></use>
+      <rect x={vx} y={vy} width={vw} height={vh} fill="none" stroke="#c9361a" stroke-width="2.5" vector-effect="non-scaling-stroke" rx="8"></rect>
+    </svg>
+    <p class="text-noche mt-0.5 text-center text-[9px] leading-3 font-extrabold sm:text-[11px]">V Región</p>
+  </div>
+
+  <a
+    href="https://www.openstreetmap.org/copyright"
+    target="_blank"
+    rel="noopener"
+    class="bg-blanco/80 text-noche-suave absolute right-0 bottom-0 rounded-tl-lg px-1.5 py-0.5 text-[9px] leading-3 no-underline sm:text-[10px]"
+  >
+    © OpenStreetMap
+  </a>
+</div>
+
+<style>
+  .zona-otra {
+    fill: var(--color-crema);
+    stroke: rgb(31 42 92 / 0.28);
+    stroke-width: var(--borde-otra, 1px);
+    cursor: pointer;
+    transition: fill 0.15s;
+  }
+  .zona-otra:hover,
+  .zona-otra[data-activa] {
+    fill: var(--color-arena);
+  }
+  .zona {
+    fill: var(--relleno);
+    stroke: var(--color-noche);
+    stroke-width: var(--borde-zona, 1.5px);
+    stroke-linejoin: round;
+    cursor: pointer;
+    transition:
+      stroke-width 0.15s,
+      filter 0.15s;
+  }
+  .zona:hover {
+    filter: brightness(1.07) saturate(1.1);
+    stroke-width: var(--borde-zona-hover, 2.5px);
+  }
+  [data-mapa-resalte] :global(path) {
+    fill: none;
+    stroke: var(--color-noche);
+    stroke-width: 3.5px;
+    stroke-linejoin: round;
+  }
+  /* En el mapa chico todo va más fino y sin interacción. */
+  .mapa-mini {
+    pointer-events: none;
+    --borde-otra: 0.6px;
+    --borde-zona: 0.7px;
+    --borde-zona-hover: 0.7px;
+  }
+  .mapa-sel {
+    translate: -50% -50%;
+    animation: mapa-sel-entrar 0.25s cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+  @keyframes mapa-sel-entrar {
+    from {
+      scale: 0.6;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mapa-sel {
+      animation: none;
+    }
+    .zona,
+    .zona-otra {
+      transition: none;
+    }
+  }
+</style>

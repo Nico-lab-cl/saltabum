@@ -1,200 +1,363 @@
 ---
-// Agenda de reservas: el cliente elige el día en el calendario y después arma su arriendo: juego, hora de inicio
-// (cada 30 minutos entre 09:00 y 22:00), cuántas horas (3 más hasta 3 adicionales) y la comuna para el despacho.
-// Ve el total al tiro y reserva. Reglas y precios: src/lib/reservas.ts. Datos y envío: src/lib/client/reservas.ts.
+// Agenda de reservas por pasos: 1) día en el calendario, 2) duración y hora de inicio (cada 30 minutos entre 09:00
+// y 22:00), 3) comuna y dirección, 4) datos de contacto. Todos los pasos ocupan el mismo alto (se apilan en la misma
+// celda de la grilla, así el bloque mide lo que el paso más alto y no salta al avanzar). El total queda siempre a la
+// vista: en el pie en celular y en el resumen lateral en escritorio.
+// Reglas y precios: src/lib/reservas.ts. Datos y envío: src/lib/client/reservas.ts.
 import Turnstile from "@/components/core/Turnstile.astro";
 import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
-import { APERTURA, CIERRE, HORAS_BASE, HORAS_EXTRA_MAX, aHora, pesos } from "@/lib/reservas";
+import { APERTURA, CIERRE, HORAS_BASE, HORAS_EXTRA_MAX, REGION, aHora, pesos } from "@/lib/reservas";
 import { ABONO, COMUNAS, HORA_EXTRA, PRODUCTOS } from "../data";
 import Icon from "../components/Icon.astro";
 import Rayos from "../components/Rayos.astro";
 import WaButton from "../components/WaButton.astro";
 
 const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
-const input =
-  "border-noche bg-crema text-noche placeholder:text-noche-suave/70 min-h-12 w-full min-w-0 rounded-xl border-2 px-3.5";
-const titulo = "font-display text-[19px] leading-6 font-semibold";
+const PASOS = [
+  { id: "fecha", nombre: "Fecha" },
+  { id: "horario", nombre: "Horario" },
+  { id: "comuna", nombre: "Lugar" },
+  { id: "datos", nombre: "Tus datos" },
+] as const;
+const variosJuegos = PRODUCTOS.length > 1;
+
+/** Casilla de formulario con la etiqueta adentro, arriba y en chico (como un checkout). */
+const caja =
+  "border-noche bg-crema relative flex min-h-14 min-w-0 cursor-text flex-col justify-center rounded-xl border-2 px-3.5 py-1.5 focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-azul-texto has-[:user-invalid]:border-rojo-texto";
+const cajaEtiqueta = "text-noche-suave text-xs leading-4 font-bold";
+const cajaInput =
+  "text-noche placeholder:text-noche-suave/60 w-full min-w-0 bg-transparent text-base leading-6 outline-none focus-visible:outline-none";
+const opcional = '<span class="font-semibold opacity-80">(opcional)</span>';
+const etiqueta = "font-display text-[17px] leading-6 font-semibold lg:text-[19px]";
+const tituloPaso = "font-display text-[22px] leading-7 font-semibold outline-none lg:text-[26px] lg:leading-8";
+/** Cada paso va en la misma celda; el oculto queda invisible (sin perder su alto) e inerte. El que entra aparece suave. */
+const capa =
+  "col-start-1 row-start-1 flex min-w-0 flex-col gap-4 transition-[opacity,translate] duration-300 ease-out data-oculto:invisible data-oculto:translate-y-2 data-oculto:opacity-0 motion-reduce:transition-none";
+const botonRedondo =
+  "border-noche bg-crema flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 disabled:cursor-not-allowed disabled:opacity-30";
 ---
 
-<section id="reservar" aria-labelledby="agenda-titulo" class="border-noche bg-sol text-noche relative isolate overflow-hidden border-b-2" data-agenda>
+<section id="reservar" aria-labelledby="agenda-titulo" class="border-noche bg-sol text-noche relative isolate overflow-clip border-b-2" data-agenda>
   <Rayos x="78%" y="8%" />
-  <div class="mx-auto flex max-w-[1320px] flex-col gap-6 px-4 py-10 lg:gap-10 lg:px-10 lg:py-20">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-6 px-4 py-10 lg:gap-9 lg:px-10 lg:py-20">
     <div>
       <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Reserva en línea</p>
       <h2 id="agenda-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
         Elige tu fecha y horario
       </h2>
-      <p class="mt-2 max-w-[600px] lg:mt-3 lg:text-lg">
-        Arma tu arriendo en minutos, con la hora que quieras desde las {aHora(APERTURA)} y el total a la vista
+      <p class="mt-2 max-w-[640px] lg:mt-3 lg:text-lg">
+        Reserva en 4 pasos, con la hora que quieras desde las {aHora(APERTURA)} y el total siempre a la vista
       </p>
     </div>
 
-    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:gap-8">
-      <!-- Calendario -->
-      <div class="border-noche bg-blanco shadow-pop flex flex-col gap-4 rounded-[28px] border-2 p-4 lg:flex-1 lg:p-6 lg:shadow-pop-l">
-        <div class="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            data-mes-anterior
-            aria-label="Mes anterior"
-            class="border-noche bg-crema flex size-11 cursor-pointer items-center justify-center rounded-full border-2 disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            <Icon name="flecha" size={20} strokeWidth={2.6} class="rotate-180" />
-          </button>
-          <p data-mes-titulo aria-live="polite" class="font-display text-2xl leading-7 font-semibold first-letter:uppercase">&nbsp;</p>
-          <button
-            type="button"
-            data-mes-siguiente
-            aria-label="Mes siguiente"
-            class="border-noche bg-crema flex size-11 cursor-pointer items-center justify-center rounded-full border-2 disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            <Icon name="flecha" size={20} strokeWidth={2.6} />
-          </button>
-        </div>
+    <form
+      data-reserva
+      novalidate
+      aria-label="Reserva en línea"
+      class="group border-noche bg-blanco shadow-pop lg:shadow-pop-l grid overflow-clip rounded-[28px] border-2 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]"
+    >
+      <div class="flex min-w-0 flex-col">
+        <!-- Pasos -->
+        <ol data-stepper class="border-noche bg-crema grid grid-cols-4 border-b-2" aria-label="Pasos de la reserva">
+          {
+            PASOS.map((p, i) => (
+              <li class:list={["min-w-0", i > 0 && "border-noche/15 border-l-2"]}>
+                <button
+                  type="button"
+                  data-ir={p.id}
+                  disabled={i > 0}
+                  aria-current={i === 0 ? "step" : undefined}
+                  class="group aria-[current=step]:bg-sol flex min-h-15 w-full cursor-pointer flex-col items-center justify-center gap-1 px-1 py-2 text-[12px] leading-4 font-extrabold disabled:cursor-default sm:flex-row sm:gap-2 sm:text-sm lg:min-h-16 lg:text-[15px]"
+                >
+                  <span class="border-noche bg-blanco group-aria-[current=step]:bg-noche group-aria-[current=step]:text-crema group-data-hecho:bg-verde flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-[13px] group-disabled:opacity-50">
+                    <span class="group-data-hecho:hidden">{i + 1}</span>
+                    <Icon name="check" size={15} strokeWidth={3.2} class="hidden group-data-hecho:block" />
+                  </span>
+                  <span class="truncate group-disabled:opacity-60">{p.nombre}</span>
+                </button>
+              </li>
+            ))
+          }
+        </ol>
 
-        <div class="grid grid-cols-7 gap-1.5 text-center lg:gap-2" aria-hidden="true">
-          {DIAS_SEMANA.map((d) => <span class="text-noche-suave text-xs font-extrabold tracking-[1px]">{d}</span>)}
-        </div>
-        <div data-dias class="grid min-h-[300px] grid-cols-7 gap-1.5 lg:gap-2"></div>
-
-        <p data-agenda-estado class="text-noche-suave text-sm">Cargando disponibilidad…</p>
-
-        <ul class="flex flex-wrap gap-x-4 gap-y-2 text-sm" aria-label="Simbología">
-          <li class="flex items-center gap-2"><span class="border-noche bg-verde-burbuja size-4 rounded border-2"></span>Con horarios libres</li>
-          <li class="flex items-center gap-2"><span class="border-noche bg-sol size-4 rounded border-2"></span>Quedan pocos</li>
-          <li class="flex items-center gap-2"><span class="border-noche/30 bg-arena size-4 rounded border-2"></span>Sin horarios</li>
-        </ul>
-      </div>
-
-      <!-- Arma tu arriendo -->
-      <div class="border-noche bg-blanco flex flex-col gap-4 rounded-[28px] border-2 p-4 lg:flex-1 lg:p-6">
-        <div data-paso="dia">
-          <p class="font-display text-[22px] leading-7 font-semibold">Elige un día en el calendario</p>
-          <p class="text-noche-suave mt-1.5">Puedes reservar desde mañana y después eliges la hora, las horas y tu comuna</p>
-          <ul class="mt-4 flex flex-col gap-2">
-            <li class="bg-crema flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold"><Icon name="puntual" size={20} />Inicio desde las {aHora(APERTURA)}, cada 30 minutos</li>
-            <li class="bg-crema flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold"><Icon name="check" size={20} />{HORAS_BASE} horas, más hasta {HORAS_EXTRA_MAX} adicionales de {HORA_EXTRA}</li>
-            <li class="bg-crema flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 font-semibold"><Icon name="despacho" size={20} />Despacho según tu comuna, con el total a la vista</li>
-          </ul>
-        </div>
-
-        <div data-paso="armar" hidden class="flex flex-col gap-5">
-          <p data-dia-titulo class="font-display text-[24px] leading-7 font-semibold first-letter:uppercase"></p>
-
-          <fieldset class="flex flex-col gap-2">
-            <legend class={titulo}>Juego</legend>
-            <div class="mt-2 grid gap-2">
-              {
-                PRODUCTOS.map((p, i) => (
-                  <label class="border-noche has-checked:bg-noche has-checked:text-crema has-checked:shadow-sol bg-crema flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-xl border-2 px-3.5 py-2.5 font-extrabold">
-                    <span class="flex items-center gap-2.5">
+        <!-- Escenario: los pasos apilados -->
+        <div class="grid flex-1 p-4 sm:p-5 lg:p-7">
+          <!-- 1 · Fecha -->
+          <div data-paso="fecha" class={capa}>
+            <h3 tabindex="-1" class={tituloPaso}>¿Qué día es tu evento?</h3>
+            {
+              variosJuegos ? (
+                <fieldset class="flex flex-wrap gap-2">
+                  <legend class="sr-only">Juego</legend>
+                  {PRODUCTOS.map((p, i) => (
+                    <label class="border-noche has-checked:bg-noche has-checked:text-crema bg-crema flex min-h-11 cursor-pointer items-center gap-2 rounded-full border-2 px-3.5 text-sm font-extrabold">
                       <input type="radio" name="producto" value={p.id} checked={i === 0} class="accent-sol size-4" data-producto />
-                      {p.nombre}
-                    </span>
-                    <span class="text-sm font-semibold">{pesos(p.precio)} · {HORAS_BASE} horas</span>
-                  </label>
-                ))
-              }
-            </div>
-          </fieldset>
-
-          <div class="flex flex-col gap-2">
-            <p class={titulo}>¿Cuántas horas?</p>
-            <div class="flex items-center gap-3">
-              <button type="button" data-menos aria-label="Una hora menos" class="border-noche bg-crema flex size-12 cursor-pointer items-center justify-center rounded-full border-2 text-2xl font-extrabold disabled:cursor-not-allowed disabled:opacity-30">−</button>
-              <p class="min-w-[150px] text-center">
-                <span data-horas class="font-display text-[28px] leading-8 font-bold">{HORAS_BASE}</span>
-                <span class="font-extrabold"> horas</span>
-                <span data-horas-extra class="text-noche-suave block text-sm">Sin horas adicionales</span>
-              </p>
-              <button type="button" data-mas aria-label="Una hora más" class="border-noche bg-crema flex size-12 cursor-pointer items-center justify-center rounded-full border-2 text-2xl font-extrabold disabled:cursor-not-allowed disabled:opacity-30">+</button>
+                      {p.nombre} · {pesos(p.precio)}
+                    </label>
+                  ))}
+                </fieldset>
+              ) : (
+                <input type="hidden" name="producto" value={PRODUCTOS[0].id} data-producto />
+              )
+            }
+            <div class="grid flex-1 content-between gap-4 lg:grid-cols-[minmax(0,1fr)_200px] lg:content-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_230px]">
+              <div class="flex min-w-0 flex-col gap-3">
+                <div class="flex items-center justify-between gap-3">
+                  <button type="button" data-mes-anterior aria-label="Mes anterior" class={botonRedondo}>
+                    <Icon name="flecha" size={20} strokeWidth={2.6} class="rotate-180" />
+                  </button>
+                  <p data-mes-titulo aria-live="polite" class="font-display text-[22px] leading-7 font-semibold first-letter:uppercase">&nbsp;</p>
+                  <button type="button" data-mes-siguiente aria-label="Mes siguiente" class={botonRedondo}>
+                    <Icon name="flecha" size={20} strokeWidth={2.6} />
+                  </button>
+                </div>
+                <div class="grid grid-cols-7 gap-1.5 text-center" aria-hidden="true">
+                  {DIAS_SEMANA.map((d) => <span class="text-noche-suave text-xs font-extrabold tracking-[1px]">{d}</span>)}
+                </div>
+                <div data-dias class="grid min-h-[282px] grid-cols-7 content-start gap-1.5 lg:min-h-[318px]"></div>
+                <p data-agenda-estado class="text-noche-suave text-sm">Cargando disponibilidad…</p>
+              </div>
+              <div class="flex flex-col gap-3 lg:pt-14">
+                <ul class="flex flex-wrap gap-x-4 gap-y-2 text-sm lg:flex-col" aria-label="Simbología">
+                  <li class="flex items-center gap-2"><span class="border-noche bg-verde-burbuja size-4 rounded border-2"></span>Con horarios libres</li>
+                  <li class="flex items-center gap-2"><span class="border-noche bg-sol size-4 rounded border-2"></span>Quedan pocos</li>
+                  <li class="flex items-center gap-2"><span class="border-noche/30 bg-arena size-4 rounded border-2"></span>Sin horarios</li>
+                </ul>
+                <ul class="flex flex-col gap-1.5 text-[13px] leading-5 font-semibold lg:gap-2 lg:text-sm">
+                  <li class="bg-crema flex items-start gap-2 rounded-xl px-3 py-2 lg:py-2.5"><Icon name="puntual" size={18} class="shrink-0" />Inicio desde las {aHora(APERTURA)}, cada 30 minutos</li>
+                  <li class="bg-crema flex items-start gap-2 rounded-xl px-3 py-2 lg:py-2.5"><Icon name="check" size={18} class="shrink-0" />{HORAS_BASE} horas, más hasta {HORAS_EXTRA_MAX} adicionales de {HORA_EXTRA}</li>
+                  <li class="bg-crema flex items-start gap-2 rounded-xl px-3 py-2 lg:py-2.5"><Icon name="despacho" size={18} class="shrink-0" />Montaje y retiro incluidos</li>
+                </ul>
+              </div>
             </div>
           </div>
 
-          <div class="flex flex-col gap-2">
-            <p class={titulo}>Hora de inicio</p>
-            <div data-inicios role="group" aria-label="Hora de inicio" class="grid grid-cols-4 gap-2 sm:grid-cols-5"></div>
-            <p data-inicio-resumen class="text-noche-suave text-sm">Elige a qué hora quieres que esté listo el juego</p>
+          <!-- 2 · Horario -->
+          <div data-paso="horario" data-oculto inert class={capa}>
+            <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+              <h3 tabindex="-1" class={tituloPaso}>¿A qué hora?</h3>
+              <button type="button" data-ir="fecha" class="border-noche bg-crema inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border-2 px-3 text-sm font-extrabold">
+                <Icon name="calendario" size={17} />
+                <span data-res="fecha-corta" class="first-letter:uppercase"></span>
+                <span class="text-azul-texto underline">Cambiar</span>
+              </button>
+            </div>
+
+            <div class="bg-crema flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-2xl px-3.5 py-2.5">
+              <div>
+                <p class={etiqueta}>Duración</p>
+                <p data-horas-extra class="text-noche-suave text-sm">Sin horas extra</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" data-menos aria-label="Una hora menos" class={`${botonRedondo} bg-blanco text-2xl font-extrabold`}>−</button>
+                <p class="min-w-[74px] text-center" aria-live="polite">
+                  <span data-horas class="font-display text-[26px] leading-8 font-bold">{HORAS_BASE}</span>
+                  <span class="font-extrabold"> horas</span>
+                </p>
+                <button type="button" data-mas aria-label="Una hora más" class={`${botonRedondo} bg-blanco text-2xl font-extrabold`}>+</button>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <p class={etiqueta}>Hora de inicio</p>
+              <div data-inicios role="group" aria-label="Hora de inicio" class="grid grid-cols-4 gap-1.5 min-[360px]:grid-cols-5 sm:grid-cols-6 sm:gap-2 xl:grid-cols-7"></div>
+              <p data-inicio-resumen aria-live="polite" class="text-noche-suave text-sm">Elige a qué hora quieres que esté listo el juego</p>
+            </div>
             <WhatsAppLink
               placement="agenda-noche"
               message="Hola, mi evento dura toda la noche o pasa de las 22:00 y quiero cotizar un juego inflable. Vengo de saltabum.cl"
-              class="border-noche bg-crema mt-1 flex min-h-12 items-center gap-2.5 rounded-xl border-2 border-dashed px-3.5 py-2 text-sm font-extrabold no-underline"
+              class="border-noche/40 text-noche mt-auto flex min-h-11 items-center gap-2.5 rounded-xl border-2 border-dashed px-3 py-2 text-[13px] leading-[18px] font-bold no-underline"
             >
-              <Icon name="whatsapp" size={20} class="shrink-0" />
-              <span>¿Tu evento dura toda la noche o pasa de las {aHora(CIERRE)}? Cotízalo con nosotros por WhatsApp</span>
+              <Icon name="whatsapp" size={18} class="shrink-0" />
+              <span>¿Tu evento pasa de las {aHora(CIERRE)}? Cotízalo por WhatsApp</span>
             </WhatsAppLink>
           </div>
 
-          <label class="flex flex-col gap-2">
-            <span class={titulo}>Comuna del evento</span>
-            <select data-comuna class={input}>
-              <option value="">Elige tu comuna</option>
-              {COMUNAS.map((c) => <option value={c.nombre}>{c.nombre} · {c.despacho ? `despacho ${pesos(c.despacho)}` : "despacho gratis"}</option>)}
-            </select>
-          </label>
-
-          <!-- Total -->
-          <div class="border-noche bg-crema rounded-[20px] border-2 p-4">
-            <p class={titulo}>Tu arriendo</p>
-            <dl class="mt-2 flex flex-col gap-1.5 text-[15px]">
-              <div class="flex justify-between gap-3"><dt data-linea-base>Arriendo por {HORAS_BASE} horas</dt><dd data-precio-base class="font-extrabold"></dd></div>
-              <div class="flex justify-between gap-3"><dt data-linea-extra>Horas adicionales</dt><dd data-precio-extra class="font-extrabold"></dd></div>
-              <div class="flex justify-between gap-3"><dt data-linea-despacho>Despacho</dt><dd data-precio-despacho class="font-extrabold"></dd></div>
-              <div class="border-noche/20 mt-1 flex items-end justify-between gap-3 border-t-2 border-dashed pt-2">
-                <dt class="font-extrabold">Total</dt>
-                <dd data-precio-total class="font-display text-[30px] leading-8 font-bold"></dd>
+          <!-- 3 · Lugar -->
+          <div data-paso="comuna" data-oculto inert class={capa}>
+            <div>
+              <h3 tabindex="-1" class={tituloPaso}>¿Dónde es el evento?</h3>
+              <p class="text-noche-suave mt-1 text-sm lg:text-base">El despacho depende de la comuna; el montaje y el retiro van siempre incluidos</p>
+            </div>
+            <fieldset>
+              <legend class="sr-only">Comuna del evento</legend>
+              <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {
+                  COMUNAS.map((c) => (
+                    <label class="border-noche has-checked:bg-noche has-checked:text-crema has-checked:shadow-sol bg-crema flex min-h-15 cursor-pointer flex-col justify-center gap-0.5 rounded-xl border-2 px-3 py-2 has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-azul-texto">
+                      <input type="radio" name="comuna" value={c.nombre} class="sr-only" data-comuna data-ciudades={(c.ciudades ?? c.mapa ?? [c.nombre]).join("|")} />
+                      <span class="leading-5 font-extrabold">{c.nombre}</span>
+                      <span class="text-sm font-semibold opacity-80">{c.despacho ? `+${pesos(c.despacho)} despacho` : "Despacho gratis"}</span>
+                    </label>
+                  ))
+                }
               </div>
-            </dl>
-            <p class="text-noche-suave mt-2 text-sm">Reservas con {pesos(ABONO)} de abono, que se descuentan del total</p>
+            </fieldset>
+            <fieldset class="grid grid-cols-2 gap-2.5">
+              <legend class="sr-only">Dirección del evento</legend>
+              <label class={`${caja} col-span-2 sm:col-span-1`}>
+                <span class={cajaEtiqueta}>Dirección</span>
+                <input name="direccion" required autocomplete="address-line1" placeholder="Calle y número" class={cajaInput} />
+              </label>
+              <label class={`${caja} col-span-2 sm:col-span-1`}>
+                <span class={cajaEtiqueta}>Casa, depto, block <Fragment set:html={opcional} /></span>
+                <input name="depto" autocomplete="address-line2" placeholder="Ej.: casa 12 o depto 304" class={cajaInput} />
+              </label>
+              <label class={caja}>
+                <span class={cajaEtiqueta}>Ciudad</span>
+                <input name="ciudad" required autocomplete="address-level2" list="agenda-ciudades" data-ciudad class={cajaInput} />
+              </label>
+              <label class={`${caja} bg-arena/60 cursor-default`}>
+                <span class={cajaEtiqueta}>Región</span>
+                <input name="region" value={REGION} readonly autocomplete="address-level1" class={`${cajaInput} text-noche-suave`} />
+              </label>
+              <datalist id="agenda-ciudades"></datalist>
+            </fieldset>
+            <p class="text-noche-suave mt-auto text-sm">
+              ¿No está tu comuna? <a href="#despacho" class="text-azul-texto font-bold underline">Mira el mapa de despacho</a> o{" "}
+              <WhatsAppLink placement="agenda-comuna" message="Hola, quiero arrendar un juego inflable y mi comuna no aparece en la agenda. Vengo de saltabum.cl" class="text-azul-texto font-bold underline">escríbenos por WhatsApp</WhatsAppLink>
+            </p>
           </div>
 
-          <form data-reserva class="group grid grid-cols-2 gap-3.5">
-            <label class="col-span-2 flex flex-col gap-1.5 font-bold sm:col-span-1">
-              Nombre
-              <input name="nombre" required autocomplete="name" placeholder="Ej.: Camila Rojas" class={input} />
-            </label>
-            <label class="col-span-2 flex flex-col gap-1.5 font-bold sm:col-span-1">
-              Teléfono
-              <input name="telefono" type="tel" required autocomplete="tel" inputmode="tel" placeholder="+56 9 1234 5678" class={input} />
-            </label>
-            <label class="col-span-2 flex flex-col gap-1.5 font-bold">
-              <span>Dirección <span class="text-noche-suave font-normal">(opcional)</span></span>
-              <input name="direccion" autocomplete="street-address" class={input} />
-            </label>
-            <label class="col-span-2 flex flex-col gap-1.5 font-bold">
-              <span>Mensaje <span class="text-noche-suave font-normal">(opcional)</span></span>
-              <textarea name="mensaje" rows="2" placeholder="Tipo de evento, cantidad de niños, pasto o cemento" class={`${input} resize-y py-3`}></textarea>
-            </label>
+          <!-- 4 · Tus datos -->
+          <div data-paso="datos" data-oculto inert class={capa}>
+            <div>
+              <h3 tabindex="-1" class={tituloPaso}>¿A nombre de quién reservamos?</h3>
+              <p class="text-noche-suave mt-1 text-sm lg:text-base">Te escribimos por WhatsApp para confirmar con el abono de {pesos(ABONO)}</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <label class={caja}>
+                <span class={cajaEtiqueta}>Nombre</span>
+                <input name="nombre" required autocomplete="given-name" placeholder="Camila" class={cajaInput} />
+              </label>
+              <label class={caja}>
+                <span class={cajaEtiqueta}>Apellido</span>
+                <input name="apellido" required autocomplete="family-name" placeholder="Rojas" class={cajaInput} />
+              </label>
+              <label class={`${caja} col-span-2 sm:col-span-1`}>
+                <span class={cajaEtiqueta}>Correo electrónico</span>
+                <input name="email" type="email" required autocomplete="email" inputmode="email" placeholder="nombre@correo.cl" class={cajaInput} />
+              </label>
+              <label class={`${caja} col-span-2 sm:col-span-1`}>
+                <span class={cajaEtiqueta}>Teléfono (WhatsApp)</span>
+                <input name="telefono" type="tel" required autocomplete="tel" inputmode="tel" placeholder="+56 9 1234 5678" class={cajaInput} />
+              </label>
+              <label class={`${caja} col-span-2`}>
+                <span class={cajaEtiqueta}>Empresa <Fragment set:html={opcional} /></span>
+                <input name="empresa" autocomplete="organization" placeholder="Nombre o RUT, para factura" class={cajaInput} />
+              </label>
+              <label class={`${caja} col-span-2`}>
+                <span class={cajaEtiqueta}>Mensaje <Fragment set:html={opcional} /></span>
+                <textarea name="mensaje" rows="2" placeholder="Tipo de evento, cantidad de niños, pasto o cemento" class={`${cajaInput} resize-none`}></textarea>
+              </label>
+            </div>
             <input name="website" hidden tabindex="-1" autocomplete="off" />
-            <p class="text-noche-suave col-span-2 text-xs leading-5">Usamos tus datos solo para responder y coordinar tu evento, según la Ley 19.628 y la Ley 21.719. Más detalles en la <a href="/politica-de-privacidad" class="text-azul-texto underline">política de privacidad</a></p>
-            <div class="col-span-2 min-h-[65px] w-[300px] max-w-full">
+            <p class="text-noche-suave text-xs leading-5">
+              Usamos tus datos solo para coordinar tu evento, según la Ley 19.628 y la Ley 21.719. Más en la <a href="/politica-de-privacidad" class="text-azul-texto underline">política de privacidad</a>
+            </p>
+            <div class="min-h-[65px] w-[300px] max-w-full">
               <Turnstile theme="light" />
             </div>
-            <button
-              type="submit"
-              data-reserva-boton
-              class="bounce bg-rojo-texto border-noche shadow-pop col-span-2 min-h-14 cursor-pointer rounded-full border-2 px-6 text-[17px] leading-[22px] font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60 group-data-[state=sending]:pointer-events-none group-data-[state=sending]:opacity-75"
-            >
-              Elige la hora y tu comuna
-            </button>
-            <p data-reserva-mensaje aria-live="polite" class="text-noche-suave col-span-2 text-sm">
-              Después te escribimos por WhatsApp para confirmar con el abono de {pesos(ABONO)}
-            </p>
-          </form>
+            <p data-reserva-mensaje aria-live="polite" class="text-noche-suave text-sm empty:hidden"></p>
+          </div>
+
+          <!-- Listo -->
+          <div data-paso="listo" data-oculto inert class={`${capa} justify-center`}>
+            <span class="border-noche bg-verde flex size-14 items-center justify-center rounded-full border-2">
+              <Icon name="check" size={30} strokeWidth={3} />
+            </span>
+            <h3 tabindex="-1" class={tituloPaso}>¡Tu horario quedó reservado!</h3>
+            <p data-listo-detalle class="text-noche-suave max-w-[520px]"></p>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <WaButton placement="reserva" size="l" message="Hola, acabo de reservar en saltabum.cl y quiero confirmar con el abono." class="text-center leading-[22px]">
+                Confirmar por WhatsApp
+              </WaButton>
+              <button type="button" data-otra class="text-azul-texto min-h-11 cursor-pointer px-2 font-extrabold underline">Hacer otra reserva</button>
+            </div>
+          </div>
         </div>
 
-        <div data-paso="listo" hidden class="flex flex-col gap-3">
-          <span class="border-noche bg-verde flex size-12 items-center justify-center rounded-full border-2">
-            <Icon name="check" size={26} strokeWidth={3} />
-          </span>
-          <p class="font-display text-[26px] leading-8 font-semibold">¡Tu horario quedó reservado!</p>
-          <p data-listo-detalle class="text-noche-suave"></p>
-          <WaButton placement="reserva" size="l" message="Hola, acabo de reservar en saltabum.cl y quiero confirmar con el abono." class="text-center leading-[22px] lg:self-start">
-            Confirmar por WhatsApp
-          </WaButton>
+        <!-- Pie: total (celular) y navegación. Queda pegado abajo mientras se ve la reserva (por eso el form usa overflow-clip). -->
+        <div data-pie class="border-noche bg-blanco sticky bottom-0 z-10 flex items-center gap-2 border-t-2 px-4 py-3 min-[360px]:gap-3 sm:px-5 lg:px-7 lg:py-4">
+          <button type="button" data-atras hidden class="border-noche bg-crema flex size-12 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border-2 font-extrabold lg:w-auto lg:px-5">
+            <Icon name="flecha" size={20} strokeWidth={2.6} class="rotate-180" />
+            <span class="sr-only lg:not-sr-only">Atrás</span>
+          </button>
+          <div class="min-w-0 flex-1 lg:hidden" aria-live="polite">
+            <p data-mini-detalle class="text-noche-suave truncate text-xs leading-4 font-semibold"></p>
+            <p class="leading-7 whitespace-nowrap"><span class="hidden text-sm font-extrabold min-[360px]:inline">Total </span><span data-mini-total class="font-display text-[22px] font-bold"></span></p>
+          </div>
+          <span class="hidden flex-1 lg:block"></span>
+          <button
+            type="button"
+            data-siguiente
+            disabled
+            class="bounce bg-rojo-texto border-noche shadow-pop flex min-h-13 shrink-0 cursor-pointer items-center gap-2 rounded-full border-2 px-4 text-base font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none min-[360px]:px-5 sm:px-6 lg:text-[17px]"
+          >
+            <!-- En pantallas muy angostas basta con «Continuar»; el paso ya dice qué falta. -->
+            <span data-siguiente-texto class="hidden min-[360px]:inline">Elige un día</span>
+            <span class="min-[360px]:hidden">Continuar</span>
+            <Icon name="flecha" size={18} strokeWidth={2.8} class="hidden min-[360px]:block" />
+          </button>
+          <button
+            type="submit"
+            data-reserva-boton
+            hidden
+            class="bounce bg-rojo-texto border-noche shadow-pop min-h-13 shrink-0 cursor-pointer rounded-full border-2 px-4 text-base font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60 min-[360px]:px-5 group-data-[state=sending]:pointer-events-none group-data-[state=sending]:opacity-75 sm:px-6 lg:text-[17px]"
+          >
+            Reservar
+          </button>
         </div>
       </div>
-    </div>
+
+      <!-- Resumen (escritorio) -->
+      <aside class="border-noche bg-crema hidden min-w-0 flex-col gap-4 border-l-2 p-6 lg:flex xl:p-7" aria-label="Resumen de tu arriendo">
+        <p class="font-display text-2xl leading-8 font-semibold">Tu arriendo</p>
+        <dl class="flex flex-col gap-3">
+          {
+            [
+              { id: "juego", nombre: "Juego", icono: "check" as const, paso: undefined },
+              { id: "fecha", nombre: "Fecha", icono: "calendario" as const, paso: "fecha" },
+              { id: "horario", nombre: "Horario", icono: "puntual" as const, paso: "horario" },
+              { id: "comuna", nombre: "Despacho", icono: "ubicacion" as const, paso: "comuna" },
+            ].map((r) => (
+              <div class="flex items-center gap-3">
+                <span class="border-noche bg-blanco flex size-10 shrink-0 items-center justify-center rounded-full border-2">
+                  <Icon name={r.icono} size={19} />
+                </span>
+                <div class="min-w-0 flex-1">
+                  <dt class="text-noche-suave text-xs font-extrabold tracking-[1px] uppercase">{r.nombre}</dt>
+                  <dd data-res={r.id} class="leading-5 font-bold first-letter:uppercase data-vacio:text-noche-suave/70 data-vacio:font-semibold" />
+                </div>
+                {r.paso && (
+                  <button type="button" data-ir={r.paso} hidden class="text-azul-texto min-h-10 shrink-0 cursor-pointer px-1 text-sm font-extrabold underline">
+                    Cambiar
+                  </button>
+                )}
+              </div>
+            ))
+          }
+        </dl>
+        <dl class="border-noche/20 flex flex-col gap-1.5 border-t-2 border-dashed pt-4 text-[15px]">
+          <div class="flex justify-between gap-3"><dt>Arriendo por {HORAS_BASE} horas</dt><dd data-precio-base class="font-extrabold"></dd></div>
+          <div class="flex justify-between gap-3"><dt data-linea-extra>Horas adicionales</dt><dd data-precio-extra class="font-extrabold"></dd></div>
+          <div class="flex justify-between gap-3"><dt data-linea-despacho>Despacho</dt><dd data-precio-despacho class="font-extrabold"></dd></div>
+          <div class="border-noche/20 mt-1.5 flex items-end justify-between gap-3 border-t-2 border-dashed pt-3">
+            <dt class="font-extrabold">Total</dt>
+            <dd data-precio-total class="font-display text-[32px] leading-9 font-bold"></dd>
+          </div>
+        </dl>
+        <p class="text-noche-suave text-sm">Reservas con {pesos(ABONO)} de abono, que se descuentan del total</p>
+        <WhatsAppLink
+          placement="agenda-ayuda"
+          message="Hola, tengo una duda sobre la reserva en saltabum.cl"
+          class="text-noche mt-auto inline-flex min-h-11 items-center gap-2 text-sm font-extrabold underline"
+        >
+          <Icon name="whatsapp" size={18} />
+          ¿Dudas? Escríbenos por WhatsApp
+        </WhatsAppLink>
+      </aside>
+    </form>
   </div>
 </section>
 
@@ -211,56 +374,136 @@ const titulo = "font-display text-[19px] leading-6 font-semibold";
     pesos,
     VALOR_HORA_EXTRA,
   } from "@/lib/reservas";
+  import { PRODUCTOS } from "../data";
+
+  const ORDEN = ["fecha", "horario", "comuna", "datos"] as const;
+  type Paso = (typeof ORDEN)[number] | "listo";
+  /** Texto del botón «Continuar» mientras falta completar el paso. */
+  const FALTA = { fecha: "Elige un día", horario: "Elige la hora", comuna: "Elige tu comuna" } as const;
 
   const root = document.querySelector<HTMLElement>("[data-agenda]");
   if (root) iniciar(root);
 
   function iniciar(root: HTMLElement) {
     const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
+    const $$ = <T extends Element>(sel: string) => [...root.querySelectorAll<T>(sel)];
+    const form = $<HTMLFormElement>("[data-reserva]");
     const gridDias = $<HTMLElement>("[data-dias]");
     const tituloMes = $<HTMLElement>("[data-mes-titulo]");
     const btnAnterior = $<HTMLButtonElement>("[data-mes-anterior]");
-    const btnSiguiente = $<HTMLButtonElement>("[data-mes-siguiente]");
+    const btnSiguienteMes = $<HTMLButtonElement>("[data-mes-siguiente]");
     const estado = $<HTMLElement>("[data-agenda-estado]");
-    const pasoDia = $<HTMLElement>('[data-paso="dia"]');
-    const pasoArmar = $<HTMLElement>('[data-paso="armar"]');
-    const pasoListo = $<HTMLElement>('[data-paso="listo"]');
-    const tituloDia = $<HTMLElement>("[data-dia-titulo]");
     const gridInicios = $<HTMLElement>("[data-inicios]");
     const resumenInicio = $<HTMLElement>("[data-inicio-resumen]");
-    const textoHoras = $<HTMLElement>("[data-horas]");
-    const textoExtra = $<HTMLElement>("[data-horas-extra]");
     const btnMenos = $<HTMLButtonElement>("[data-menos]");
     const btnMas = $<HTMLButtonElement>("[data-mas]");
-    const selComuna = $<HTMLSelectElement>("[data-comuna]");
-    const form = $<HTMLFormElement>("[data-reserva]");
-    const botonReservar = $<HTMLButtonElement>("[data-reserva-boton]");
+    const btnAtras = $<HTMLButtonElement>("[data-atras]");
+    const btnSiguiente = $<HTMLButtonElement>("[data-siguiente]");
+    const btnReservar = $<HTMLButtonElement>("[data-reserva-boton]");
+    const pie = $<HTMLElement>("[data-pie]");
     const mensaje = $<HTMLElement>("[data-reserva-mensaje]");
-    const mensajeInicial = mensaje.textContent ?? "";
+    const setTexto = (sel: string, txt: string) => $$<HTMLElement>(sel).forEach((el) => (el.textContent = txt));
 
     const fechaLarga = new Intl.DateTimeFormat("es-CL", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+    const fechaCorta = new Intl.DateTimeFormat("es-CL", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
     const nombreMes = new Intl.DateTimeFormat("es-CL", { month: "long", year: "numeric", timeZone: "UTC" });
     const aFecha = (iso: string) => new Date(`${iso}T12:00:00Z`);
     const iso = (d: Date) => d.toISOString().slice(0, 10);
+    const sinPunto = (s: string) => s.replace(/\./g, "");
 
     let disp: Disponibilidad | undefined;
     let mes = ""; // "YYYY-MM"
     let dia: string | undefined;
     let inicio: number | undefined;
     let horas = HORAS_BASE;
-    const producto = () => root.querySelector<HTMLInputElement>("[data-producto]:checked")?.value ?? "megatobogan";
+    let paso: Paso = "fecha";
+
+    const producto = () =>
+      (root.querySelector<HTMLInputElement>("[data-producto]:checked") ?? root.querySelector<HTMLInputElement>("input[type=hidden][data-producto]"))?.value ??
+      PRODUCTOS[0].id;
+    const comuna = () => root.querySelector<HTMLInputElement>("[data-comuna]:checked")?.value;
+    /** Campos de texto de un paso (los que se validan antes de avanzar o reservar). */
+    const camposDe = (p: string) =>
+      $$<HTMLInputElement | HTMLTextAreaElement>(
+        `[data-paso="${p}"] input:not([type=radio]):not([type=hidden]):not([readonly]), [data-paso="${p}"] textarea`,
+      );
+    const validos = (p: string) => camposDe(p).every((c) => c.checkValidity());
+    const completo: Record<(typeof ORDEN)[number], () => boolean> = {
+      fecha: () => !!dia,
+      horario: () => inicio !== undefined,
+      comuna: () => !!comuna() && validos("comuna"),
+      datos: () => false,
+    };
+    /** Si a un paso le falta algo, lo muestra y marca el primer campo pendiente. Devuelve true si está bien. */
+    function revisar(p: "comuna" | "datos"): boolean {
+      const malo = camposDe(p).find((c) => !c.checkValidity());
+      if (!malo) return true;
+      if (paso !== p) irA(p, false);
+      malo.reportValidity();
+      malo.focus();
+      return false;
+    }
+    /** Hasta qué paso se puede llegar: el primero que falta completar. */
+    const alcanzable = () => ORDEN.findIndex((p) => !completo[p]());
 
     /** Horas de inicio libres ese día para el juego y la duración elegidos. */
     const libres = (fecha: string, h = horas) =>
       iniciosPosibles(h).filter((m) => estaLibre(fecha, producto(), m, h, disp?.ocupados ?? []));
 
+    // ── Navegación entre pasos ────────────────────────────────────────────────
+    function irA(destino: Paso, enfocar = true) {
+      paso = destino;
+      $$<HTMLElement>("[data-paso]").forEach((el) => {
+        const activo = el.dataset.paso === destino;
+        el.toggleAttribute("data-oculto", !activo);
+        el.inert = !activo;
+      });
+      // En «listo» el pie se esconde sin perder su alto, para que el bloque no cambie de tamaño.
+      pie.classList.toggle("invisible", destino === "listo");
+      pie.inert = destino === "listo";
+      actualizar();
+      if (!enfocar) return;
+      // Si el usuario avanzó desde el pie y el inicio del bloque quedó fuera de la pantalla, se vuelve arriba.
+      const arriba = form.getBoundingClientRect().top;
+      if (arriba < 60) {
+        const suave = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+        form.scrollIntoView({ behavior: suave ? "smooth" : "auto", block: "start" });
+      }
+      $<HTMLElement>(`[data-paso="${destino}"] h3`).focus({ preventScroll: true });
+    }
+
+    function siguiente() {
+      if (paso === "listo" || paso === "datos") return;
+      if (paso === "comuna" && comuna() && !revisar("comuna")) return;
+      if (!completo[paso]()) return;
+      irA(ORDEN[ORDEN.indexOf(paso) + 1]);
+    }
+
+    // ── Ciudad: se sugiere según la comuna de despacho ───────────────────────
+    const inputCiudad = $<HTMLInputElement>("[data-ciudad]");
+    const listaCiudades = $<HTMLDataListElement>("#agenda-ciudades");
+    let ciudadSugerida = "";
+    function sugerirCiudad() {
+      const radio = root.querySelector<HTMLInputElement>("[data-comuna]:checked");
+      if (!radio) return;
+      const opciones = (radio.dataset.ciudades || radio.value).split("|");
+      listaCiudades.replaceChildren(...opciones.map((o) => Object.assign(document.createElement("option"), { value: o })));
+      inputCiudad.placeholder = `Ej.: ${opciones[0]}`;
+      // Solo se reemplaza si el cliente no escribió otra cosa.
+      if (!inputCiudad.value || inputCiudad.value === ciudadSugerida) {
+        ciudadSugerida = opciones.length === 1 ? opciones[0] : "";
+        inputCiudad.value = ciudadSugerida;
+      }
+    }
+
+    // ── Calendario ────────────────────────────────────────────────────────────
     function pintarMes() {
       if (!disp) return;
       const [y, m] = mes.split("-").map(Number);
       const primero = new Date(Date.UTC(y, m - 1, 1, 12));
       tituloMes.textContent = nombreMes.format(primero);
       btnAnterior.disabled = mes <= disp.desde.slice(0, 7);
-      btnSiguiente.disabled = mes >= disp.hasta.slice(0, 7);
+      btnSiguienteMes.disabled = mes >= disp.hasta.slice(0, 7);
 
       gridDias.replaceChildren();
       const vacios = (primero.getUTCDay() + 6) % 7; // semana parte el lunes
@@ -277,13 +520,12 @@ const titulo = "font-display text-[19px] leading-6 font-semibold";
         // El color del día se calcula con la duración base (3 horas).
         const n = fuera ? 0 : libres(fecha, HORAS_BASE).length;
         const tipo = fuera ? "fuera" : n === 0 ? "lleno" : n < 8 ? "pocos" : "libre";
-        boton.dataset.estado = tipo;
         boton.disabled = tipo === "fuera" || tipo === "lleno";
         boton.setAttribute("aria-pressed", String(fecha === dia));
         const textoEstado = { fuera: "no disponible", lleno: "sin horarios", pocos: "quedan pocos horarios", libre: "con horarios libres" }[tipo];
         boton.setAttribute("aria-label", `${fechaLarga.format(aFecha(fecha))}, ${textoEstado}`);
         boton.className =
-          "min-h-11 cursor-pointer rounded-xl border-2 text-[15px] font-extrabold aria-pressed:bg-noche aria-pressed:text-crema aria-pressed:border-noche aria-pressed:shadow-sol disabled:cursor-not-allowed lg:min-h-13 lg:text-base " +
+          "min-h-11 cursor-pointer rounded-xl border-2 text-[15px] font-extrabold aria-pressed:bg-noche aria-pressed:text-crema aria-pressed:border-noche aria-pressed:shadow-sol disabled:cursor-not-allowed lg:min-h-12 lg:text-base " +
           {
             fuera: "border-transparent text-noche-suave/40",
             lleno: "border-noche/20 bg-arena text-noche-suave line-through",
@@ -297,19 +539,29 @@ const titulo = "font-display text-[19px] leading-6 font-semibold";
 
     function elegirDia(fecha: string) {
       dia = fecha;
-      pasoDia.hidden = true;
-      pasoListo.hidden = true;
-      pasoArmar.hidden = false;
-      tituloDia.textContent = fechaLarga.format(aFecha(fecha));
       gridDias.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.fecha === fecha)));
       pintarInicios();
+      irA("horario");
     }
 
+    function cambiarMes(delta: number) {
+      const [y, m] = mes.split("-").map(Number);
+      mes = iso(new Date(Date.UTC(y, m - 1 + delta, 1, 12))).slice(0, 7);
+      pintarMes();
+    }
+
+    // ── Horario ───────────────────────────────────────────────────────────────
     /** Dibuja las horas de inicio de la duración elegida; las que chocan con otra reserva quedan tachadas. */
     function pintarInicios() {
       if (!dia) return;
       const ok = new Set(libres(dia));
       if (inicio !== undefined && !ok.has(inicio)) inicio = undefined;
+      // Con más horas quedan menos opciones; se rellena con celdas vacías para que el paso no cambie de alto.
+      const relleno = Array.from({ length: iniciosPosibles(HORAS_BASE).length - iniciosPosibles(horas).length }, () => {
+        const vacio = document.createElement("span");
+        vacio.className = "min-h-10 sm:min-h-11";
+        return vacio;
+      });
       gridInicios.replaceChildren(
         ...iniciosPosibles(horas).map((m) => {
           const b = document.createElement("button");
@@ -319,17 +571,18 @@ const titulo = "font-display text-[19px] leading-6 font-semibold";
           b.setAttribute("aria-pressed", String(m === inicio));
           b.setAttribute("aria-label", `${aHora(m)}${b.disabled ? ", ocupado" : ""}`);
           b.className =
-            "border-noche bg-verde-burbuja aria-pressed:bg-noche aria-pressed:text-crema aria-pressed:shadow-sol min-h-11 cursor-pointer rounded-xl border-2 text-[15px] font-extrabold disabled:cursor-not-allowed disabled:border-noche/20 disabled:bg-arena disabled:text-noche-suave disabled:line-through";
+            "border-noche bg-verde-burbuja aria-pressed:bg-noche aria-pressed:text-crema aria-pressed:shadow-sol min-h-10 cursor-pointer rounded-xl border-2 text-[14px] font-extrabold disabled:cursor-not-allowed disabled:border-noche/20 disabled:bg-arena disabled:text-noche-suave disabled:line-through sm:min-h-11 sm:text-[15px]";
           b.addEventListener("click", () => {
             inicio = m;
             pintarInicios();
           });
           return b;
         }),
+        ...relleno,
       );
       if (ok.size === 0) resumenInicio.textContent = "Con esta duración no quedan horarios ese día, prueba con menos horas o con otro día";
       else if (inicio === undefined) resumenInicio.textContent = "Elige a qué hora quieres que esté listo el juego";
-      else resumenInicio.textContent = `De ${etiquetaHorario(inicio, inicio + horas * 60)}`;
+      else resumenInicio.textContent = `Tu juego estará de ${etiquetaHorario(inicio, inicio + horas * 60)}`;
       actualizar();
     }
 
@@ -338,96 +591,194 @@ const titulo = "font-display text-[19px] leading-6 font-semibold";
       pintarInicios();
     }
 
-    /** Duración, desglose del precio y texto del botón. */
+    // ── Resumen, total y botones ──────────────────────────────────────────────
     function actualizar() {
       const extra = horas - HORAS_BASE;
-      textoHoras.textContent = String(horas);
-      textoExtra.textContent = extra ? `${extra} adicional${extra > 1 ? "es" : ""} de ${pesos(VALOR_HORA_EXTRA)}` : "Sin horas adicionales";
+      setTexto("[data-horas]", String(horas));
+      setTexto("[data-horas-extra]", extra ? `+${extra} hora${extra > 1 ? "s" : ""}, ${pesos(extra * VALOR_HORA_EXTRA)}` : "Sin horas extra");
       btnMenos.disabled = horas <= HORAS_BASE;
       btnMas.disabled = horas >= HORAS_BASE + HORAS_EXTRA_MAX;
 
-      const comuna = selComuna.value || undefined;
-      const p = calcularPrecio(producto(), horas, comuna);
-      $<HTMLElement>("[data-precio-base]").textContent = pesos(p.base);
-      $<HTMLElement>("[data-linea-extra]").textContent = extra ? `${extra} hora${extra > 1 ? "s" : ""} adicional${extra > 1 ? "es" : ""}` : "Horas adicionales";
-      $<HTMLElement>("[data-precio-extra]").textContent = extra ? pesos(p.extras) : "$0";
-      $<HTMLElement>("[data-linea-despacho]").textContent = comuna ? `Despacho a ${comuna}` : "Despacho";
-      $<HTMLElement>("[data-precio-despacho]").textContent = comuna ? pesos(p.despacho) : "Elige tu comuna";
-      $<HTMLElement>("[data-precio-total]").textContent = `$${p.total.toLocaleString("es-CL")}`;
+      const c = comuna();
+      const p = calcularPrecio(producto(), horas, c);
+      const horario = inicio !== undefined ? etiquetaHorario(inicio, inicio + horas * 60) : undefined;
+      const res = (id: string, valor: string | undefined, vacio = "Por elegir") =>
+        $$<HTMLElement>(`[data-res="${id}"]`).forEach((el) => {
+          el.textContent = valor ?? vacio;
+          el.toggleAttribute("data-vacio", !valor);
+        });
+      res("juego", `${PRODUCTOS.find((x) => x.id === producto())?.nombre ?? ""}`);
+      res("fecha", dia && fechaLarga.format(aFecha(dia)));
+      res("fecha-corta", dia && sinPunto(fechaCorta.format(aFecha(dia))));
+      res("horario", horario && `${horario} · ${horas} horas`);
+      res("comuna", c && `${c} · ${p.despacho ? pesos(p.despacho) : "gratis"}`);
 
-      const listo = dia && inicio !== undefined && comuna;
-      botonReservar.disabled = !listo;
-      botonReservar.textContent = listo
-        ? `Reservar de ${etiquetaHorario(inicio!, inicio! + horas * 60)}`
-        : inicio === undefined
-          ? "Elige la hora de inicio"
-          : "Elige tu comuna";
+      setTexto("[data-precio-base]", pesos(p.base));
+      setTexto("[data-linea-extra]", extra ? `${extra} hora${extra > 1 ? "s" : ""} adicional${extra > 1 ? "es" : ""}` : "Horas adicionales");
+      setTexto("[data-precio-extra]", extra ? pesos(p.extras) : "$0");
+      setTexto("[data-linea-despacho]", c ? `Despacho a ${c}` : "Despacho");
+      setTexto("[data-precio-despacho]", c ? pesos(p.despacho) : "Por elegir");
+      const total = `$${p.total.toLocaleString("es-CL")}`;
+      setTexto("[data-precio-total]", total);
+      setTexto("[data-mini-total]", total);
+      setTexto(
+        "[data-mini-detalle]",
+        [dia && sinPunto(fechaCorta.format(aFecha(dia))), horario, c].filter(Boolean).join(" · ") || `${horas} horas${c ? "" : " · despacho aparte"}`,
+      );
+
+      // Pasos: el actual, los listos y hasta dónde se puede saltar.
+      const tope = alcanzable();
+      $$<HTMLButtonElement>("[data-stepper] [data-ir]").forEach((b, i) => {
+        const id = b.dataset.ir as Paso;
+        if (id === paso) b.setAttribute("aria-current", "step");
+        else b.removeAttribute("aria-current");
+        b.toggleAttribute("data-hecho", paso === "listo" || completo[id as (typeof ORDEN)[number]]());
+        b.disabled = paso === "listo" || (tope >= 0 && i > tope);
+      });
+      $$<HTMLButtonElement>("aside [data-ir]").forEach((b) => (b.hidden = paso === "listo" || !completo[b.dataset.ir as (typeof ORDEN)[number]]()));
+
+      btnAtras.hidden = paso === "fecha" || paso === "listo";
+      const actual = paso;
+      btnSiguiente.hidden = actual === "datos";
+      btnReservar.hidden = actual !== "datos";
+      if (actual !== "datos" && actual !== "listo") {
+        // En «Lugar» basta la comuna para habilitar el botón; la dirección se revisa al tocarlo.
+        const listo = actual === "comuna" ? !!comuna() : completo[actual]();
+        btnSiguiente.disabled = !listo;
+        $<HTMLElement>("[data-siguiente-texto]").textContent = listo ? "Continuar" : FALTA[actual];
+      }
     }
 
+    // ── Eventos ───────────────────────────────────────────────────────────────
     btnMenos.addEventListener("click", () => cambiarHoras(-1));
     btnMas.addEventListener("click", () => cambiarHoras(1));
-    selComuna.addEventListener("change", actualizar);
-    root.querySelectorAll("[data-producto]").forEach((r) =>
+    btnAnterior.addEventListener("click", () => cambiarMes(-1));
+    btnSiguienteMes.addEventListener("click", () => cambiarMes(1));
+    btnSiguiente.addEventListener("click", siguiente);
+    btnAtras.addEventListener("click", () => {
+      const i = ORDEN.indexOf(paso as (typeof ORDEN)[number]);
+      if (i > 0) irA(ORDEN[i - 1]);
+    });
+    root.addEventListener("click", (e) => {
+      const b = (e.target as Element).closest<HTMLButtonElement>("[data-ir]");
+      if (b && !b.disabled) irA(b.dataset.ir as Paso);
+    });
+    $$<HTMLInputElement>("[data-comuna]").forEach((r) =>
+      r.addEventListener("change", () => {
+        sugerirCiudad();
+        actualizar();
+      }),
+    );
+    // Al escribir la dirección se actualizan los pasos (para poder saltar al siguiente).
+    camposDe("comuna").forEach((c) => c.addEventListener("input", actualizar));
+    $$<HTMLInputElement>("[data-producto]").forEach((r) =>
       r.addEventListener("change", () => {
         pintarMes();
         pintarInicios();
       }),
     );
-
-    btnAnterior.addEventListener("click", () => cambiarMes(-1));
-    btnSiguiente.addEventListener("click", () => cambiarMes(1));
-    function cambiarMes(delta: number) {
-      const [y, m] = mes.split("-").map(Number);
-      mes = iso(new Date(Date.UTC(y, m - 1 + delta, 1, 12))).slice(0, 7);
+    $<HTMLButtonElement>("[data-otra]").addEventListener("click", () => {
+      form.reset();
+      dia = undefined;
+      inicio = undefined;
+      horas = HORAS_BASE;
+      ciudadSugerida = "";
       pintarMes();
-    }
+      irA("fecha");
+    });
+
+    // La sección de despacho puede dejar elegida la comuna antes de llegar aquí.
+    document.addEventListener("saltabum:comuna", (e) => {
+      const nombre = (e as CustomEvent<string>).detail;
+      const radio = $$<HTMLInputElement>("[data-comuna]").find((r) => r.value === nombre);
+      if (radio) {
+        radio.checked = true;
+        sugerirCiudad();
+        actualizar();
+      }
+    });
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const comuna = selComuna.value;
-      if (!dia || inicio === undefined || !comuna || form.dataset.state === "sending") return;
+      const c = comuna();
+      if (!dia || inicio === undefined || !c || form.dataset.state === "sending") return;
+      if (!revisar("comuna") || !revisar("datos")) return;
       form.dataset.state = "sending";
-      botonReservar.disabled = true;
+      btnReservar.disabled = true;
       mensaje.textContent = "Reservando…";
       const data = new FormData(form);
       const txt = (k: string) => (typeof data.get(k) === "string" ? (data.get(k) as string) : undefined);
       const fecha = dia;
       const desde = inicio;
+      const juego = producto();
       const r = await enviarReserva({
         fecha,
-        producto: producto() as never,
+        producto: juego as never,
         inicio: aHora(desde),
         horas,
         nombre: txt("nombre") ?? "",
+        apellido: txt("apellido"),
+        email: txt("email"),
         telefono: txt("telefono") ?? "",
-        comuna,
+        empresa: txt("empresa"),
+        comuna: c,
         direccion: txt("direccion"),
+        depto: txt("depto"),
+        ciudad: txt("ciudad"),
+        region: txt("region"),
         mensaje: txt("mensaje"),
         turnstile_token: txt("cf-turnstile-response"),
         website: txt("website"),
       });
       form.dataset.state = "idle";
+      btnReservar.disabled = false;
       window.turnstile?.reset();
 
       if (r.ok) {
         const fin = desde + horas * 60;
-        disp?.ocupados.push({ fecha, producto: producto(), inicio: desde, fin });
-        const total = calcularPrecio(producto(), horas, comuna).total;
-        root.querySelector("[data-listo-detalle]")!.textContent =
-          `${fechaLarga.format(aFecha(fecha))}, de ${etiquetaHorario(desde, fin)} en ${comuna}, total ${pesos(total)}. Te escribimos por WhatsApp para confirmar con el abono`;
-        pasoArmar.hidden = true;
-        pasoListo.hidden = false;
-        form.reset();
-        inicio = undefined;
-        mensaje.textContent = mensajeInicial;
+        disp?.ocupados.push({ fecha, producto: juego, inicio: desde, fin });
+        const total = calcularPrecio(juego, horas, c).total;
+        const lugar = [txt("direccion"), txt("depto"), txt("ciudad") || c].filter(Boolean).join(", ");
+        const detalle = `${fechaLarga.format(aFecha(fecha))}, de ${etiquetaHorario(desde, fin)} en ${lugar}, total ${pesos(total)}`;
+        $<HTMLElement>("[data-listo-detalle]").textContent = `${detalle}. Te escribimos por WhatsApp para confirmar con el abono`;
+        const textoWhatsapp = `Hola, acabo de reservar en saltabum.cl para el ${detalle}. Quiero confirmar con el abono.`;
+        const wa = $<HTMLAnchorElement>(`[data-paso="listo"] a[data-track]`);
+        const url = new URL(wa.href);
+        url.search = `?text=${encodeURIComponent(textoWhatsapp)}`;
+        wa.href = url.toString();
+        // El resumen queda a la vista hasta que el cliente pida hacer otra reserva.
+        mensaje.textContent = "";
         pintarMes();
+        irA("listo");
+
+        // Página de gracias: el resumen viaja en sessionStorage (nunca en la URL). La breve espera deja salir
+        // los avisos de conversión del navegador antes de cambiar de página.
+        try {
+          sessionStorage.setItem(
+            "saltabum:reserva",
+            JSON.stringify({
+              nombre: txt("nombre")?.split(/\s+/)[0],
+              juego: PRODUCTOS.find((p) => p.id === juego)?.nombre,
+              fecha: fechaLarga.format(aFecha(fecha)),
+              horario: `${etiquetaHorario(desde, fin)} · ${horas} horas`,
+              lugar,
+              total: pesos(total),
+              whatsapp: textoWhatsapp,
+            }),
+          );
+        } catch {
+          // Sin almacenamiento la página de gracias igual funciona, sin el resumen.
+        }
+        setTimeout(() => location.assign("/gracias/"), 450);
         return;
       }
-      actualizar();
       if (r.error === "ocupado") {
-        mensaje.textContent = "Ese horario se acaba de tomar, elige otro";
+        mensaje.textContent = "";
         await recargar();
-        elegirDia(fecha);
+        inicio = undefined;
+        pintarInicios();
+        irA("horario");
+        resumenInicio.textContent = "Ese horario se acaba de tomar, elige otro";
         return;
       }
       mensaje.textContent =
@@ -449,7 +800,31 @@ const titulo = "font-display text-[19px] leading-6 font-semibold";
         estado.textContent = "No pudimos cargar la disponibilidad, escríbenos por WhatsApp";
       }
     }
-    actualizar();
+
+    // ── Disponibilidad en vivo ────────────────────────────────────────────────
+    // Lo que se reserva o bloquea en el panel /admin aparece aquí sin recargar: se vuelve a consultar cada 30 s
+    // mientras la agenda está en pantalla y al volver a la pestaña. Si el horario elegido se tomó, se avisa.
+    let enPantalla = false;
+    new IntersectionObserver(([e]) => (enPantalla = e.isIntersecting)).observe(root);
+    async function refrescar() {
+      if (form.dataset.state === "sending" || paso === "listo") return;
+      const elegido = inicio;
+      await recargar();
+      if (!dia) return;
+      pintarInicios();
+      if (elegido !== undefined && inicio === undefined) {
+        if (paso === "comuna" || paso === "datos") irA("horario");
+        resumenInicio.textContent = "El horario que elegiste se acaba de tomar, elige otro";
+      }
+    }
+    setInterval(() => {
+      if (enPantalla && document.visibilityState === "visible") void refrescar();
+    }, 30_000);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && enPantalla) void refrescar();
+    });
+
+    irA("fecha", false);
     void recargar();
   }
 </script>

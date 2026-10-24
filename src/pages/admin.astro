@@ -1,16 +1,26 @@
 ---
-// Panel interno de reservas: ver reservas, marcar pagos (se informan a Meta como compra), bloquear un día completo
-// o un rango de horas y liberar (cancelar). Acceso con usuario, contraseña y código de verificación (TOTP).
-// La seguridad vive en src/lib/server/admin-auth.ts y los encabezados en public/_headers (/admin).
-// Sin tracking ni banner de cookies, y fuera del sitemap (noindex).
+// Panel interno de Saltabum. Pestañas:
+//   · Reservas: calendario, lista, crear, editar, eliminar, registrar pagos (se informan a Meta como compra) y
+//     bloquear horarios. Se actualiza solo y lo que se cambia aquí se ve al tiro en la agenda de la web.
+//   · Consultas: los mensajes del formulario de contacto (se pueden pasar a reserva).
+//   · Historial: todo lo que pasó con las reservas y consultas, quién lo hizo y qué cambió.
+//   · Códigos QR: escaneos del QR impreso.
+// Acceso con contraseña y código de verificación (TOTP). La seguridad vive en src/lib/server/admin-auth.ts y los
+// encabezados en public/_headers (/admin). Sin tracking ni banner de cookies, y fuera del sitemap (noindex).
 import "@/styles/global.css";
 import Turnstile from "@/components/core/Turnstile.astro";
+import PanelConsultas from "@/components/admin/PanelConsultas.astro";
+import PanelHistorial from "@/components/admin/PanelHistorial.astro";
 import PanelQr from "@/components/admin/PanelQr.astro";
-import { APERTURA, CIERRE, PASO, aHora } from "@/lib/reservas";
+import PanelReservas from "@/components/admin/PanelReservas.astro";
 
-const HORAS: string[] = [];
-for (let m = APERTURA; m <= CIERRE; m += PASO) HORAS.push(aHora(m));
 const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
+const PESTANAS = [
+  ["reservas", "Reservas"],
+  ["consultas", "Consultas"],
+  ["historial", "Historial"],
+  ["qr", "Códigos QR"],
+] as const;
 ---
 
 <!doctype html>
@@ -21,14 +31,18 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
     <meta name="robots" content="noindex, nofollow" />
     <meta name="referrer" content="no-referrer" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <title>Reservas · Saltabum</title>
+    <title>Panel · Saltabum</title>
   </head>
   <body class="bg-crema text-noche">
-    <main class="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 py-8">
+    <main class="mx-auto flex max-w-[1280px] flex-col gap-6 px-4 py-6 lg:py-8">
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <h1 class="font-display text-4xl font-semibold">Reservas</h1>
+        <div class="flex items-center gap-3">
+          <img src="/favicon.svg" alt="" width="40" height="40" class="size-10" />
+          <h1 class="font-display text-3xl font-semibold lg:text-4xl">Panel Saltabum</h1>
+        </div>
         <div data-usuario hidden class="flex items-center gap-3">
           <span class="text-noche-suave text-sm" data-nombre></span>
+          <a href="/" target="_blank" rel="noopener" class="text-azul-texto text-sm font-bold underline">Ver la web</a>
           <button data-salir class="border-noche min-h-11 cursor-pointer rounded-full border-2 px-5 font-extrabold">Cerrar sesión</button>
         </div>
       </div>
@@ -85,78 +99,45 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
         </div>
       </section>
 
-      <section data-panel hidden class="flex flex-col gap-6">
-        <form data-bloqueo class="border-noche bg-blanco grid gap-3 rounded-[20px] border-2 p-5 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
-          <label class="flex flex-col gap-1.5 font-bold">
-            Fecha
-            <input name="fecha" type="date" required class="border-noche min-h-12 rounded-xl border-2 px-3" />
-          </label>
-          <label class="flex flex-col gap-1.5 font-bold">
-            Desde
-            <select name="desde" class="border-noche min-h-12 rounded-xl border-2 px-3">
-              <option value="">Todo el día</option>
-              {HORAS.map((h) => <option>{h}</option>)}
-            </select>
-          </label>
-          <label class="flex flex-col gap-1.5 font-bold">
-            Hasta
-            <select name="hasta" class="border-noche min-h-12 rounded-xl border-2 px-3">
-              <option value="">Todo el día</option>
-              {HORAS.map((h) => <option>{h}</option>)}
-            </select>
-          </label>
-          <button class="bg-rojo-texto min-h-12 cursor-pointer rounded-full px-5 font-extrabold text-white">Bloquear</button>
-        </form>
-        <p data-estado class="text-noche-suave text-sm" aria-live="polite"></p>
-        <div class="border-noche bg-blanco overflow-x-auto rounded-[20px] border-2">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-arena">
-              <tr>
-                <th class="p-3">Fecha</th><th class="p-3">Horario</th><th class="p-3">Estado</th><th class="p-3">Cliente</th>
-                <th class="p-3">Comuna y dirección</th><th class="p-3">Total</th><th class="p-3">Pago</th><th class="p-3"></th>
-              </tr>
-            </thead>
-            <tbody data-filas></tbody>
-          </table>
-        </div>
-        <p class="text-noche-suave text-xs">
-          Al marcar una reserva como pagada se informa a Meta como venta, para medir qué anuncios traen clientes reales.
-          La sesión se cierra sola tras 2 horas sin uso.
-        </p>
-      </section>
-
-      <PanelQr />
+      <div data-panel hidden class="flex flex-col gap-6">
+        <nav role="tablist" aria-label="Secciones del panel" class="border-noche bg-blanco flex w-fit max-w-full overflow-x-auto rounded-full border-2 p-1">
+          {
+            PESTANAS.map(([id, nombre], i) => (
+              <button
+                type="button"
+                role="tab"
+                id={`pestana-${id}`}
+                aria-controls={`panel-${id}`}
+                aria-selected={i === 0 ? "true" : "false"}
+                data-pestana={id}
+                class="aria-selected:bg-noche aria-selected:text-crema min-h-10 cursor-pointer rounded-full px-5 font-extrabold whitespace-nowrap"
+              >
+                {nombre}
+                {id === "consultas" && (
+                  <span data-contador="consultas" hidden class="bg-rojo-texto ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs leading-5 text-white" />
+                )}
+              </button>
+            ))
+          }
+        </nav>
+        <div id="panel-reservas" role="tabpanel" aria-labelledby="pestana-reservas" data-pestana-panel="reservas"><PanelReservas /></div>
+        <div id="panel-consultas" role="tabpanel" aria-labelledby="pestana-consultas" data-pestana-panel="consultas" hidden><PanelConsultas /></div>
+        <div id="panel-historial" role="tabpanel" aria-labelledby="pestana-historial" data-pestana-panel="historial" hidden><PanelHistorial /></div>
+        <div id="panel-qr" role="tabpanel" aria-labelledby="pestana-qr" data-pestana-panel="qr" hidden><PanelQr /></div>
+      </div>
     </main>
 
-    <script>
-      import { etiquetaHorario, pesos } from "@/lib/reservas";
+    <!-- Aviso flotante común a todas las pestañas -->
+    <p data-aviso-panel hidden role="status" class="bg-noche text-crema shadow-pop fixed right-4 bottom-4 z-50 max-w-[360px] rounded-2xl px-4 py-3 text-sm font-bold"></p>
 
-      type Fila = {
-        id: number;
-        fecha: string;
-        producto: string;
-        inicio: number;
-        fin: number;
-        total: number | null;
-        estado: string;
-        nombre: string | null;
-        telefono: string | null;
-        comuna: string | null;
-        direccion: string | null;
-        mensaje: string | null;
-        pagado: number | null;
-        pagado_en: string | null;
-        pagado_por: string | null;
-      };
+    <script>
       const $ = <T extends HTMLElement>(s: string) => document.querySelector<T>(s)!;
       const login = $<HTMLFormElement>("[data-login]");
       const errorLogin = $("[data-error]");
       const panel = $("[data-panel]");
-      const filas = $("[data-filas]");
-      const estado = $("[data-estado]");
-      const bloqueo = $<HTMLFormElement>("[data-bloqueo]");
       const cajaUsuario = $("[data-usuario]");
-      const fechaLarga = new Intl.DateTimeFormat("es-CL", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+      const configurar = $("[data-configurar]");
+      const campoCodigo = $("[data-campo-codigo]");
 
       // Encabezado propio: un sitio ajeno no puede enviarlo (defensa CSRF junto con SameSite=Strict y el origen).
       const api = (ruta: string, init?: RequestInit) =>
@@ -166,83 +147,38 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
           headers: { "x-saltabum-admin": "1", "content-type": "application/json" },
         });
 
-      const configurar = $("[data-configurar]");
-      const campoCodigo = $("[data-campo-codigo]");
-
       function mostrarLogin(mensaje = "") {
+        const estabaAbierto = !panel.hidden;
         panel.hidden = true;
         cajaUsuario.hidden = true;
         configurar.hidden = true;
         login.hidden = false;
         errorLogin.textContent = mensaje;
-        filas.replaceChildren();
-        document.dispatchEvent(new Event("panel:cerrado"));
+        if (estabaAbierto) document.dispatchEvent(new Event("panel:cerrado"));
       }
 
-      function celda(texto: string) {
-        const td = document.createElement("td");
-        td.className = "p-3";
-        td.textContent = texto;
-        return td;
+      // ── Pestañas ──────────────────────────────────────────────────────────
+      function abrirPestana(id: string) {
+        document.querySelectorAll<HTMLElement>("[data-pestana]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.pestana === id)));
+        document.querySelectorAll<HTMLElement>("[data-pestana-panel]").forEach((p) => (p.hidden = p.dataset.pestanaPanel !== id));
+        history.replaceState(null, "", id === "reservas" ? location.pathname : `#${id}`);
+        document.dispatchEvent(new CustomEvent("panel:pestana", { detail: id }));
       }
+      document.querySelectorAll<HTMLElement>("[data-pestana]").forEach((b) => b.addEventListener("click", () => abrirPestana(b.dataset.pestana!)));
+      // Flechas izquierda/derecha entre pestañas.
+      $("[role=tablist]").addEventListener("keydown", (e) => {
+        if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+        const tabs = [...document.querySelectorAll<HTMLElement>("[data-pestana]")];
+        const i = tabs.findIndex((t) => t.getAttribute("aria-selected") === "true");
+        const sig = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+        sig.focus();
+        abrirPestana(sig.dataset.pestana!);
+      });
 
-      function boton(texto: string, clase: string, accion: () => void) {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = `cursor-pointer font-bold underline ${clase}`;
-        b.textContent = texto;
-        b.addEventListener("click", accion);
-        return b;
-      }
-
-      async function enviar(datos: Record<string, unknown>) {
-        const res = await api("/api/admin/reservas", { method: "POST", body: JSON.stringify(datos) });
-        if (res.status === 401) mostrarLogin("Tu sesión expiró, vuelve a ingresar");
-        return res;
-      }
-
-      function celdaPago(f: Fila) {
-        const td = celda("");
-        if (f.estado !== "reservado") return td;
-        if (f.pagado) {
-          td.textContent = `Pagada ${pesos(f.pagado)}`;
-          td.title = `Por ${f.pagado_por ?? "?"} el ${f.pagado_en ? new Date(f.pagado_en).toLocaleString("es-CL") : "?"}`;
-          td.classList.add("font-bold");
-          return td;
-        }
-        td.append(
-          boton("Marcar pagada", "text-azul-texto", () => {
-            // Pide el monto en la misma celda (abono o total), sin ventanas emergentes.
-            const input = document.createElement("input");
-            input.type = "number";
-            input.min = "1000";
-            input.step = "10";
-            input.value = String(f.total ?? 20000);
-            input.className = "border-noche w-28 rounded-lg border-2 px-2 py-1";
-            input.setAttribute("aria-label", "Monto pagado en pesos");
-            const ok = boton("Confirmar", "text-azul-texto ml-2", async () => {
-              const monto = Math.round(Number(input.value));
-              if (!(monto >= 1000)) return void (estado.textContent = "Escribe el monto pagado en pesos");
-              ok.disabled = true;
-              const res = await enviar({ accion: "pagada", id: f.id, monto });
-              const data = (await res.json().catch(() => ({}))) as { meta?: string };
-              estado.textContent = res.ok
-                ? data.meta === "enviada"
-                  ? "Pago guardado y enviado a Meta"
-                  : "Pago guardado (Meta no está configurado o no respondió)"
-                : "No se pudo guardar el pago";
-              void cargar();
-            });
-            const cancelar = boton("Cancelar", "text-noche-suave ml-2", () => void cargar());
-            td.replaceChildren(input, ok, cancelar);
-            input.focus();
-          }),
-        );
-        return td;
-      }
-
+      // ── Sesión ────────────────────────────────────────────────────────────
       async function cargar() {
-        const res = await api("/api/admin/reservas");
+        const res = await api("/api/admin/reservas").catch(() => null);
+        if (!res) return mostrarLogin("Sin conexión con el panel");
         if (res.status === 401) return mostrarLogin();
         if (res.status === 503) {
           // Sin contraseña cargada: se muestra el asistente para crearla.
@@ -252,41 +188,39 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
           return;
         }
         if (!res.ok) return mostrarLogin("No se pudo cargar el panel");
-        const { filas: datos, usuario } = (await res.json()) as { filas: Fila[]; usuario: string };
-        // La sección de los QR (PanelQr) carga sus datos cuando hay sesión.
-        if (panel.hidden) document.dispatchEvent(new Event("panel:listo"));
+        const datos = (await res.json()) as { usuario: string };
         login.hidden = true;
         login.reset();
+        campoCodigo.hidden = true;
         panel.hidden = false;
         cajaUsuario.hidden = false;
-        $("[data-nombre]").textContent = `Sesión de ${usuario}`;
-        filas.replaceChildren(
-          ...datos.map((f) => {
-            const tr = document.createElement("tr");
-            tr.className = "border-noche/10 border-t align-top";
-            tr.append(
-              celda(fechaLarga.format(new Date(`${f.fecha}T12:00:00Z`))),
-              celda(f.inicio === 0 && f.fin === 24 * 60 ? "Todo el día" : etiquetaHorario(f.inicio, f.fin)),
-              celda(f.estado === "reservado" ? "Reservado" : "Bloqueado"),
-              celda([f.nombre, f.telefono, f.mensaje].filter(Boolean).join(" · ")),
-              celda([f.comuna, f.direccion].filter(Boolean).join(", ")),
-              celda(f.total ? pesos(f.total) : ""),
-              celdaPago(f),
-            );
-            const td = celda("");
-            td.append(
-              boton(f.estado === "reservado" ? "Cancelar" : "Liberar", "text-rojo-texto", async () => {
-                if (f.estado === "reservado" && !confirm(`¿Cancelar la reserva de ${f.nombre ?? "este cliente"}?`)) return;
-                await enviar({ accion: "liberar", id: f.id });
-                void cargar();
-              }),
-            );
-            tr.append(td);
-            return tr;
-          }),
-        );
-        if (!datos.length) estado.textContent = "No hay reservas ni bloqueos desde hoy";
+        $("[data-nombre]").textContent = `Sesión de ${datos.usuario}`;
+        // Las pestañas cargan sus datos con este aviso (Reservas recibe estos mismos datos).
+        document.dispatchEvent(new CustomEvent("panel:listo", { detail: datos }));
+        abrirPestana(["consultas", "historial", "qr"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "reservas");
       }
+
+      document.addEventListener("panel:sin-sesion", () => mostrarLogin("Tu sesión expiró, vuelve a ingresar"));
+      document.addEventListener("panel:abrir-pestana", (e) => abrirPestana((e as CustomEvent<string>).detail));
+
+      // Contador de pendientes en una pestaña (ej. consultas nuevas).
+      document.addEventListener("panel:contador", (e) => {
+        const { pestana, n } = (e as CustomEvent<{ pestana: string; n: number }>).detail;
+        const contador = document.querySelector<HTMLElement>(`[data-contador="${pestana}"]`);
+        if (!contador) return;
+        contador.textContent = String(n);
+        contador.hidden = n === 0;
+      });
+
+      // Aviso flotante (lo piden las pestañas con el evento «panel:aviso»).
+      const aviso = $("[data-aviso-panel]");
+      let temporizador: ReturnType<typeof setTimeout> | undefined;
+      document.addEventListener("panel:aviso", (e) => {
+        aviso.textContent = (e as CustomEvent<string>).detail;
+        aviso.hidden = false;
+        clearTimeout(temporizador);
+        temporizador = setTimeout(() => (aviso.hidden = true), 6000);
+      });
 
       login.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -327,16 +261,7 @@ const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
         mostrarLogin("Sesión cerrada");
       });
 
-      bloqueo.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const data = new FormData(bloqueo);
-        const desde = String(data.get("desde") ?? "");
-        const hasta = String(data.get("hasta") ?? "");
-        const res = await enviar({ accion: "bloquear", fecha: data.get("fecha"), ...(desde && hasta ? { desde, hasta } : {}) });
-        estado.textContent = res.ok ? "Bloqueado" : "No se pudo guardar (revisa que «hasta» sea después de «desde»)";
-        void cargar();
-      });
-
+      // ── Crear contraseña ──────────────────────────────────────────────────
       // Genera la línea del secreto ADMIN_USUARIOS en el navegador (PBKDF2-SHA256, 100.000 iteraciones, sal aleatoria).
       const crear = $<HTMLFormElement>("[data-crear]");
       crear.addEventListener("submit", async (e) => {

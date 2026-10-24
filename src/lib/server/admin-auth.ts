@@ -99,7 +99,13 @@ async function verificarTotp(secreto: string, codigo: string): Promise<number | 
 let tablas: Promise<unknown> | undefined;
 async function db() {
   const d = await baseReservas();
-  tablas ??= d.batch([
+  tablas ??= crearTablas(d);
+  await tablas;
+  return d;
+}
+
+async function crearTablas(d: Awaited<ReturnType<typeof baseReservas>>) {
+  await d.batch([
     d.prepare(`CREATE TABLE IF NOT EXISTS admin_sesiones (
       id_hash TEXT PRIMARY KEY, usuario TEXT NOT NULL, creado INTEGER NOT NULL, ultimo INTEGER NOT NULL, ip_hash TEXT, ua_hash TEXT)`),
     d.prepare(`CREATE TABLE IF NOT EXISTS admin_intentos (
@@ -109,18 +115,57 @@ async function db() {
     d.prepare(`CREATE TABLE IF NOT EXISTS admin_auditoria (
       id INTEGER PRIMARY KEY AUTOINCREMENT, creado TEXT NOT NULL, usuario TEXT, accion TEXT NOT NULL, detalle TEXT, ip_hash TEXT)`),
   ]);
-  await tablas;
-  return d;
+  // Columnas del historial de reservas (agregadas después; ALTER falla si ya existen y se ignora).
+  for (const c of ["reserva_id INTEGER", "antes TEXT", "despues TEXT"]) {
+    await d.prepare(`ALTER TABLE admin_auditoria ADD COLUMN ${c}`).run().catch(() => undefined);
+  }
 }
 
 const huellaIp = (request: Request) => sha256Hex(`admin:${request.headers.get("cf-connecting-ip") ?? "local"}`);
 
-export async function auditar(request: Request, usuario: string | null, accion: string, detalle?: string): Promise<void> {
+/** Cambio sobre una reserva o consulta: cuál es y cómo estaba antes y después (se guardan como JSON en el historial). */
+export interface CambioReserva {
+  /** Id de la reserva (o de la consulta, en las acciones «consulta_…»). */
+  reservaId?: number;
+  antes?: unknown;
+  despues?: unknown;
+}
+
+/** Registra una acción en el historial. `usuario` null = la hizo un cliente desde la web. */
+export async function auditar(
+  request: Request,
+  usuario: string | null,
+  accion: string,
+  detalle?: string,
+  cambio: CambioReserva = {},
+): Promise<void> {
   const d = await db();
+  const json = (v: unknown) => (v === undefined ? null : JSON.stringify(v));
   await d
-    .prepare("INSERT INTO admin_auditoria (creado, usuario, accion, detalle, ip_hash) VALUES (?, ?, ?, ?, ?)")
-    .bind(new Date().toISOString(), usuario, accion, detalle ?? null, await huellaIp(request))
+    .prepare("INSERT INTO admin_auditoria (creado, usuario, accion, detalle, ip_hash, reserva_id, antes, despues) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+    .bind(new Date().toISOString(), usuario, accion, detalle ?? null, await huellaIp(request), cambio.reservaId ?? null, json(cambio.antes), json(cambio.despues))
     .run();
+}
+
+export interface EventoHistorial {
+  id: number;
+  creado: string;
+  usuario: string | null;
+  accion: string;
+  detalle: string | null;
+  reserva_id: number | null;
+  antes: string | null;
+  despues: string | null;
+}
+
+/** Últimos eventos del historial, del más nuevo al más antiguo (sin huellas de IP). */
+export async function listarHistorial(limite: number): Promise<EventoHistorial[]> {
+  const d = await db();
+  const { results } = await d
+    .prepare("SELECT id, creado, usuario, accion, detalle, reserva_id, antes, despues FROM admin_auditoria ORDER BY id DESC LIMIT ?")
+    .bind(limite)
+    .all<EventoHistorial>();
+  return results;
 }
 
 // ---------- Defensa CSRF ----------

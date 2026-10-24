@@ -10,10 +10,11 @@ import {
   TURNSTILE_SECRET_KEY,
 } from "astro:env/server";
 import { PRODUCTOS } from "@design/data";
-import { aMinutos, calcularPrecio, etiquetaHorario, pesos, rangoReservable, reservaSchema } from "@/lib/reservas";
+import { aMinutos, calcularPrecio, etiquetaHorario, pesos, rangoReservable, REGION, reservaSchema } from "@/lib/reservas";
 import { sendToCrm } from "@/lib/server/crm";
 import { sha256Hex } from "@/lib/server/crypto";
 import { buildFbc, sendMetaEvent } from "@/lib/server/meta-capi";
+import { auditar } from "@/lib/server/admin-auth";
 import { crearReserva, reservasRecientes } from "@/lib/server/reservas-db";
 import { verifyTurnstile } from "@/lib/server/turnstile";
 
@@ -71,30 +72,47 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   // Huella de la IP (no se guarda la IP) para limitar reservas en serie.
   const ipHash = ip ? await sha256Hex(`reservas:${ip}`) : null;
 
-  let tomado: boolean;
+  const datos = {
+    fecha: r.fecha,
+    producto: r.producto,
+    inicio,
+    fin,
+    total: precio.total,
+    nombre: r.nombre,
+    apellido: r.apellido ?? null,
+    email: r.email ?? null,
+    telefono: r.telefono,
+    empresa: r.empresa ?? null,
+    comuna: r.comuna,
+    direccion: r.direccion ?? null,
+    depto: r.depto ?? null,
+    ciudad: r.ciudad ?? null,
+    region: r.region ?? REGION,
+    mensaje: r.mensaje ?? null,
+    notas: null,
+  };
+  let id: number | null;
   try {
     if (ipHash && (await reservasRecientes(ipHash)) >= MAX_RESERVAS_POR_IP) {
       return json(429, { ok: false, error: "limite" });
     }
-    tomado = await crearReserva({
-      fecha: r.fecha,
-      producto: r.producto,
-      inicio,
-      fin,
-      total: precio.total,
-      nombre: r.nombre,
-      telefono: r.telefono,
-      comuna: r.comuna,
-      direccion: r.direccion ?? null,
-      mensaje: r.mensaje ?? null,
-    }, ipHash, r.consent
-      ? { fbp: cookies.get("_fbp")?.value ?? null, fbc: buildFbc(cookies.get("_fbc")?.value, r.attribution?.fbclid) ?? null }
-      : undefined);
+    id = await crearReserva(datos, {
+      origen: "web",
+      ipHash,
+      medicion: r.consent
+        ? { fbp: cookies.get("_fbp")?.value ?? null, fbc: buildFbc(cookies.get("_fbc")?.value, r.attribution?.fbclid) ?? null }
+        : undefined,
+    });
   } catch (err) {
     console.error("[reservas] D1:", String(err));
     return json(503, { ok: false, error: "db" });
   }
-  if (!tomado) return json(409, { ok: false, error: "ocupado" });
+  if (id === null) return json(409, { ok: false, error: "ocupado" });
+
+  // Historial del panel /admin. Si falla, la reserva igual queda guardada.
+  await auditar(request, null, "reserva_web", `${r.fecha} ${etiquetaHorario(inicio, fin)} · ${r.nombre}`, { reservaId: id, despues: datos }).catch((err) =>
+    console.error("[reservas] historial:", String(err)),
+  );
 
   // Lead a Meta Conversions API con el mismo event_id que dispara el Pixel en el navegador.
   if (r.consent && PUBLIC_META_PIXEL_ID && META_CAPI_ACCESS_TOKEN) {
@@ -106,7 +124,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       eventId: r.event_id,
       eventSourceUrl: r.page_url,
       phone: r.telefono,
+      email: r.email,
       firstName: r.nombre,
+      lastName: r.apellido,
+      city: r.ciudad ?? r.comuna,
       ip,
       userAgent: request.headers.get("user-agent") ?? undefined,
       fbp: cookies.get("_fbp")?.value,
@@ -123,7 +144,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       created_at: new Date().toISOString(),
       source: "saltabum.cl",
       form_name: "reserva",
-      contact: { nombre: r.nombre, telefono: r.telefono, mensaje: r.mensaje },
+      contact: {
+        nombre: [r.nombre, r.apellido].filter(Boolean).join(" "),
+        telefono: r.telefono,
+        email: r.email,
+        mensaje: r.mensaje,
+      },
       extra: {
         fecha: r.fecha,
         horario: etiquetaHorario(inicio, fin),
@@ -133,6 +159,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         despacho: pesos(precio.despacho),
         total: pesos(precio.total),
         ...(r.direccion ? { direccion: r.direccion } : {}),
+        ...(r.depto ? { depto: r.depto } : {}),
+        ...(r.ciudad ? { ciudad: r.ciudad } : {}),
+        region: r.region ?? REGION,
+        ...(r.empresa ? { empresa: r.empresa } : {}),
       },
       attribution: r.attribution,
       context: {

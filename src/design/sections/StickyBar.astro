@@ -1,5 +1,5 @@
 ---
-// Barra fija inferior (solo mobile). Se esconde mientras el formulario de contacto está en pantalla.
+// Barra fija inferior (solo mobile). Se esconde mientras el formulario de contacto o la reserva están en pantalla.
 import { PUBLIC_WHATSAPP_NUMBER } from "astro:env/client";
 import Icon from "../components/Icon.astro";
 import WaButton from "../components/WaButton.astro";
@@ -27,11 +27,18 @@ const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
 </nav>
 
 <script>
+  // Se esconde mientras un formulario (contacto o reserva) está en pantalla, para no tapar sus botones.
   const bar = document.querySelector<HTMLElement>("[data-sticky-bar]");
-  const form = document.querySelector("[data-lead-form]");
-  if (bar && form) {
-    new IntersectionObserver(([entry]) => bar.toggleAttribute("data-oculta", entry.isIntersecting), {
-      threshold: 0.15,
-    }).observe(form);
+  const forms = document.querySelectorAll("[data-lead-form], [data-reserva]");
+  if (bar && forms.length) {
+    const visibles = new Set<Element>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => (e.isIntersecting ? visibles.add(e.target) : visibles.delete(e.target)));
+        bar.toggleAttribute("data-oculta", visibles.size > 0);
+      },
+      { threshold: 0.15 },
+    );
+    forms.forEach((f) => observer.observe(f));
   }
 </script>

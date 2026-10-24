@@ -32,6 +32,10 @@ export type Comuna = {
   tono: "gratis" | "pago" | "convenir";
   /** Valor del despacho en pesos (lo usa la agenda para calcular el total). */
   despacho: number;
+  /** Comunas del mapa de despacho que cubre esta opción (nombres de OpenStreetMap). Por defecto, `nombre`. */
+  mapa?: string[];
+  /** Ciudades o localidades que se sugieren al reservar (ej. Quintay está en la comuna de Casablanca). Por defecto, `mapa`. */
+  ciudades?: string[];
 };
 
 // Ordenadas por la costa, de norte a sur y hacia el interior.
@@ -39,10 +43,35 @@ export const COMUNAS: Comuna[] = [
   { nombre: "Concón", zonas: "Costa de Montemar e Higuerillas", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago", despacho: 5000 },
   { nombre: "Viña del Mar", zonas: "Reñaca, Jardín del Mar, Forestal", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis", despacho: 0 },
   { nombre: "Valparaíso", zonas: "Nuestra base, Curauma y Placilla", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis", despacho: 0 },
+  {
+    nombre: "Casablanca / Quintay",
+    zonas: "Casablanca, Quintay y sus parcelas",
+    precio: "+$10.000",
+    titulo: "+$10.000 de despacho",
+    tono: "pago",
+    despacho: 10000,
+    mapa: ["Casablanca"],
+    ciudades: ["Casablanca", "Quintay"],
+  },
   { nombre: "Quilpué", zonas: "Todo Quilpué", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago", despacho: 5000 },
   { nombre: "Villa Alemana", zonas: "Toda Villa Alemana", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago", despacho: 5000 },
-  { nombre: "Limache / Olmué", zonas: "Todo Limache y Olmué", precio: "+$7.000", titulo: "+$7.000 de despacho", tono: "pago", despacho: 7000 },
+  { nombre: "Limache / Olmué", zonas: "Todo Limache y Olmué", precio: "+$7.000", titulo: "+$7.000 de despacho", tono: "pago", despacho: 7000, mapa: ["Limache", "Olmué"] },
 ];
+
+/** Cada valor de despacho distinto (de menor a mayor) con su color en el mapa de despacho y la leyenda. */
+const COLORES_TRAMO = ["verde", "sol", "naranja", "rosa", "morado"] as const;
+export type ColorTramo = (typeof COLORES_TRAMO)[number];
+export const TRAMOS = [...new Set(COMUNAS.map((c) => c.despacho))]
+  .sort((a, b) => a - b)
+  .map((despacho, i) => ({ despacho, color: COLORES_TRAMO[Math.min(i, COLORES_TRAMO.length - 1)] }));
+export const colorTramo = (despacho: number): ColorTramo => TRAMOS.find((t) => t.despacho === despacho)?.color ?? "sol";
+export const BG_TRAMO: Record<ColorTramo, string> = {
+  verde: "bg-verde",
+  sol: "bg-sol",
+  naranja: "bg-naranja",
+  rosa: "bg-rosa",
+  morado: "bg-morado",
+};
 
 export const TONO_BG: Record<Comuna["tono"], string> = {
   gratis: "bg-verde",

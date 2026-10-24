@@ -1,0 +1,188 @@
+---
+// Pestaña «Historial» del panel /admin: todo lo que pasó con las reservas (desde la web o el panel), con quién lo
+// hizo, cuándo y qué cambió. También puede mostrar los ingresos al panel. Se carga al abrir la pestaña
+// (evento «panel:pestana» con «historial») y se actualiza cada minuto mientras está abierta.
+const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
+---
+
+<section data-historial-panel class="flex flex-col gap-4">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h2 class="font-display text-3xl font-semibold">Historial</h2>
+      <p class="text-noche-suave text-sm">Reservas y consultas desde la web, cambios del equipo, pagos y bloqueos, del más nuevo al más antiguo</p>
+    </div>
+    <div class="flex flex-wrap items-end gap-2">
+      <label class="flex flex-col gap-1 text-sm font-bold">
+        Mostrar
+        <select data-historial-tipo class={campo}>
+          <option value="reservas">Reservas y consultas</option>
+          <option value="todo">Todo (con ingresos al panel)</option>
+        </select>
+      </label>
+      <input data-historial-buscar type="search" placeholder="Buscar cliente o fecha…" class={`${campo} w-[240px]`} />
+      <button type="button" data-historial-actualizar class="border-noche bg-blanco min-h-11 cursor-pointer rounded-full border-2 px-5 font-extrabold">Actualizar</button>
+    </div>
+  </div>
+  <p data-historial-estado class="text-noche-suave text-sm" aria-live="polite"></p>
+  <ol data-historial-lista class="flex flex-col gap-2"></ol>
+</section>
+
+<script>
+  import { aHora, pesos } from "@/lib/reservas";
+
+  type Evento = {
+    id: number;
+    creado: string;
+    usuario: string | null;
+    accion: string;
+    detalle: string | null;
+    reserva_id: number | null;
+    antes: string | null;
+    despues: string | null;
+  };
+
+  const root = document.querySelector<HTMLElement>("[data-historial-panel]")!;
+  const lista = root.querySelector<HTMLElement>("[data-historial-lista]")!;
+  const estado = root.querySelector<HTMLElement>("[data-historial-estado]")!;
+  const tipo = root.querySelector<HTMLSelectElement>("[data-historial-tipo]")!;
+  const buscar = root.querySelector<HTMLInputElement>("[data-historial-buscar]")!;
+  const fechaHora = new Intl.DateTimeFormat("es-CL", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const fechaCorta = new Intl.DateTimeFormat("es-CL", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  /** «2026-11-14 10:00 a 14:00 · …» → «sáb, 14 nov 2026 10:00 a 14:00 · …» */
+  const conFecha = (t: string) => t.replace(/^(\d{4}-\d{2}-\d{2})/, (f) => fechaCorta.format(new Date(`${f}T12:00:00Z`)));
+
+  const ACCIONES: Record<string, { nombre: string; color: string; reserva: boolean }> = {
+    reserva_web: { nombre: "Reserva desde la web", color: "bg-sol", reserva: true },
+    reserva_creada: { nombre: "Reserva creada", color: "bg-verde-burbuja", reserva: true },
+    reserva_editada: { nombre: "Reserva editada", color: "bg-celeste", reserva: true },
+    reserva_eliminada: { nombre: "Reserva eliminada", color: "bg-rojo-suave", reserva: true },
+    pagada: { nombre: "Pago registrado", color: "bg-verde", reserva: true },
+    bloquear: { nombre: "Horario bloqueado", color: "bg-arena", reserva: true },
+    liberar: { nombre: "Bloqueo liberado", color: "bg-arena", reserva: true },
+    consulta_web: { nombre: "Consulta desde la web", color: "bg-sol", reserva: true },
+    consulta_estado: { nombre: "Consulta actualizada", color: "bg-celeste", reserva: true },
+    consulta_notas: { nombre: "Nota en consulta", color: "bg-celeste", reserva: true },
+    consulta_eliminada: { nombre: "Consulta eliminada", color: "bg-rojo-suave", reserva: true },
+    ingreso: { nombre: "Ingreso al panel", color: "bg-crema", reserva: false },
+    salida: { nombre: "Salida del panel", color: "bg-crema", reserva: false },
+    ingreso_fallido: { nombre: "Ingreso fallido", color: "bg-rojo-suave", reserva: false },
+    ingreso_bloqueado: { nombre: "Ingreso bloqueado", color: "bg-rojo-suave", reserva: false },
+  };
+
+  const CAMPOS: Record<string, string> = {
+    fecha: "Fecha",
+    inicio: "Inicio",
+    fin: "Término",
+    producto: "Juego",
+    total: "Total",
+    nombre: "Nombre",
+    apellido: "Apellido",
+    telefono: "Teléfono",
+    email: "Correo",
+    empresa: "Empresa",
+    comuna: "Comuna",
+    direccion: "Dirección",
+    depto: "Casa/depto",
+    ciudad: "Ciudad",
+    region: "Región",
+    mensaje: "Mensaje",
+    notas: "Notas",
+    pagado: "Pagado",
+    estado: "Estado",
+  };
+
+  const valor = (campo: string, v: unknown): string => {
+    if (v === null || v === undefined || v === "") return "—";
+    if ((campo === "inicio" || campo === "fin") && typeof v === "number") return aHora(v);
+    if (campo === "fecha" && typeof v === "string") return conFecha(v);
+    if ((campo === "total" || campo === "pagado") && typeof v === "number") return pesos(v);
+    return String(v);
+  };
+  const leer = (s: string | null) => {
+    try {
+      return s ? (JSON.parse(s) as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  let eventos: Evento[] = [];
+  let abierta = false;
+
+  function el(tag: string, clase: string, texto?: string) {
+    const e = document.createElement(tag);
+    e.className = clase;
+    if (texto) e.textContent = texto;
+    return e;
+  }
+
+  function pintar() {
+    const q = buscar.value.trim().toLowerCase();
+    const filtrados = eventos.filter((e) => {
+      const info = ACCIONES[e.accion];
+      if (tipo.value === "reservas" && !info?.reserva) return false;
+      return !q || [e.detalle, e.usuario, e.antes, e.despues].filter(Boolean).join(" ").toLowerCase().includes(q);
+    });
+    lista.replaceChildren(
+      ...filtrados.map((e) => {
+        const info = ACCIONES[e.accion] ?? { nombre: e.accion, color: "bg-crema", reserva: false };
+        const li = el("li", "border-noche bg-blanco grid gap-2 rounded-2xl border-2 p-4 sm:grid-cols-[150px_minmax(0,1fr)]");
+        const cuando = el("div", "flex flex-col gap-1");
+        cuando.append(el("p", "text-sm font-bold first-letter:uppercase", fechaHora.format(new Date(e.creado))));
+        cuando.append(el("p", "text-noche-suave text-xs font-semibold", e.usuario ? `Por ${e.usuario}` : "Por el cliente (web)"));
+        li.append(cuando);
+
+        const cuerpo = el("div", "flex min-w-0 flex-col gap-1.5");
+        const cabeza = el("div", "flex flex-wrap items-center gap-2");
+        cabeza.append(el("span", `border-noche rounded-full border px-2.5 py-0.5 text-xs font-extrabold ${info.color}`, info.nombre));
+        if (e.detalle) cabeza.append(el("span", "font-bold first-letter:uppercase", conFecha(e.detalle)));
+        cuerpo.append(cabeza);
+
+        // Qué cambió: en una edición, solo los campos distintos; al crear o eliminar, los datos principales.
+        const antes = leer(e.antes);
+        const despues = leer(e.despues);
+        if (antes && despues) {
+          const cambios = Object.keys(CAMPOS).filter((k) => k in despues && valor(k, antes[k]) !== valor(k, despues[k]));
+          const ul = el("ul", "text-sm");
+          for (const k of cambios) ul.append(el("li", "", `${CAMPOS[k]}: ${valor(k, antes[k])} → ${valor(k, despues[k])}`));
+          if (!cambios.length) ul.append(el("li", "text-noche-suave", "Se guardó sin cambios"));
+          cuerpo.append(ul);
+        } else if (antes || despues) {
+          const datos = (antes ?? despues)!;
+          const partes = ["telefono", "email", "comuna", "direccion", "total", "notas"]
+            .filter((k) => datos[k] !== undefined && datos[k] !== null && datos[k] !== "")
+            .map((k) => `${CAMPOS[k]}: ${valor(k, datos[k])}`);
+          if (partes.length) cuerpo.append(el("p", "text-noche-suave text-sm", partes.join(" · ")));
+        }
+        li.append(cuerpo);
+        return li;
+      }),
+    );
+    estado.textContent = filtrados.length ? "" : "Todavía no hay movimientos";
+  }
+
+  async function cargar() {
+    estado.textContent = eventos.length ? "" : "Cargando…";
+    const res = await fetch("/api/admin/historial?limite=500", { credentials: "same-origin", headers: { "x-saltabum-admin": "1" } }).catch(() => null);
+    if (res?.status === 401) return void document.dispatchEvent(new CustomEvent("panel:sin-sesion"));
+    if (!res?.ok) return void (estado.textContent = "No se pudo cargar el historial");
+    eventos = ((await res.json()) as { eventos: Evento[] }).eventos;
+    pintar();
+  }
+
+  tipo.addEventListener("change", pintar);
+  buscar.addEventListener("input", pintar);
+  root.querySelector("[data-historial-actualizar]")!.addEventListener("click", () => void cargar());
+  document.addEventListener("panel:pestana", (e) => {
+    abierta = (e as CustomEvent<string>).detail === "historial";
+    if (abierta) void cargar();
+  });
+  setInterval(() => {
+    if (abierta && document.visibilityState === "visible") void cargar();
+  }, 60_000);
+  document.addEventListener("panel:cerrado", () => {
+    abierta = false;
+    eventos = [];
+    lista.replaceChildren();
+  });
+</script>

@@ -20,7 +20,7 @@ export default defineConfig({
   // legales; `lastmod` es la fecha del build, así Google sabe cuándo volver a rastrear.
   integrations: [
     sitemap({
-      filter: (page) => !page.includes("/admin") && !page.includes("/ver-en-tu-espacio"),
+      filter: (page) => !page.includes("/admin") && !page.includes("/ver-en-tu-espacio") && !page.includes("/gracias"),
       // Prioridad según el tipo de página (portada > pillars > catálogo, producto y comunas > preguntas > legal).
       serialize(item) {
         const ruta = new URL(item.url).pathname;
@@ -65,7 +65,9 @@ export default defineConfig({
       PUBLIC_CLARITY_ID: envField.string({ context: "client", access: "public", default: "z12kisbdh0" }),
       // WhatsApp de Saltabum (+56 9 6344 4133). Se puede reemplazar con la variable de entorno.
       PUBLIC_WHATSAPP_NUMBER: envField.string({ context: "client", access: "public", default: "56963444133" }),
-      PUBLIC_TURNSTILE_SITE_KEY: envField.string({ context: "client", access: "public", optional: true }),
+      // Widget de Turnstile de saltabum.cl (la site key es pública: va en el HTML). En local, el .env usa la de prueba
+      // 1x00000000000000000000AA, porque esta solo funciona en los dominios del widget.
+      PUBLIC_TURNSTILE_SITE_KEY: envField.string({ context: "client", access: "public", default: "0x4AAAAAAFkdLkIHOumJFjJT" }),
 
       // ---- Secretos: solo en el Worker, se leen en tiempo de ejecución (wrangler secret put) ----
       TURNSTILE_SECRET_KEY: envField.string({ context: "server", access: "secret", optional: true }),

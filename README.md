@@ -61,7 +61,9 @@ Para probar exactamente como en Cloudflare (runtime workerd): `npm run preview`.
 **Públicas** (se incrustan al compilar) — ver `.env.example`:
 `PUBLIC_META_PIXEL_ID`, `PUBLIC_GOOGLE_ADS_ID`, `PUBLIC_GOOGLE_ADS_LEAD_LABEL`, `PUBLIC_GOOGLE_ADS_WHATSAPP_LABEL`,
 `PUBLIC_GA4_ID`, `PUBLIC_CLARITY_ID`, `PUBLIC_WHATSAPP_NUMBER`, `PUBLIC_TURNSTILE_SITE_KEY`.
-Si un ID queda vacío, ese tag simplemente no se carga.
+Si un ID queda vacío, ese tag simplemente no se carga. El píxel de Meta, GA4, Clarity, WhatsApp y la site key de Turnstile
+ya traen su valor por defecto en `astro.config.mjs`, así que no hace falta cargarlas en Cloudflare. En local, el `.env`
+usa la site key de prueba `1x00000000000000000000AA` (la de producción solo funciona en saltabum.cl).
 
 **Secretos** (solo en el Worker, en tiempo de ejecución):
 
@@ -73,9 +75,9 @@ npx wrangler secret put CRM_WEBHOOK_SECRET
 npx wrangler secret put ADMIN_USUARIOS   # usuarios del panel /admin (ver «Panel de reservas»)
 ```
 
-En producción, si falta `TURNSTILE_SECRET_KEY` o `CRM_WEBHOOK_URL`, `/api/lead` responde 503
-(a propósito: así no se pierden leads en silencio). Mientras el CRM no exista, el diseño debería
-priorizar WhatsApp.
+Las consultas del formulario de contacto (`/api/lead`) se guardan en D1 y se ven en `/admin` → Consultas; el CRM
+(`CRM_WEBHOOK_URL`) es opcional y, si existe, también las recibe. En producción, sin `TURNSTILE_SECRET_KEY`
+`/api/lead` responde 503 (a propósito: sin antispam no se aceptan consultas).
 
 ## Despliegue
 
@@ -148,6 +150,6 @@ El CRM debe validar la firma, rechazar timestamps de más de 5 min y responder 2
 - [ ] Completar `src/config/site.ts` (descripción SEO, datos legales) y revisar la política de privacidad con un abogado
 - [ ] Crear en Google Ads las acciones de conversión "Lead formulario" y "Clic WhatsApp" → copiar sus labels
 - [ ] Activar Enhanced Conversions en Google Ads y verificar el Pixel/dominio en Meta Business
-- [ ] Crear widget de Turnstile para `saltabum.cl`
+- [x] Crear widget de Turnstile para `saltabum.cl`
 - [ ] Probar eventos con Meta "Probar eventos" (`META_CAPI_TEST_EVENT_CODE`) y Google Tag Assistant
 - [ ] Agregar `public/og-default.jpg` (1200×630)

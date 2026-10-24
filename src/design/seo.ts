@@ -179,7 +179,7 @@ export const PREGUNTAS_FRECUENTES: { tema: string; preguntas: Pregunta[] }[] = [
     preguntas: [
       { q: "¿Qué precio tienen los juegos inflables en arriendo?", a: `En Saltabum el arriendo parte en ${DESDE} por ${DESDE_HORAS}, con montaje, anclaje y retiro incluidos. Cada hora adicional cuesta ${HORA_EXTRA}.` },
       { q: "¿Cuánto es el abono para reservar?", a: "Reservas la hora con un abono de $20.000, que se descuenta del total del arriendo. El saldo se paga el día del evento." },
-      { q: "¿Cuánto cuesta el despacho?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Concón, Quilpué y Villa Alemana, y $7.000 a Limache y Olmué." },
+      { q: "¿Cuánto cuesta el despacho?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Concón, Quilpué y Villa Alemana, $7.000 a Limache y Olmué, y $10.000 a Casablanca y Quintay." },
       { q: "¿Cómo reservo un juego inflable?", a: "Elige el día y el horario en el calendario de la web o escríbenos por WhatsApp. Te confirmamos y coordinamos el abono." },
       { q: "¿Puedo reservar para el mismo día?", a: "No, las reservas se hacen desde el día siguiente para coordinar bien el despacho y el montaje." },
       { q: "¿Emiten factura?", a: "Sí, emitimos factura para empresas, colegios, municipalidades, juntas de vecinos y particulares que la necesiten." },
@@ -223,7 +223,7 @@ export const PREGUNTAS_PAGINA: Record<"megatobogan" | "cumpleanos" | "precios" |
   precios: [
     { q: "¿Cuánto cuesta arrendar un juego inflable?", a: `Desde ${DESDE} por ${DESDE_HORAS} con montaje, anclaje y retiro incluidos.` },
     { q: "¿Cuánto vale la hora adicional?", a: `Cada hora adicional cuesta ${HORA_EXTRA}.` },
-    { q: "¿El despacho tiene costo?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Concón, Quilpué y Villa Alemana, y $7.000 a Limache y Olmué." },
+    { q: "¿El despacho tiene costo?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Concón, Quilpué y Villa Alemana, $7.000 a Limache y Olmué, y $10.000 a Casablanca y Quintay." },
     { q: "¿Hay costos ocultos?", a: "No, el precio incluye montaje, anclaje y retiro. Solo pones el enchufe, que consume menos de $2.000 por evento." },
   ],
   eventos: [

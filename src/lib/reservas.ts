@@ -93,6 +93,22 @@ export const pesos = (n: number) => (n === 0 ? "Gratis" : `$${n.toLocaleString("
 
 const fechaISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida");
 const hora = z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida");
+/** Texto opcional: vacío se guarda como undefined. */
+const opcional = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .transform((v) => (v ? v : undefined));
+
+/** Correo opcional, guardado en minúsculas. */
+const correo = opcional(200)
+  .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Correo inválido")
+  .transform((v) => v?.toLowerCase());
+
+/** Región de todas las comunas donde llegamos. */
+export const REGION = "Valparaíso";
 
 export const reservaSchema = z
   .object({
@@ -102,19 +118,18 @@ export const reservaSchema = z
     horas: z.number().int().min(HORAS_BASE).max(HORAS_BASE + HORAS_EXTRA_MAX),
     nombre: z.string().trim().min(2, "Ingresa tu nombre").max(120),
     telefono: z.string().trim().min(8, "Ingresa tu teléfono").max(30),
+    // El formulario exige apellido, correo, dirección y ciudad; aquí quedan opcionales para no rechazar
+    // reservas desde una página abierta antes de que se agregaran.
+    apellido: opcional(120),
+    email: correo,
+    empresa: opcional(160),
     comuna: z.enum(COMUNA_NOMBRES),
-    direccion: z
-      .string()
-      .trim()
-      .max(200)
-      .optional()
-      .transform((v) => (v ? v : undefined)),
-    mensaje: z
-      .string()
-      .trim()
-      .max(1000)
-      .optional()
-      .transform((v) => (v ? v : undefined)),
+    direccion: opcional(200),
+    /** Casa, departamento, block, etc. */
+    depto: opcional(120),
+    ciudad: opcional(80),
+    region: opcional(60),
+    mensaje: opcional(1000),
     event_id: z.uuid(),
     page_url: z.string().max(1000).optional(),
     consent: z.boolean().default(false),
@@ -127,7 +142,43 @@ export const reservaSchema = z
 
 export type ReservaInput = z.input<typeof reservaSchema>;
 
+/** Hora del panel: cualquier minuto del día (el panel puede salirse del horario de la web). 24:00 = medianoche. */
+const horaPanel = z.string().regex(/^(([01]\d|2[0-3]):[0-5]\d|24:00)$/, "Hora inválida");
+
+/**
+ * Reserva cargada o editada desde el panel /admin. Es más flexible que la de la web: cualquier horario, comuna
+ * libre (puede ser una fuera de zona) y el total que acuerde el equipo. Las notas internas no las ve el cliente.
+ */
+export const reservaPanelSchema = z
+  .object({
+    fecha: fechaISO,
+    producto: z.enum(PRODUCTO_IDS),
+    inicio: horaPanel,
+    fin: horaPanel,
+    total: z.number().int().min(0).max(5_000_000),
+    nombre: z.string().trim().min(2, "Escribe el nombre del cliente").max(120),
+    apellido: opcional(120),
+    telefono: opcional(30),
+    email: correo,
+    empresa: opcional(160),
+    comuna: opcional(80),
+    direccion: opcional(200),
+    depto: opcional(120),
+    ciudad: opcional(80),
+    region: opcional(60),
+    mensaje: opcional(1000),
+    notas: opcional(2000),
+  })
+  .refine((r) => aMinutos(r.fin) > aMinutos(r.inicio), { message: "El término debe ser después del inicio", path: ["fin"] });
+
+export type ReservaPanel = z.output<typeof reservaPanelSchema>;
+
+/** Acciones del panel /admin sobre la agenda. */
 export const bloqueoSchema = z.discriminatedUnion("accion", [
+  /** «forzar» guarda aunque se cruce con otra reserva o bloqueo (el panel lo pide después de avisar). */
+  z.object({ accion: z.literal("crear"), datos: reservaPanelSchema, forzar: z.boolean().default(false) }),
+  z.object({ accion: z.literal("editar"), id: z.number().int().positive(), datos: reservaPanelSchema, forzar: z.boolean().default(false) }),
+  z.object({ accion: z.literal("eliminar"), id: z.number().int().positive() }),
   z.object({
     accion: z.literal("bloquear"),
     fecha: fechaISO,
