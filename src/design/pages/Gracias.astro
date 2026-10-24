@@ -1,5 +1,6 @@
 ---
-// /gracias/ — después de reservar en la agenda. El resumen (fecha, horario, lugar y total) lo deja la agenda en
+// /gracias/ — después de reservar en la agenda o de enviar el formulario de contacto (?tipo=consulta, el nombre
+// llega en sessionStorage «saltabum:consulta»). El resumen (fecha, horario, lugar y total) lo deja la agenda en
 // sessionStorage («saltabum:reserva») justo antes de traer al cliente aquí; si no está (página abierta directo o
 // almacenamiento bloqueado), se muestra el agradecimiento sin el resumen. No dispara conversiones: la reserva
 // ya se midió al enviarse.
@@ -69,11 +70,11 @@ const PREPARA = [
         <Icon name="check" size={44} strokeWidth={3.2} />
       </span>
       <div>
-        <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Reserva recibida</p>
+        <p data-gracias-eyebrow class="text-xs font-extrabold tracking-[1.2px] uppercase">Reserva recibida</p>
         <h1 id="gracias-titulo" class="font-display mt-2 text-[38px] leading-[42px] font-semibold lg:text-6xl lg:leading-[64px]">
-          ¡Gracias<span data-gracias-nombre></span>! Tu horario quedó reservado
+          ¡Gracias<span data-gracias-nombre></span>! <span data-gracias-titulo>Tu horario quedó reservado</span>
         </h1>
-        <p class="mx-auto mt-3 max-w-[560px] text-lg lg:text-xl">
+        <p data-gracias-bajada class="mx-auto mt-3 max-w-[560px] text-lg lg:text-xl">
           Te escribimos por WhatsApp para confirmar tu reserva con el abono de {abono}
         </p>
       </div>
@@ -115,7 +116,7 @@ const PREPARA = [
           message="Hola, acabo de reservar en saltabum.cl y quiero confirmar con el abono."
           class="w-full text-center leading-[22px] sm:w-auto"
         >
-          Confirmar ahora por WhatsApp
+          <span data-gracias-cta>Confirmar ahora por WhatsApp</span>
         </WaButton>
         <a
           href={RUTAS.inicio}
@@ -201,12 +202,31 @@ const PREPARA = [
 <script>
   // Lee el resumen que dejó la agenda. Nada de esto viaja en la URL.
   type Resumen = { nombre?: string; juego?: string; fecha?: string; horario?: string; lugar?: string; total?: string; whatsapp?: string };
-  let r: Resumen | null = null;
-  try {
-    r = JSON.parse(sessionStorage.getItem("saltabum:reserva") ?? "null") as Resumen | null;
-  } catch {
-    r = null;
+  const texto = (sel: string, t: string) => {
+    const el = document.querySelector<HTMLElement>(sel);
+    if (el) el.textContent = t;
+  };
+  const leer = <T,>(clave: string): T | null => {
+    try {
+      return JSON.parse(sessionStorage.getItem(clave) ?? "null") as T | null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Después del formulario de contacto: otro mensaje y sin resumen de reserva.
+  const esConsulta = new URLSearchParams(location.search).get("tipo") === "consulta";
+  if (esConsulta) {
+    const c = leer<{ nombre?: string }>("saltabum:consulta");
+    if (c?.nombre) texto("[data-gracias-nombre]", `, ${c.nombre}`);
+    texto("[data-gracias-eyebrow]", "Consulta recibida");
+    texto("[data-gracias-titulo]", "Recibimos tu mensaje");
+    texto("[data-gracias-bajada]", "Te respondemos hoy mismo por WhatsApp o por teléfono. Si te urge, escríbenos directo");
+    texto("[data-gracias-cta]", "Escríbenos por WhatsApp");
+    document.title = "¡Consulta recibida! | Saltabum";
   }
+
+  const r = esConsulta ? null : leer<Resumen>("saltabum:reserva");
   if (r) {
     const nombre = document.querySelector<HTMLElement>("[data-gracias-nombre]");
     if (nombre && r.nombre) nombre.textContent = `, ${r.nombre}`;

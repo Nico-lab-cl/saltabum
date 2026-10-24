@@ -1,25 +1,32 @@
 ---
+// Barra superior fija. Escritorio (xl): logo, secciones, botón Contacto, WhatsApp, llamar y redes sociales
+// (llamar y redes se ven desde lg).
+// Celular y tablet: logo, Contacto (ícono en celular, botón desde sm), WhatsApp y menú; dentro del menú van las
+// secciones, Contacto, llamar y las redes.
 import { PUBLIC_WHATSAPP_NUMBER } from "astro:env/client";
 import Icon from "../components/Icon.astro";
+import Redes from "../components/Redes.astro";
 import WaButton from "../components/WaButton.astro";
 import Wordmark from "../components/Wordmark.astro";
-import { NAV } from "../seo";
+import { NAV, RUTAS } from "../seo";
 
 const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
+const actual = Astro.url.pathname;
 ---
 
 <header class="border-noche bg-sol text-noche sticky top-0 z-40 border-b-2">
-  <div class="mx-auto flex max-w-[1320px] items-center gap-6 px-4 py-2.5 lg:px-10 lg:py-3.5">
-    <a href="/" class="no-underline" aria-label="Saltabum y Entretenciones, inicio">
-      <Wordmark class="text-[27px] lg:text-[34px]" />
+  <div class="mx-auto flex max-w-[1400px] items-center gap-2 px-4 py-2.5 sm:gap-3 lg:px-8 lg:py-3 2xl:gap-5">
+    <a href="/" class="shrink-0 no-underline" aria-label="Saltabum y Entretenciones, inicio">
+      <Wordmark class="text-[25px] min-[380px]:text-[27px] lg:text-[32px]" />
     </a>
 
-    <nav aria-label="Principal" class="hidden flex-1 justify-center gap-6 xl:flex">
+    <nav aria-label="Principal" class="hidden flex-1 justify-center gap-4 xl:flex 2xl:gap-6">
       {
         NAV.map((item) => (
           <a
             href={item.href}
-            class="text-noche hover:border-noche border-b-[3px] border-transparent py-2.5 font-bold no-underline"
+            aria-current={actual === item.href ? "page" : undefined}
+            class="text-noche hover:border-noche aria-[current=page]:border-noche border-b-[3px] border-transparent py-2.5 text-[15px] font-bold whitespace-nowrap no-underline 2xl:text-base"
           >
             {item.label}
           </a>
@@ -27,20 +34,46 @@ const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
       }
     </nav>
 
-    <div class="ml-auto flex items-center gap-2 lg:gap-3 xl:ml-0">
-      {
-        telefono && (
-          <a href={`tel:+${telefono}`} class="text-noche hidden min-h-11 items-center gap-1.5 font-extrabold no-underline xl:inline-flex">
-            <Icon name="telefono" size={20} />
-            Llamar
-          </a>
-        )
-      }
-      <WaButton placement="header" size="s" class="max-lg:hidden">WhatsApp</WaButton>
+    <div class="ml-auto flex items-center gap-2 xl:ml-0">
+      <!-- Contacto: ícono en celular, botón desde sm -->
+      <a
+        href={RUTAS.contacto}
+        aria-label="Contacto"
+        class="bounce border-noche bg-blanco text-noche flex size-11 items-center justify-center rounded-full border-2 no-underline sm:hidden"
+      >
+        <Icon name="correo" size={20} strokeWidth={2.2} />
+      </a>
+      <a
+        href={RUTAS.contacto}
+        aria-current={actual === RUTAS.contacto ? "page" : undefined}
+        class="bounce border-noche bg-blanco text-noche shadow-pop-s aria-[current=page]:bg-noche aria-[current=page]:text-crema hidden min-h-11 items-center gap-2 rounded-full border-2 px-4 font-extrabold whitespace-nowrap no-underline sm:inline-flex"
+      >
+        <Icon name="correo" size={19} strokeWidth={2.2} />
+        Contacto
+      </a>
+
+      <WaButton placement="header" size="s" class="whitespace-nowrap max-lg:hidden">WhatsApp</WaButton>
       <WaButton placement="header" size="s" icon={false} class="size-11 !px-0 lg:hidden">
         <span class="sr-only">Escríbenos por WhatsApp</span>
         <Icon name="whatsapp" size={22} />
       </WaButton>
+
+      <!-- Desde lg: llamar y redes -->
+      <div class="hidden items-center gap-1.5 lg:flex">
+        {
+          telefono && (
+            <a
+              href={`tel:+${telefono}`}
+              aria-label="Llamar a Saltabum"
+              title="Llamar"
+              class="bounce border-noche bg-blanco text-noche flex size-11 items-center justify-center rounded-full border-2 no-underline"
+            >
+              <Icon name="telefono" size={20} />
+            </a>
+          )
+        }
+        <Redes class="gap-1.5" />
+      </div>
 
       <details class="group relative xl:hidden">
         <summary
@@ -52,15 +85,35 @@ const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
         </summary>
         <nav
           aria-label="Principal"
-          class="border-noche bg-crema shadow-pop absolute top-14 right-0 flex w-64 flex-col rounded-[20px] border-2 p-2"
+          class="border-noche bg-crema shadow-pop absolute top-14 right-0 flex max-h-[calc(100dvh-80px)] w-[min(288px,calc(100vw-32px))] flex-col overflow-y-auto rounded-[20px] border-2 p-2"
         >
           {
             NAV.map((item) => (
-              <a href={item.href} class="text-noche hover:bg-arena rounded-xl px-4 py-3 font-bold no-underline">
+              <a
+                href={item.href}
+                aria-current={actual === item.href ? "page" : undefined}
+                class="text-noche hover:bg-arena aria-[current=page]:bg-sol rounded-xl px-4 py-3 font-bold no-underline"
+              >
                 {item.label}
               </a>
             ))
           }
+          <a href={RUTAS.contacto} class="bg-noche text-crema mt-1 flex items-center gap-2 rounded-xl px-4 py-3 font-extrabold no-underline">
+            <Icon name="correo" size={19} strokeWidth={2.2} />
+            Contacto
+          </a>
+          {
+            telefono && (
+              <a href={`tel:+${telefono}`} class="text-noche hover:bg-arena flex items-center gap-2 rounded-xl px-4 py-3 font-bold no-underline">
+                <Icon name="telefono" size={19} />
+                Llamar
+              </a>
+            )
+          }
+          <div class="border-noche/15 mt-1 border-t-2 px-2 pt-3 pb-1">
+            <p class="text-noche-suave mb-2 text-xs font-extrabold tracking-[1px] uppercase">Síguenos</p>
+            <Redes />
+          </div>
         </nav>
       </details>
     </div>

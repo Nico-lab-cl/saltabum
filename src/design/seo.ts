@@ -11,6 +11,7 @@ export const RUTAS = {
   eventos: "/arriendo-inflables-eventos-empresas/",
   preguntas: "/preguntas-frecuentes/",
   reservar: "/#reservar",
+  contacto: "/contacto/",
   /** Página a la que lleva el QR: el modelo 3D con el botón para verlo con la cámara del celular. */
   verEnTuEspacio: "/ver-en-tu-espacio/",
 } as const;
@@ -236,6 +237,10 @@ export const PREGUNTAS_PAGINA: Record<"megatobogan" | "cumpleanos" | "precios" |
 
 /** Meta título (≤ 60) y descripción (≤ 160) de cada página. */
 export const METAS = {
+  contacto: {
+    title: "Contacto · Arriendo de juegos inflables en Valparaíso",
+    description: "Escríbenos por WhatsApp, llámanos o déjanos tus datos y te respondemos el mismo día. Arriendo de juegos inflables en la V Región con despacho, montaje y retiro.",
+  },
   inflables: {
     title: "Arriendo de juegos inflables en la V Región",
     description: `Catálogo de juegos inflables en arriendo para cumpleaños y eventos en la Región de Valparaíso desde ${DESDE} por ${DESDE_HORAS}, con montaje y retiro.`,

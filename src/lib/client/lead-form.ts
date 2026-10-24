@@ -83,6 +83,15 @@ async function submitLead(form: HTMLFormElement): Promise<void> {
     setState(form, "success", MESSAGES.success);
     form.reset();
     form.dispatchEvent(new CustomEvent("lead:success", { detail: { eventId } }));
+
+    // Página de gracias (modo «consulta»). El nombre viaja en sessionStorage, nunca en la URL; la breve espera
+    // deja salir los avisos de conversión antes de cambiar de página.
+    try {
+      sessionStorage.setItem("saltabum:consulta", JSON.stringify({ nombre: payload.nombre.split(/\s+/)[0] }));
+    } catch {
+      // Sin almacenamiento la página de gracias igual funciona, sin el nombre.
+    }
+    setTimeout(() => location.assign("/gracias/?tipo=consulta"), 450);
   } catch (err) {
     setState(form, "error", MESSAGES.error);
     form.dispatchEvent(new CustomEvent("lead:error", { detail: { error: String(err) } }));

@@ -1,0 +1,91 @@
+---
+// /contacto/ — todos los canales para hablar con Saltabum (WhatsApp, teléfono, correo y redes) y el formulario de
+// contacto (la misma sección del home: las consultas llegan a /admin → Consultas y después a /gracias/).
+import { PUBLIC_WHATSAPP_NUMBER } from "astro:env/client";
+import { SITE } from "@/config/site";
+import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
+import { RUTAS } from "../seo";
+import Icon from "../components/Icon.astro";
+import Rayos from "../components/Rayos.astro";
+import Redes from "../components/Redes.astro";
+import PaginaSeo, { type Miga } from "../layouts/PaginaSeo.astro";
+import Contacto from "../sections/Contacto.astro";
+
+interface Props {
+  migas: Miga[];
+}
+const { migas } = Astro.props;
+
+const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
+const telefonoVisible = telefono.length === 11 ? `+${telefono.slice(0, 2)} ${telefono.slice(2, 3)} ${telefono.slice(3, 7)} ${telefono.slice(7)}` : `+${telefono}`;
+const tarjeta = "bounce border-noche bg-blanco shadow-pop flex items-center gap-4 rounded-3xl border-2 p-4 text-left no-underline lg:flex-col lg:items-start lg:p-6";
+const circulo = "border-noche flex size-12 shrink-0 items-center justify-center rounded-full border-2 lg:size-14";
+---
+
+<PaginaSeo migas={migas}>
+  <section class="border-noche bg-sol text-noche relative isolate overflow-clip border-b-2" aria-labelledby="contacto-pagina-titulo">
+    <Rayos x="85%" y="10%" />
+    <div class="mx-auto flex max-w-[1320px] flex-col gap-7 px-4 py-10 lg:gap-10 lg:px-10 lg:py-16">
+      <div class="max-w-[720px]">
+        <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Contacto</p>
+        <h1 id="contacto-pagina-titulo" class="font-display mt-1.5 text-[38px] leading-[42px] font-semibold lg:text-6xl lg:leading-[64px]">
+          Hablemos de tu evento
+        </h1>
+        <p class="mt-3 text-lg lg:text-xl">Escríbenos por donde te acomode y te respondemos el mismo día</p>
+      </div>
+
+      <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+        <li>
+          <WhatsAppLink placement="contacto-pagina" class={`${tarjeta} bg-verde-burbuja h-full`}>
+            <span class={`${circulo} bg-verde`}><Icon name="whatsapp" size={26} /></span>
+            <span>
+              <strong class="font-display block text-xl leading-6 font-semibold">WhatsApp</strong>
+              <span class="text-noche-suave text-sm">Lo más rápido: cotiza y reserva por chat</span>
+            </span>
+          </WhatsAppLink>
+        </li>
+        {
+          telefono && (
+            <li>
+              <a href={`tel:+${telefono}`} class={`${tarjeta} h-full`}>
+                <span class={`${circulo} bg-sol`}>
+                  <Icon name="telefono" size={24} />
+                </span>
+                <span>
+                  <strong class="font-display block text-xl leading-6 font-semibold">Llámanos</strong>
+                  <span class="text-noche-suave text-sm whitespace-nowrap">{telefonoVisible}</span>
+                </span>
+              </a>
+            </li>
+          )
+        }
+        <li>
+          <a href={`mailto:${SITE.email}`} class={`${tarjeta} h-full`}>
+            <span class={`${circulo} bg-celeste`}><Icon name="correo" size={24} strokeWidth={2.2} /></span>
+            <span class="min-w-0">
+              <strong class="font-display block text-xl leading-6 font-semibold">Correo</strong>
+              <span class="text-noche-suave block truncate text-sm">{SITE.email}</span>
+            </span>
+          </a>
+        </li>
+        <li class="border-noche bg-blanco shadow-pop flex items-center gap-4 rounded-3xl border-2 p-4 lg:flex-col lg:items-start lg:p-6">
+          <span class={`${circulo} bg-rosa`}><Icon name="instagram" size={24} strokeWidth={2.2} /></span>
+          <span class="flex min-w-0 flex-col gap-2">
+            <strong class="font-display block text-xl leading-6 font-semibold">Síguenos</strong>
+            <Redes boton="border-noche bg-crema text-noche" />
+          </span>
+        </li>
+      </ul>
+
+      <a
+        href={RUTAS.reservar}
+        class="border-noche bg-blanco/80 flex flex-col gap-1 rounded-2xl border-2 border-dashed px-4 py-3 font-bold no-underline sm:flex-row sm:items-center sm:gap-3 lg:self-start"
+      >
+        <span class="flex items-center gap-2"><Icon name="calendario" size={20} />¿Ya sabes la fecha?</span>
+        <span class="text-azul-texto underline">Reserva en línea y ve el total al tiro</span>
+      </a>
+    </div>
+  </section>
+
+  <Contacto />
+</PaginaSeo>

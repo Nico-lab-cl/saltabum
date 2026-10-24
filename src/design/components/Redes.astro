@@ -1,0 +1,33 @@
+---
+// Íconos de las redes sociales de Saltabum (perfiles en src/config/site.ts). Botones redondos de 44 px.
+import { SITE } from "@/config/site";
+import Icon, { type IconName } from "./Icon.astro";
+
+interface Props {
+  class?: string;
+  /** Clases de cada botón (color de fondo, borde). */
+  boton?: string;
+}
+const { class: className, boton = "border-noche bg-blanco text-noche" } = Astro.props;
+
+const ICONOS: Record<string, IconName> = { Instagram: "instagram", Facebook: "facebook", TikTok: "tiktok" };
+---
+
+<ul class:list={["flex items-center gap-2", className]} aria-label="Redes sociales">
+  {
+    SITE.redes.map((r) => (
+      <li>
+        <a
+          href={r.url}
+          target="_blank"
+          rel="noopener"
+          aria-label={`Saltabum en ${r.nombre}`}
+          title={r.nombre}
+          class:list={["bounce flex size-11 items-center justify-center rounded-full border-2 no-underline", boton]}
+        >
+          <Icon name={ICONOS[r.nombre] ?? "flecha"} size={20} strokeWidth={2.2} />
+        </a>
+      </li>
+    ))
+  }
+</ul>

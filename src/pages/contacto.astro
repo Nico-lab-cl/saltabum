@@ -1,0 +1,15 @@
+---
+import Contacto from "@design/pages/Contacto.astro";
+import { METAS, RUTAS } from "@design/seo";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { migasJsonLd } from "@/lib/seo";
+
+const migas = [
+  { nombre: "Inicio", href: RUTAS.inicio },
+  { nombre: "Contacto", href: RUTAS.contacto },
+];
+---
+
+<BaseLayout {...METAS.contacto} jsonLd={[migasJsonLd(migas)]}>
+  <Contacto migas={migas} />
+</BaseLayout>
