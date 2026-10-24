@@ -8,7 +8,6 @@
 // Acceso con contraseña y código de verificación (TOTP). La seguridad vive en src/lib/server/admin-auth.ts y los
 // encabezados en public/_headers (/admin). Sin tracking ni banner de cookies, y fuera del sitemap (noindex).
 import "@/styles/global.css";
-import Turnstile from "@/components/core/Turnstile.astro";
 import PanelConsultas from "@/components/admin/PanelConsultas.astro";
 import PanelHistorial from "@/components/admin/PanelHistorial.astro";
 import PanelQr from "@/components/admin/PanelQr.astro";
@@ -65,7 +64,6 @@ const PESTANAS = [
             class={campo}
           />
         </label>
-        <Turnstile />
         <button class="bg-noche text-crema min-h-12 cursor-pointer rounded-full px-6 font-extrabold disabled:opacity-50">Entrar</button>
         <p data-error class="text-rojo-texto text-sm font-bold" aria-live="assertive"></p>
       </form>
@@ -233,11 +231,9 @@ const PESTANAS = [
           body: JSON.stringify({
             clave: String(datos.get("clave") ?? ""),
             codigo: String(datos.get("codigo") ?? "") || undefined,
-            turnstile_token: String(datos.get("cf-turnstile-response") ?? "") || undefined,
           }),
         }).catch(() => null);
         btn.disabled = false;
-        (window as { turnstile?: { reset: () => void } }).turnstile?.reset();
         if (res?.ok) return void cargar();
         if (res?.status === 401 && ((await res.json().catch(() => ({}))) as { error?: string }).error === "codigo") {
           campoCodigo.hidden = false;
@@ -250,7 +246,7 @@ const PESTANAS = [
           res?.status === 429
             ? "Demasiados intentos. Espera unos minutos antes de volver a probar"
             : res?.status === 403
-              ? "No se pudo verificar que eres una persona, recarga la página"
+              ? "No se pudo ingresar, recarga la página"
               : res?.status === 503
                 ? "El panel no está configurado"
                 : "Contraseña incorrecta";

@@ -1,27 +1,20 @@
-// POST /api/lead — recibe el formulario de contacto, valida, verifica Turnstile, guarda la consulta en D1 (pestaña
+// POST /api/lead — recibe el formulario de contacto, valida, revisa el honeypot, guarda la consulta en D1 (pestaña
 // «Consultas» del panel /admin), la envía al CRM si hay uno configurado y reporta el Lead a Meta Conversions API
 // (si el usuario aceptó cookies).
 import type { APIRoute } from "astro";
 import { PUBLIC_META_PIXEL_ID } from "astro:env/client";
-import {
-  CRM_WEBHOOK_SECRET,
-  CRM_WEBHOOK_URL,
-  META_CAPI_ACCESS_TOKEN,
-  META_CAPI_TEST_EVENT_CODE,
-  TURNSTILE_SECRET_KEY,
-} from "astro:env/server";
+import { CRM_WEBHOOK_SECRET, CRM_WEBHOOK_URL, META_CAPI_ACCESS_TOKEN, META_CAPI_TEST_EVENT_CODE } from "astro:env/server";
 import { leadSchema } from "@/lib/lead-schema";
 import { auditar } from "@/lib/server/admin-auth";
 import { consultasRecientes, guardarConsulta } from "@/lib/server/consultas-db";
 import { sha256Hex } from "@/lib/server/crypto";
 import { sendToCrm, type CrmLeadPayload } from "@/lib/server/crm";
 import { buildFbc, sendMetaEvent } from "@/lib/server/meta-capi";
-import { verifyTurnstile } from "@/lib/server/turnstile";
 
 export const prerender = false;
 
 const MAX_BODY_BYTES = 16_000;
-/** Máximo de consultas por conexión cada 24 horas (antispam, además de Turnstile). */
+/** Máximo de consultas por conexión cada 24 horas (antispam, junto con el honeypot). */
 const MAX_CONSULTAS_POR_IP = 5;
 /** Datos de origen que se guardan con la consulta (de qué campaña o página llegó). */
 const ORIGEN = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "referrer", "landing_page"];
@@ -58,15 +51,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const ip = request.headers.get("cf-connecting-ip") ?? undefined;
   const userAgent = request.headers.get("user-agent") ?? undefined;
-
-  if (TURNSTILE_SECRET_KEY) {
-    if (!(await verifyTurnstile(TURNSTILE_SECRET_KEY, lead.turnstile_token, ip))) {
-      return json(403, { ok: false, error: "captcha" });
-    }
-  } else if (import.meta.env.PROD) {
-    console.error("[lead] TURNSTILE_SECRET_KEY no configurado");
-    return json(503, { ok: false, error: "not_configured" });
-  }
 
   // La consulta queda guardada en el panel /admin aunque no haya CRM.
   const ipHash = ip ? await sha256Hex(`consultas:${ip}`) : null;

@@ -28,7 +28,6 @@ export const leadSchema = z
     page_url: z.string().max(1000).optional(),
     consent: z.boolean().default(false),
     attribution: z.record(z.string(), z.string().max(1000)).default({}),
-    turnstile_token: z.string().max(2048).optional(),
     /** Honeypot anti-bots: debe venir vacío. */
     website: z.string().optional(),
   })

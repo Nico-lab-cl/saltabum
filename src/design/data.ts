@@ -17,8 +17,12 @@ export const DESDE_HORAS = "3 horas";
 /** Valor de cada hora adicional sobre el bloque base. */
 export const HORA_EXTRA = "$10.000";
 /** Modelo 3D a escala real (scripts/generar-modelo-3d.mjs). Al cambiarlo, súbele la versión al nombre: /modelos se guarda 7 días en caché. */
-/** Juegos que se pueden reservar en la agenda (precio del bloque base en pesos). El Megatobogán es el primero de varios. */
-export const PRODUCTOS = [{ id: "megatobogan", nombre: PRODUCTO.nombre, precio: Number(DESDE.replace(/\D/g, "")) }] as const;
+/** Juegos que se pueden reservar en la agenda (precio del bloque base en pesos). Cada uno tiene su propia disponibilidad. */
+export const PRODUCTOS = [
+  { id: "megatobogan", nombre: PRODUCTO.nombre, precio: Number(DESDE.replace(/\D/g, "")) },
+  { id: "castillo-pirata", nombre: "Castillo Pirata", precio: 49990 },
+  { id: "castillo-formula-1", nombre: "Castillo Fórmula 1", precio: 49990 },
+] as const;
 /** Abono para reservar, en pesos. */
 export const ABONO = 20000;
 

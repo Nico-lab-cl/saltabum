@@ -11,7 +11,7 @@ Landing page de Saltabum. **Astro 7 + Tailwind v4**, desplegada en **Cloudflare 
 | Consentimiento | Banner opt-in + Google Consent Mode v2 + consent API de Meta y Clarity                        |
 | Conversiones   | `Lead` (formulario) y `Contact` (WhatsApp) a todas las plataformas, con `event_id` compartido |
 | Server-side    | Meta Conversions API desde el Worker, deduplicada con el Pixel                                |
-| Formulario     | `/api/lead`: validación (zod) + Turnstile + honeypot → webhook firmado (HMAC) a tu CRM        |
+| Formulario     | `/api/lead`: validación (zod) + honeypot + límite por IP → webhook firmado (HMAC) a tu CRM   |
 | Atribución     | UTMs, gclid, fbclid, msclkid y landing page viajan con cada lead al CRM                       |
 | SEO            | meta/OG/canonical, JSON-LD, sitemap.xml, robots.txt                                           |
 | Diseño         | **`src/design/`** ← aquí va lo de Claude Design (ver `src/design/README.md`)                  |
@@ -30,10 +30,10 @@ Landing page de Saltabum. **Astro 7 + Tailwind v4**, desplegada en **Cloudflare 
 ```
 src/
 ├── design/            ← TODO lo visual (Claude Design)
-├── components/core/   ← Tracking, CookieBanner, Turnstile, WhatsAppLink, SEO (no tocar el diseño aquí)
+├── components/core/   ← Tracking, CookieBanner, WhatsAppLink, SEO (no tocar el diseño aquí)
 ├── layouts/           ← BaseLayout: une SEO + tracking + diseño
 ├── lib/client/        ← scripts del navegador (consentimiento, conversiones, formulario, atribución)
-├── lib/server/        ← CRM webhook, Meta CAPI, Turnstile
+├── lib/server/        ← CRM webhook, Meta CAPI, panel /admin
 ├── lib/lead-schema.ts ← contrato de datos del formulario
 ├── pages/             ← rutas (index, política de privacidad, 404, api/lead)
 └── config/site.ts     ← nombre, SEO por defecto, datos legales
@@ -46,7 +46,7 @@ Requisitos: Node.js 22+.
 ```bash
 npm install
 cp .env.example .env            # IDs públicos (pueden quedar vacíos en local)
-cp .dev.vars.example .dev.vars  # secretos locales (ya trae los de prueba de Turnstile)
+cp .dev.vars.example .dev.vars  # secretos locales
 npm run dev                     # http://localhost:4321
 ```
 
@@ -60,15 +60,13 @@ Para probar exactamente como en Cloudflare (runtime workerd): `npm run preview`.
 
 **Públicas** (se incrustan al compilar) — ver `.env.example`:
 `PUBLIC_META_PIXEL_ID`, `PUBLIC_GOOGLE_ADS_ID`, `PUBLIC_GOOGLE_ADS_LEAD_LABEL`, `PUBLIC_GOOGLE_ADS_WHATSAPP_LABEL`,
-`PUBLIC_GA4_ID`, `PUBLIC_CLARITY_ID`, `PUBLIC_WHATSAPP_NUMBER`, `PUBLIC_TURNSTILE_SITE_KEY`.
-Si un ID queda vacío, ese tag simplemente no se carga. El píxel de Meta, GA4, Clarity, WhatsApp y la site key de Turnstile
-ya traen su valor por defecto en `astro.config.mjs`, así que no hace falta cargarlas en Cloudflare. En local, el `.env`
-usa la site key de prueba `1x00000000000000000000AA` (la de producción solo funciona en saltabum.cl).
+`PUBLIC_GA4_ID`, `PUBLIC_CLARITY_ID`, `PUBLIC_WHATSAPP_NUMBER`.
+Si un ID queda vacío, ese tag simplemente no se carga. El píxel de Meta, GA4, Clarity y WhatsApp
+ya traen su valor por defecto en `astro.config.mjs`, así que no hace falta cargarlas en Cloudflare.
 
 **Secretos** (solo en el Worker, en tiempo de ejecución):
 
 ```bash
-npx wrangler secret put TURNSTILE_SECRET_KEY
 npx wrangler secret put META_CAPI_ACCESS_TOKEN
 npx wrangler secret put CRM_WEBHOOK_URL
 npx wrangler secret put CRM_WEBHOOK_SECRET
@@ -76,8 +74,8 @@ npx wrangler secret put ADMIN_USUARIOS   # usuarios del panel /admin (ver «Pane
 ```
 
 Las consultas del formulario de contacto (`/api/lead`) se guardan en D1 y se ven en `/admin` → Consultas; el CRM
-(`CRM_WEBHOOK_URL`) es opcional y, si existe, también las recibe. En producción, sin `TURNSTILE_SECRET_KEY`
-`/api/lead` responde 503 (a propósito: sin antispam no se aceptan consultas).
+(`CRM_WEBHOOK_URL`) es opcional y, si existe, también las recibe. Antispam: honeypot (`website`) y máximo 5
+consultas por conexión cada 24 horas.
 
 ## Despliegue
 
@@ -95,7 +93,7 @@ conectado al repo de GitHub, rama `main`:
 `wrangler deploy`. Sin el build, wrangler falla con "Missing entry-point to Worker script".
 
 Las `PUBLIC_*` se incrustan al compilar, así que van en las **variables de build**; los secretos del Worker
-(`TURNSTILE_SECRET_KEY`, etc.) van en Settings → Variables and Secrets (o con `wrangler secret put`).
+(`META_CAPI_ACCESS_TOKEN`, etc.) van en Settings → Variables and Secrets (o con `wrangler secret put`).
 
 `.github/workflows/ci.yml` solo verifica (`check` + `build`) en cada push y PR; no despliega.
 
@@ -116,7 +114,7 @@ Recomendado: regla de redirección en Cloudflare `www.saltabum.cl/*` → `https:
   `src/lib/reservas.ts`. Nunca se puede reservar para el mismo día.
 - Las reservas se guardan en Cloudflare D1 (binding `DB`, base `saltabum-reservas`). Wrangler la crea sola en el
   primer deploy y el Worker crea la tabla al primer uso. La clave primaria (fecha + bloque) impide reservas dobles.
-- Antispam: Turnstile si está configurado y, siempre, máximo 3 reservas por conexión cada 24 horas.
+- Antispam: honeypot y máximo 3 reservas por conexión cada 24 horas.
 - Panel: `https://saltabum.cl/admin`. Ahí se ven las reservas con sus datos, se marcan pagos (se informan a Meta como
   compra cerrada por chat), se bloquean días u horarios y se cancelan reservas.
 
@@ -150,6 +148,5 @@ El CRM debe validar la firma, rechazar timestamps de más de 5 min y responder 2
 - [ ] Completar `src/config/site.ts` (descripción SEO, datos legales) y revisar la política de privacidad con un abogado
 - [ ] Crear en Google Ads las acciones de conversión "Lead formulario" y "Clic WhatsApp" → copiar sus labels
 - [ ] Activar Enhanced Conversions en Google Ads y verificar el Pixel/dominio en Meta Business
-- [x] Crear widget de Turnstile para `saltabum.cl`
 - [ ] Probar eventos con Meta "Probar eventos" (`META_CAPI_TEST_EVENT_CODE`) y Google Tag Assistant
 - [ ] Agregar `public/og-default.jpg` (1200×630)

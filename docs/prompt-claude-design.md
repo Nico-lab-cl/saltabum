@@ -157,7 +157,7 @@ Diseña la landing mobile-first y su versión desktop, con este orden:
   - Links a WhatsApp: usa `<WhatsAppLink placement="hero">` de `@/components/core/WhatsAppLink.astro`, o un `<a>`
     con `data-track="whatsapp"` y `data-track-placement="..."`.
   - Formulario: `<form data-lead-form="contacto">` con campos `nombre`, `telefono`, `email`, `mensaje`,
-    `extra.*`, el componente `<Turnstile />` de `@/components/core/Turnstile.astro`, el campo oculto
+    `extra.*`, el campo oculto
     `<input name="website" hidden tabindex="-1" autocomplete="off">` y un `<p data-lead-message>`. El form recibe
     `data-state="idle|sending|success|error"` para los estilos.
   - Cookies: cualquier elemento con `data-consent-open` reabre el banner, que puedes rediseñar manteniendo

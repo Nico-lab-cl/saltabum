@@ -41,7 +41,6 @@ export type DatosReserva = Pick<
   | "ciudad"
   | "region"
   | "mensaje"
-  | "turnstile_token"
   | "website"
 >;
 

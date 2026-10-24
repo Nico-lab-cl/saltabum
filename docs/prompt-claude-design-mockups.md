@@ -119,7 +119,7 @@ anclaje, puntual, lluvia, abono, factura, WhatsApp, teléfono, calendario y comb
   - el **link a WhatsApp** dispara el tracking de conversión (todo botón de WhatsApp es el mismo componente con
     una posición: hero, header, sticky, ficha…);
   - el **formulario** usa los campos `nombre`, `telefono`, `email`, `mensaje` y extras (`comuna`, `fecha`), lleva
-    el antispam de Cloudflare Turnstile (reserva un espacio de 300×65 px) y un mensaje de estado bajo el botón;
+    un mensaje de estado bajo el botón;
   - el **banner de cookies** tiene botones Aceptar y Rechazar y se reabre desde el footer.
 
 ## Entregables por etapa

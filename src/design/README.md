@@ -44,7 +44,6 @@ El formulario puede tener el diseño que quieras mientras respete estos nombres:
 | `name="telefono"` y/o `name="email"`                             | ✅ (al menos uno) |                                             |
 | `name="mensaje"`                                                 |                   |                                             |
 | `name="extra.<lo-que-sea>"`                                      |                   | Campos adicionales (ej. `extra.personas`)   |
-| `<Turnstile />`                                                  | ✅                | Antispam de Cloudflare                      |
 | `<input name="website" hidden tabindex="-1" autocomplete="off">` | ✅                | Trampa anti-bots, debe quedar invisible     |
 | `<p data-lead-message>`                                          |                   | Aquí aparece "¡Gracias!" o el error         |
 

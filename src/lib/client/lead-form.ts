@@ -7,7 +7,7 @@
 //     <input name="email" type="email">
 //     <textarea name="mensaje"></textarea>
 //     <input name="extra.personas">           ← cualquier campo extra con prefijo "extra."
-//     <Turnstile />                            ← componente antispam
+//     <input name="website" hidden>            ← honeypot antispam
 //     <button type="submit">Enviar</button>
 //     <p data-lead-message></p>                ← (opcional) aquí se muestra éxito/error
 //   </form>
@@ -60,7 +60,6 @@ async function submitLead(form: HTMLFormElement): Promise<void> {
     page_url: location.href,
     consent,
     attribution: getAttribution(),
-    turnstile_token: str("cf-turnstile-response"),
     website: str("website"),
   };
 
@@ -95,8 +94,6 @@ async function submitLead(form: HTMLFormElement): Promise<void> {
   } catch (err) {
     setState(form, "error", MESSAGES.error);
     form.dispatchEvent(new CustomEvent("lead:error", { detail: { error: String(err) } }));
-  } finally {
-    window.turnstile?.reset(form.querySelector<HTMLElement>(".cf-turnstile") ?? undefined);
   }
 }
 

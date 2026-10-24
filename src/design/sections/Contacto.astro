@@ -1,5 +1,4 @@
 ---
-import Turnstile from "@/components/core/Turnstile.astro";
 import { COMUNAS } from "../data";
 import Icon from "../components/Icon.astro";
 import WaButton from "../components/WaButton.astro";
@@ -59,9 +58,6 @@ const input =
       <p class="text-noche-suave col-span-2 text-xs leading-5">Usamos tus datos solo para responder y coordinar tu evento, según la Ley 19.628 y la Ley 21.719. Más detalles en la <a href="/politica-de-privacidad" class="text-azul-texto underline">política de privacidad</a></p>
 
       <div class="col-span-2 flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
-        <div class="min-h-[65px] w-[300px] max-w-full">
-          <Turnstile theme="light" />
-        </div>
         <button
           type="submit"
           class="bounce bg-rojo-texto border-noche shadow-pop min-h-13 cursor-pointer rounded-full border-2 px-8 text-[17px] font-extrabold text-white group-data-[state=sending]:pointer-events-none group-data-[state=sending]:opacity-75 lg:min-h-14 lg:text-lg"

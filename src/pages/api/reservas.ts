@@ -1,14 +1,8 @@
-// POST /api/reservas — toma un horario de la agenda. Valida, verifica Turnstile, calcula el total, guarda en D1
+// POST /api/reservas — toma un horario de la agenda. Valida, revisa el honeypot, calcula el total, guarda en D1
 // (el INSERT rechaza horarios que choquen con otra reserva del mismo juego) y avisa al CRM si está configurado.
 import type { APIRoute } from "astro";
 import { PUBLIC_META_PIXEL_ID } from "astro:env/client";
-import {
-  CRM_WEBHOOK_SECRET,
-  CRM_WEBHOOK_URL,
-  META_CAPI_ACCESS_TOKEN,
-  META_CAPI_TEST_EVENT_CODE,
-  TURNSTILE_SECRET_KEY,
-} from "astro:env/server";
+import { CRM_WEBHOOK_SECRET, CRM_WEBHOOK_URL, META_CAPI_ACCESS_TOKEN, META_CAPI_TEST_EVENT_CODE } from "astro:env/server";
 import { PRODUCTOS } from "@design/data";
 import { aMinutos, calcularPrecio, etiquetaHorario, pesos, rangoReservable, REGION, reservaSchema } from "@/lib/reservas";
 import { sendToCrm } from "@/lib/server/crm";
@@ -16,12 +10,11 @@ import { sha256Hex } from "@/lib/server/crypto";
 import { buildFbc, sendMetaEvent } from "@/lib/server/meta-capi";
 import { auditar } from "@/lib/server/admin-auth";
 import { crearReserva, reservasRecientes } from "@/lib/server/reservas-db";
-import { verifyTurnstile } from "@/lib/server/turnstile";
 
 export const prerender = false;
 
 const MAX_BODY_BYTES = 16_000;
-/** Máximo de reservas por conexión cada 24 horas (antispam, sobre todo si no hay Turnstile). */
+/** Máximo de reservas por conexión cada 24 horas (antispam, junto con el honeypot). */
 const MAX_RESERVAS_POR_IP = 3;
 
 const json = (status: number, data: Record<string, unknown>) =>
@@ -56,14 +49,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (r.fecha < desde || r.fecha > hasta) return json(422, { ok: false, error: "fecha" });
 
   const ip = request.headers.get("cf-connecting-ip") ?? undefined;
-  if (TURNSTILE_SECRET_KEY) {
-    if (!(await verifyTurnstile(TURNSTILE_SECRET_KEY, r.turnstile_token, ip))) {
-      return json(403, { ok: false, error: "captcha" });
-    }
-  } else if (import.meta.env.PROD) {
-    // Sin Turnstile la reserva igual se acepta, pero queda limitada por conexión (ver abajo).
-    console.warn("[reservas] TURNSTILE_SECRET_KEY no configurado: solo límite por IP");
-  }
 
   const inicio = aMinutos(r.inicio);
   const fin = inicio + r.horas * 60;

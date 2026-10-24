@@ -4,7 +4,6 @@
 // celda de la grilla, así el bloque mide lo que el paso más alto y no salta al avanzar). El total queda siempre a la
 // vista: en el pie en celular y en el resumen lateral en escritorio.
 // Reglas y precios: src/lib/reservas.ts. Datos y envío: src/lib/client/reservas.ts.
-import Turnstile from "@/components/core/Turnstile.astro";
 import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
 import { APERTURA, CIERRE, HORAS_BASE, HORAS_EXTRA_MAX, REGION, aHora, pesos } from "@/lib/reservas";
 import { ABONO, COMUNAS, HORA_EXTRA, PRODUCTOS } from "../data";
@@ -255,9 +254,6 @@ const botonRedondo =
             <p class="text-noche-suave text-xs leading-5">
               Usamos tus datos solo para coordinar tu evento, según la Ley 19.628 y la Ley 21.719. Más en la <a href="/politica-de-privacidad" class="text-azul-texto underline">política de privacidad</a>
             </p>
-            <div class="min-h-[65px] w-[300px] max-w-full">
-              <Turnstile theme="light" />
-            </div>
             <p data-reserva-mensaje aria-live="polite" class="text-noche-suave text-sm empty:hidden"></p>
           </div>
 
@@ -675,6 +671,7 @@ const botonRedondo =
       r.addEventListener("change", () => {
         pintarMes();
         pintarInicios();
+        actualizar();
       }),
     );
     $<HTMLButtonElement>("[data-otra]").addEventListener("click", () => {
@@ -727,12 +724,10 @@ const botonRedondo =
         ciudad: txt("ciudad"),
         region: txt("region"),
         mensaje: txt("mensaje"),
-        turnstile_token: txt("cf-turnstile-response"),
         website: txt("website"),
       });
       form.dataset.state = "idle";
       btnReservar.disabled = false;
-      window.turnstile?.reset();
 
       if (r.ok) {
         const fin = desde + horas * 60;
@@ -782,11 +777,9 @@ const botonRedondo =
         return;
       }
       mensaje.textContent =
-        r.error === "captcha"
-          ? "No pudimos verificar que no eres un robot, inténtalo de nuevo"
-          : r.error === "limite"
-            ? "Ya hiciste varias reservas hoy, escríbenos por WhatsApp para agendar otra"
-            : "No pudimos reservar, inténtalo de nuevo o escríbenos por WhatsApp";
+        r.error === "limite"
+          ? "Ya hiciste varias reservas hoy, escríbenos por WhatsApp para agendar otra"
+          : "No pudimos reservar, inténtalo de nuevo o escríbenos por WhatsApp";
     });
 
     async function recargar() {

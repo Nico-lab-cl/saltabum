@@ -135,7 +135,7 @@ reseñas. Si no hay reseñas todavía, la sección muestra el estado vacío con 
   - los **botones de WhatsApp** usan el componente existente con su posición (`hero`, `ficha`, `sticky`…) o llevan
     `data-track="whatsapp"` y `data-track-placement`;
   - el **formulario** es `<form data-lead-form="contacto">` con los campos `nombre`, `telefono`, `email`, `mensaje`
-    y extras (`extra.comuna`, `extra.fecha`), el espacio de Turnstile (300 × 65 px), el campo oculto `website` y
+    y extras (`extra.comuna`, `extra.fecha`), el campo oculto `website` y
     el mensaje de estado `data-lead-message`;
   - el enlace **«Configurar cookies»** del footer lleva `data-consent-open`.
 
