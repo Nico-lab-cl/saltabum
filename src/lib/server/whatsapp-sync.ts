@@ -1,6 +1,17 @@
 // Qué hacer con cada mensaje o etiqueta que llega de Evolution, y la importación de chats ya existentes.
-import { anuncioDe, buscarMensajes, esChatPersonal, evolutionConfigurado, nombreDe, nombreDeContacto, type MensajeEvolution } from "./evolution";
-import { asegurarChat, buscarChat, guardarMensajes } from "./whatsapp-db";
+import {
+  anuncioDe,
+  buscarMensajes,
+  esChatPersonal,
+  etiquetaLeads,
+  etiquetasDeChat,
+  evolutionConfigurado,
+  listarChatsEvolution,
+  nombreDe,
+  nombreDeContacto,
+  type MensajeEvolution,
+} from "./evolution";
+import { asegurarChat, buscarChat, guardarMensajes, quitarEtiqueta } from "./whatsapp-db";
 
 /**
  * Mensaje nuevo (webhook). Se guarda si el chat ya está en el panel, o si es el mensaje con que el cliente
@@ -28,6 +39,32 @@ export async function etiquetaAgregada(jid: string): Promise<void> {
   const canonico = await asegurarChat({ jid, etiqueta: true });
   const chat = await buscarChat(canonico);
   await importarHistorial(canonico, chat?.jid_alt ?? null).catch(() => 0);
+}
+
+/**
+ * Revisa en Evolution qué chats tienen hoy la etiqueta «SALTABUM | LEADS», de a `cantidad` chats desde `desde`
+ * (Cloudflare limita cuántas consultas puede hacer cada pedido). Agrega los etiquetados que falten y quita la marca
+ * a los que ya no la tienen. No trae el historial: eso lo hace «sincronizar» con los chats nuevos.
+ */
+export async function revisarEtiquetas(desde: number, cantidad: number): Promise<{ total: number; siguiente: number | null; nuevos: string[] }> {
+  const jids = await listarChatsEvolution();
+  const tramo = jids.slice(desde, desde + cantidad);
+  const etiqueta = etiquetaLeads();
+  const nuevos: string[] = [];
+  const resultados = await Promise.all(tramo.map(async (jid) => [jid, await etiquetasDeChat(jid).catch(() => null)] as const));
+  for (const [jid, etiquetas] of resultados) {
+    if (!etiquetas) continue;
+    const chat = await buscarChat(jid);
+    if (etiquetas.includes(etiqueta)) {
+      if (!chat?.etiqueta) {
+        nuevos.push(await asegurarChat({ jid, etiqueta: true }));
+      }
+    } else if (chat?.etiqueta) {
+      await quitarEtiqueta(chat.jid);
+    }
+  }
+  const siguiente = desde + cantidad < jids.length ? desde + cantidad : null;
+  return { total: jids.length, siguiente, nuevos };
 }
 
 /** Copia desde Evolution los últimos mensajes de un chat (por sus dos identificadores). */

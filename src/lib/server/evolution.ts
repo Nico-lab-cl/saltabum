@@ -157,6 +157,29 @@ export async function nombreDeContacto(jid: string): Promise<string | null> {
   return (Array.isArray(r) ? r : []).map((c) => nombreDe({ pushName: c.pushName })).find(Boolean) ?? null;
 }
 
+/** Chats con mensajes guardados en Evolution, del de mensaje más reciente al más antiguo (solo personas). */
+export async function listarChatsEvolution(): Promise<string[]> {
+  const r = await llamar<{ remoteJid?: string; updatedAt?: string }[]>(`/chat/findChats/${encodeURIComponent(instancia())}`, {});
+  return (Array.isArray(r) ? r : [])
+    .filter((c) => esChatPersonal(c.remoteJid))
+    .sort((a, b) => Date.parse(b.updatedAt ?? "") - Date.parse(a.updatedAt ?? ""))
+    .map((c) => c.remoteJid!);
+}
+
+/**
+ * Etiquetas que tiene hoy un chat según Evolution. Se consulta chat por chat porque Evolution guarda bien las
+ * etiquetas que pones en el celular, pero no siempre manda el aviso (LABELS_ASSOCIATION) al webhook.
+ */
+export async function etiquetasDeChat(jid: string): Promise<string[]> {
+  const base = (EVOLUTION_API_URL ?? "").replace(/\/+$/, "");
+  const res = await fetch(`${base}/chat/findChatByRemoteJid/${encodeURIComponent(instancia())}?remoteJid=${encodeURIComponent(jid)}`, {
+    headers: { apikey: EVOLUTION_API_KEY ?? "" },
+  });
+  if (!res.ok) throw new Error(`Evolution findChatByRemoteJid: ${res.status}`);
+  const chat = (await res.json().catch(() => null)) as { labels?: unknown } | null;
+  return Array.isArray(chat?.labels) ? chat.labels.map(String) : [];
+}
+
 /** Revisa si un teléfono tiene WhatsApp. Devuelve el identificador del chat (…@s.whatsapp.net) o null. */
 export async function verificarNumero(telefono: string): Promise<string | null> {
   const r = await llamar<{ exists?: boolean; jid?: string }[]>(`/chat/whatsappNumbers/${encodeURIComponent(instancia())}`, { numbers: [telefono] });

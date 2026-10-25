@@ -5,6 +5,7 @@
 //          { accion: "responder", jid, texto } · { accion: "audio", jid, audio (base64) }
 //          { accion: "agregar", telefono, nombre?, mensaje? } → crea el chat y le pone la etiqueta en WhatsApp
 //          { accion: "sincronizar", jids } → vuelve a traer de Evolution los últimos mensajes (de a 15 chats)
+//          { accion: "etiquetas", desde } → revisa en Evolution qué chats tienen la etiqueta (de a 30)
 //          { accion: "importar", dias? } → busca chats que llegaron por anuncios
 import type { APIRoute } from "astro";
 import { EVOLUTION_WEBHOOK_SECRET } from "astro:env/server";
@@ -12,7 +13,7 @@ import { z } from "zod";
 import { auditar, mismoOrigen, panelConfigurado, sesion } from "@/lib/server/admin-auth";
 import { cambiarEtiqueta, enviarAudio, enviarTexto, etiquetaLeads, evolutionConfigurado, verificarNumero } from "@/lib/server/evolution";
 import { actualizarChat, asegurarChat, buscarChat, guardarMensajes, listarChats, listarMensajes, renombrarChat } from "@/lib/server/whatsapp-db";
-import { importarChatsDeAnuncios, importarHistorial } from "@/lib/server/whatsapp-sync";
+import { importarChatsDeAnuncios, importarHistorial, revisarEtiquetas } from "@/lib/server/whatsapp-sync";
 
 export const prerender = false;
 
@@ -37,6 +38,7 @@ const accionSchema = z.discriminatedUnion("accion", [
     mensaje: z.string().trim().max(4000).optional(),
   }),
   z.object({ accion: z.literal("sincronizar"), jids: z.array(jid).min(1).max(15) }),
+  z.object({ accion: z.literal("etiquetas"), desde: z.number().int().min(0).max(100_000) }),
   z.object({ accion: z.literal("importar"), dias: z.number().int().min(1).max(730).optional() }),
 ]);
 
@@ -77,7 +79,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const pedido = parsed.data;
 
   // ── Acciones que hablan con Evolution ─────────────────────────────────
-  const conEvolution = ["importar", "agregar", "sincronizar", "responder", "audio"].includes(pedido.accion);
+  const conEvolution = ["importar", "agregar", "sincronizar", "etiquetas", "responder", "audio"].includes(pedido.accion);
   if (conEvolution && !evolutionConfigurado()) return json(503, { ok: false, error: "evolution" });
 
   try {
@@ -85,6 +87,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       const r = await importarChatsDeAnuncios(pedido.dias);
       await auditar(request, usuario, "whatsapp_importar", `${r.chats} chats de anuncios · ${r.mensajes} mensajes nuevos`);
       return json(200, { ok: true, ...r });
+    }
+
+    if (pedido.accion === "etiquetas") {
+      // 30 consultas a Evolution por pedido: queda bajo el límite de Cloudflare (50 en el plan gratis).
+      return json(200, { ok: true, ...(await revisarEtiquetas(pedido.desde, 30)) });
     }
 
     if (pedido.accion === "sincronizar") {

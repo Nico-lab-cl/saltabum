@@ -494,31 +494,55 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     void cargar();
   });
 
-  // ── Actualizar: vuelve a consultar a WhatsApp los últimos mensajes de cada chat ─────────────────────
+  // ── Actualizar ─────────────────────────────────────────────────────────────────────────────────
+  // 1) Pregunta a Evolution, chat por chat, cuáles tienen hoy la etiqueta «SALTABUM | LEADS» (de a 30 por pedido).
+  //    Hace falta porque Evolution guarda las etiquetas del celular pero no siempre avisa al webhook.
+  // 2) Vuelve a traer los últimos mensajes de los chats del panel (de a 15 por pedido).
   const actualizar = root.querySelector<HTMLButtonElement>("[data-wa-actualizar]")!;
   let sincronizando = false;
-  async function sincronizar(limite?: number, silencioso = false) {
+  async function sincronizar(opciones: { paginasEtiquetas?: number; limiteChats?: number; silencioso?: boolean } = {}) {
     if (sincronizando || !puedeResponder) return;
+    const { paginasEtiquetas = Infinity, limiteChats, silencioso = false } = opciones;
     sincronizando = true;
     actualizar.disabled = true;
-    const jids = chats.slice(0, limite ?? chats.length).map((c) => c.jid);
-    let mensajes = 0;
+    const post = async (datos: Record<string, unknown>) => {
+      const res = await api("/api/admin/whatsapp", { method: "POST", body: JSON.stringify(datos) }).catch(() => null);
+      if (res?.status === 401) throw new Error("sin_sesion");
+      return res?.ok ? ((await res.json()) as Record<string, unknown>) : null;
+    };
     let fallo = false;
-    // De a 15 chats por consulta, para no pasarse del límite de llamadas del servidor.
-    for (let i = 0; i < jids.length; i += 15) {
-      if (!silencioso) actualizar.textContent = `↻ ${Math.min(i + 15, jids.length)}/${jids.length}`;
-      const res = await api("/api/admin/whatsapp", { method: "POST", body: JSON.stringify({ accion: "sincronizar", jids: jids.slice(i, i + 15) }) }).catch(() => null);
-      if (res?.status === 401) {
-        sinSesion();
-        break;
+    let nuevos: string[] = [];
+    let mensajes = 0;
+    try {
+      // 1) Etiquetas
+      let desde: number | null = 0;
+      for (let pagina = 0; desde !== null && pagina < paginasEtiquetas; pagina++) {
+        const r = (await post({ accion: "etiquetas", desde })) as { total: number; siguiente: number | null; nuevos: string[] } | null;
+        if (!r) {
+          fallo = true;
+          break;
+        }
+        nuevos = nuevos.concat(r.nuevos);
+        desde = r.siguiente;
+        if (!silencioso) actualizar.textContent = `↻ Etiquetas ${desde ?? r.total}/${r.total}`;
       }
-      if (!res?.ok) fallo = true;
-      else mensajes += ((await res.json()) as { mensajes: number }).mensajes;
+      if (nuevos.length) await cargar();
+      // 2) Mensajes: primero los chats recién encontrados (traen todo su historial).
+      const jids = [...new Set([...nuevos, ...chats.slice(0, limiteChats ?? chats.length).map((c) => c.jid)])];
+      for (let i = 0; i < jids.length; i += 15) {
+        if (!silencioso) actualizar.textContent = `↻ Mensajes ${Math.min(i + 15, jids.length)}/${jids.length}`;
+        const r = (await post({ accion: "sincronizar", jids: jids.slice(i, i + 15) })) as { mensajes: number } | null;
+        if (!r) fallo = true;
+        else mensajes += r.mensajes;
+      }
+    } catch {
+      sinSesion();
     }
     actualizar.textContent = "↻ Actualizar";
     actualizar.disabled = false;
     sincronizando = false;
-    if (!silencioso) avisar(fallo ? "WhatsApp no respondió del todo, inténtalo de nuevo" : mensajes ? `${mensajes} mensajes nuevos` : "Todo al día");
+    const partes = [nuevos.length && `${nuevos.length} chats nuevos con la etiqueta`, mensajes && `${mensajes} mensajes nuevos`].filter(Boolean);
+    if (!silencioso || nuevos.length) avisar(fallo ? "WhatsApp no respondió del todo, inténtalo de nuevo" : partes.length ? partes.join(" · ") : "Todo al día");
     await cargar();
     if (abierto) void abrir(abierto, false);
   }
@@ -526,9 +550,10 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     await cargar();
     await sincronizar();
   });
-  // Cada 5 minutos, con el panel abierto, revisa en silencio los 15 chats más recientes.
+  // Cada 5 minutos, con el panel abierto, revisa en silencio las etiquetas de los 60 chats con actividad más
+  // reciente y los mensajes de los 15 primeros del panel.
   setInterval(() => {
-    if (activo && document.visibilityState === "visible") void sincronizar(15, true);
+    if (activo && document.visibilityState === "visible") void sincronizar({ paginasEtiquetas: 2, limiteChats: 15, silencioso: true });
   }, 5 * 60_000);
 
   // ── Agregar número ───────────────────────────────────────────────────────
