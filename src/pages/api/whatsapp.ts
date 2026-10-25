@@ -40,6 +40,12 @@ export const POST: APIRoute = async ({ request, url }) => {
 
   // Evolution v2 manda «messages.upsert»; algunas versiones, «MESSAGES_UPSERT».
   const evento = String(body.event ?? "").toLowerCase().replace(/_/g, ".");
+  // Registro corto de cada aviso (sin el texto de los mensajes), para revisar en Cloudflare → Observability.
+  if (evento.startsWith("labels")) console.log("webhook whatsapp", evento, JSON.stringify(body.data).slice(0, 500));
+  else {
+    const m = (Array.isArray(body.data) ? body.data[0] : body.data) as MensajeEvolution | undefined;
+    console.log("webhook whatsapp", evento, m?.key?.remoteJid ?? "", m?.key?.fromMe ? "yo" : "cliente", m?.messageType ?? "");
+  }
   try {
     if (evento === "messages.upsert" || evento === "send.message") {
       const lista = (Array.isArray(body.data) ? body.data : [body.data]) as MensajeEvolution[];
