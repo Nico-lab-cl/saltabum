@@ -3,6 +3,7 @@
 //   · Reservas: calendario, lista, crear, editar, eliminar, registrar pagos (se informan a Meta como compra) y
 //     bloquear horarios. Se actualiza solo y lo que se cambia aquí se ve al tiro en la agenda de la web.
 //   · Consultas: los mensajes del formulario de contacto (se pueden pasar a reserva).
+//   · WhatsApp: chats que llegaron por anuncios de Meta o con la etiqueta «SALTABUM | LEADS» (vía Evolution API).
 //   · Historial: todo lo que pasó con las reservas y consultas, quién lo hizo y qué cambió.
 //   · Códigos QR: escaneos del QR impreso.
 // Acceso con contraseña y código de verificación (TOTP). La seguridad vive en src/lib/server/admin-auth.ts y los
@@ -12,11 +13,13 @@ import PanelConsultas from "@/components/admin/PanelConsultas.astro";
 import PanelHistorial from "@/components/admin/PanelHistorial.astro";
 import PanelQr from "@/components/admin/PanelQr.astro";
 import PanelReservas from "@/components/admin/PanelReservas.astro";
+import PanelWhatsapp from "@/components/admin/PanelWhatsapp.astro";
 
 const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
 const PESTANAS = [
   ["reservas", "Reservas"],
   ["consultas", "Consultas"],
+  ["whatsapp", "WhatsApp"],
   ["historial", "Historial"],
   ["qr", "Códigos QR"],
 ] as const;
@@ -111,8 +114,8 @@ const PESTANAS = [
                 class="aria-selected:bg-noche aria-selected:text-crema min-h-10 cursor-pointer rounded-full px-5 font-extrabold whitespace-nowrap"
               >
                 {nombre}
-                {id === "consultas" && (
-                  <span data-contador="consultas" hidden class="bg-rojo-texto ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs leading-5 text-white" />
+                {(id === "consultas" || id === "whatsapp") && (
+                  <span data-contador={id} hidden class="bg-rojo-texto ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs leading-5 text-white" />
                 )}
               </button>
             ))
@@ -120,6 +123,7 @@ const PESTANAS = [
         </nav>
         <div id="panel-reservas" role="tabpanel" aria-labelledby="pestana-reservas" data-pestana-panel="reservas"><PanelReservas /></div>
         <div id="panel-consultas" role="tabpanel" aria-labelledby="pestana-consultas" data-pestana-panel="consultas" hidden><PanelConsultas /></div>
+        <div id="panel-whatsapp" role="tabpanel" aria-labelledby="pestana-whatsapp" data-pestana-panel="whatsapp" hidden><PanelWhatsapp /></div>
         <div id="panel-historial" role="tabpanel" aria-labelledby="pestana-historial" data-pestana-panel="historial" hidden><PanelHistorial /></div>
         <div id="panel-qr" role="tabpanel" aria-labelledby="pestana-qr" data-pestana-panel="qr" hidden><PanelQr /></div>
       </div>
@@ -195,7 +199,7 @@ const PESTANAS = [
         $("[data-nombre]").textContent = `Sesión de ${datos.usuario}`;
         // Las pestañas cargan sus datos con este aviso (Reservas recibe estos mismos datos).
         document.dispatchEvent(new CustomEvent("panel:listo", { detail: datos }));
-        abrirPestana(["consultas", "historial", "qr"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "reservas");
+        abrirPestana(["consultas", "whatsapp", "historial", "qr"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "reservas");
       }
 
       document.addEventListener("panel:sin-sesion", () => mostrarLogin("Tu sesión expiró, vuelve a ingresar"));

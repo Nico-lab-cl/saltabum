@@ -1,0 +1,368 @@
+---
+// Pestaña «WhatsApp» del panel /admin: los chats que llegaron por un anuncio de Meta o que tienen la etiqueta
+// «SALTABUM | LEADS» en WhatsApp Business. A la izquierda la lista, a la derecha la conversación, con notas,
+// estado, crear reserva y respuesta (sale desde el mismo WhatsApp de Saltabum). Se actualiza cada 20 segundos.
+const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
+---
+
+<section data-wa-panel class="flex flex-col gap-4">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h2 class="font-display text-3xl font-semibold">WhatsApp</h2>
+      <p class="text-noche-suave text-sm">Chats que llegaron por anuncios de Meta o con la etiqueta «SALTABUM | LEADS»</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <div role="radiogroup" aria-label="Qué chats ver" class="border-noche bg-blanco flex max-w-full overflow-x-auto rounded-full border-2 p-1">
+        {
+          [
+            ["pendientes", "Por atender"],
+            ["anuncio", "Anuncios"],
+            ["etiqueta", "Etiqueta"],
+            ["cerrada", "Cerrados"],
+            ["todos", "Todos"],
+          ].map(([id, nombre], i) => (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={i === 0 ? "true" : "false"}
+              data-filtro-wa={id}
+              class="aria-checked:bg-noche aria-checked:text-crema min-h-9 cursor-pointer rounded-full px-3 text-sm font-extrabold whitespace-nowrap"
+            >
+              {nombre}
+            </button>
+          ))
+        }
+      </div>
+      <input data-wa-buscar type="search" placeholder="Buscar nombre, teléfono, mensaje…" class={`${campo} w-full sm:w-[240px]`} />
+      <button data-wa-importar type="button" class="border-noche bg-sol min-h-11 cursor-pointer rounded-full border-2 px-4 text-sm font-extrabold disabled:opacity-50">
+        Importar chats de anuncios
+      </button>
+    </div>
+  </div>
+  <p data-wa-config hidden class="border-rojo-texto bg-rojo-suave text-rojo-texto rounded-xl border-2 px-3 py-2 text-sm font-bold"></p>
+  <p data-wa-estado class="text-noche-suave text-sm" aria-live="polite"></p>
+
+  <div class="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+    <div data-wa-lista class="flex max-h-[75vh] flex-col gap-2 overflow-y-auto pr-1"></div>
+    <div data-wa-chat class="border-noche bg-blanco flex min-h-[420px] flex-col rounded-2xl border-2">
+      <p class="text-noche-suave m-auto p-6 text-center text-sm">Elige un chat para ver la conversación</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  type Chat = {
+    jid: string;
+    jid_alt: string | null;
+    telefono: string | null;
+    nombre: string | null;
+    anuncio: number;
+    anuncio_datos: string | null;
+    etiqueta: number;
+    estado: "nueva" | "contactada" | "cerrada";
+    notas: string | null;
+    creado: string;
+    ultimo: string | null;
+    ultimo_texto: string | null;
+    ultimo_de_mi: number | null;
+    sin_leer: number;
+  };
+  type Mensaje = { id: string; de_mi: number; texto: string; enviado: string; por: string | null };
+  type Anuncio = { titulo?: string; texto?: string; id?: string; url?: string; app?: string; ctwaClid?: string };
+
+  const root = document.querySelector<HTMLElement>("[data-wa-panel]")!;
+  const lista = root.querySelector<HTMLElement>("[data-wa-lista]")!;
+  const vista = root.querySelector<HTMLElement>("[data-wa-chat]")!;
+  const estado = root.querySelector<HTMLElement>("[data-wa-estado]")!;
+  const aviso = root.querySelector<HTMLElement>("[data-wa-config]")!;
+  const buscar = root.querySelector<HTMLInputElement>("[data-wa-buscar]")!;
+  const importar = root.querySelector<HTMLButtonElement>("[data-wa-importar]")!;
+
+  const hora = new Intl.DateTimeFormat("es-CL", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const dia = new Intl.DateTimeFormat("es-CL", { weekday: "short", day: "numeric", month: "short" });
+  const cuando = (iso: string) => {
+    const f = new Date(iso);
+    return f.toDateString() === new Date().toDateString() ? hora.format(f) : `${dia.format(f)} ${hora.format(f)}`;
+  };
+  const ESTADOS = {
+    nueva: { nombre: "Nueva", clase: "border-rojo-texto bg-rojo-suave text-rojo-texto" },
+    contactada: { nombre: "Contactada", clase: "border-noche bg-sol" },
+    cerrada: { nombre: "Cerrada", clase: "border-noche/40 bg-arena" },
+  } as const;
+  const APPS: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", whatsapp: "WhatsApp" };
+
+  let chats: Chat[] = [];
+  let filtro = "pendientes";
+  let abierto: string | null = null;
+  let puedeResponder = false;
+  let activo = false;
+  let conocidos: Map<string, string | null> | undefined;
+
+  const api = (ruta: string, init?: RequestInit) =>
+    fetch(ruta, { ...init, credentials: "same-origin", headers: { "x-saltabum-admin": "1", "content-type": "application/json" } });
+  const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const avisar = (texto: string) => document.dispatchEvent(new CustomEvent("panel:aviso", { detail: texto }));
+  const sinSesion = () => document.dispatchEvent(new CustomEvent("panel:sin-sesion"));
+  const leerAnuncio = (c: Chat): Anuncio => {
+    try {
+      return c.anuncio_datos ? (JSON.parse(c.anuncio_datos) as Anuncio) : {};
+    } catch {
+      return {};
+    }
+  };
+  const nombreDe = (c: Chat) => c.nombre || (c.telefono ? `+${c.telefono}` : "Cliente sin nombre");
+
+  function el(tag: string, clase: string, texto?: string | null) {
+    const e = document.createElement(tag);
+    e.className = clase;
+    if (texto) e.textContent = texto;
+    return e;
+  }
+  function boton(texto: string, clase: string, accion: () => void) {
+    const b = el("button", `min-h-9 cursor-pointer rounded-full border-2 px-3 text-sm font-extrabold disabled:opacity-50 ${clase}`, texto) as HTMLButtonElement;
+    b.type = "button";
+    b.addEventListener("click", accion);
+    return b;
+  }
+  function enlace(href: string, texto: string, clase = "text-azul-texto underline") {
+    const a = el("a", clase, texto) as HTMLAnchorElement;
+    a.href = href;
+    a.target = "_blank";
+    a.rel = "noopener";
+    return a;
+  }
+
+  async function cargar() {
+    const res = await api("/api/admin/whatsapp").catch(() => null);
+    if (res?.status === 401) return sinSesion();
+    if (!res?.ok) return void (estado.textContent = "No se pudieron cargar los chats");
+    const datos = (await res.json()) as { chats: Chat[]; configuracion: { evolution: boolean; webhook: boolean } };
+    puedeResponder = datos.configuracion.evolution;
+    importar.hidden = !datos.configuracion.evolution;
+    const faltan = [!datos.configuracion.webhook && "EVOLUTION_WEBHOOK_SECRET", !datos.configuracion.evolution && "EVOLUTION_API_URL y EVOLUTION_API_KEY"].filter(Boolean);
+    aviso.hidden = !faltan.length;
+    aviso.textContent = faltan.length ? `Falta configurar en Cloudflare: ${faltan.join(" · ")}` : "";
+
+    // Aviso de mensajes nuevos (compara el último mensaje de cada chat con la carga anterior).
+    if (conocidos) {
+      const nuevos = datos.chats.filter((c) => !c.ultimo_de_mi && c.ultimo && conocidos!.get(c.jid) !== c.ultimo);
+      if (nuevos.length === 1) avisar(`Nuevo WhatsApp de ${nombreDe(nuevos[0]!)}`);
+      else if (nuevos.length > 1) avisar(`${nuevos.length} chats de WhatsApp con mensajes nuevos`);
+    }
+    conocidos = new Map(datos.chats.map((c) => [c.jid, c.ultimo]));
+    const cambioAbierto = abierto && chats.find((c) => c.jid === abierto)?.ultimo !== datos.chats.find((c) => c.jid === abierto)?.ultimo;
+    chats = datos.chats;
+    document.dispatchEvent(
+      new CustomEvent("panel:contador", { detail: { pestana: "whatsapp", n: chats.filter((c) => c.estado !== "cerrada" && (c.sin_leer > 0 || c.estado === "nueva")).length } }),
+    );
+    pintarLista();
+    if (abierto && cambioAbierto) void abrir(abierto, false);
+  }
+
+  async function enviar(datos: Record<string, unknown>, mensajeOk?: string) {
+    const res = await api("/api/admin/whatsapp", { method: "POST", body: JSON.stringify(datos) }).catch(() => null);
+    if (res?.status === 401) return sinSesion(), false;
+    if (mensajeOk || !res?.ok) avisar(res?.ok ? mensajeOk! : res?.status === 502 ? "WhatsApp no respondió, inténtalo de nuevo" : "No se pudo guardar, inténtalo de nuevo");
+    await cargar();
+    return !!res?.ok;
+  }
+
+  function pintarLista() {
+    const q = sinTildes(buscar.value.trim());
+    const visibles = chats.filter((c) => {
+      if (filtro === "pendientes" && c.estado === "cerrada") return false;
+      if (filtro === "cerrada" && c.estado !== "cerrada") return false;
+      if (filtro === "anuncio" && !c.anuncio) return false;
+      if (filtro === "etiqueta" && !c.etiqueta) return false;
+      return !q || sinTildes([c.nombre, c.telefono, c.ultimo_texto, c.notas, leerAnuncio(c).titulo].filter(Boolean).join(" ")).includes(q);
+    });
+    lista.replaceChildren(...visibles.map(fila));
+    estado.textContent = visibles.length ? "" : chats.length ? "No hay chats en esta vista" : "Todavía no hay chats. Llegan solos cuando alguien escribe desde un anuncio o se etiqueta un chat.";
+  }
+
+  function fila(c: Chat): HTMLElement {
+    const b = el(
+      "button",
+      `border-noche flex w-full cursor-pointer flex-col gap-1 rounded-2xl border-2 p-3 text-left ${c.jid === abierto ? "bg-sol/40" : "bg-blanco"}`,
+    ) as HTMLButtonElement;
+    b.type = "button";
+    const arriba = el("div", "flex items-center justify-between gap-2");
+    arriba.append(el("span", "truncate font-extrabold", nombreDe(c)));
+    arriba.append(el("span", "text-noche-suave shrink-0 text-xs font-semibold", cuando(c.ultimo ?? c.creado)));
+    b.append(arriba);
+    b.append(el("p", "text-noche-suave truncate text-sm", c.ultimo_texto ? `${c.ultimo_de_mi ? "Tú: " : ""}${c.ultimo_texto}` : "Sin mensajes"));
+    const chips = el("div", "flex flex-wrap items-center gap-1");
+    const e = ESTADOS[c.estado];
+    chips.append(el("span", `rounded-full border px-2 text-xs font-extrabold ${e.clase}`, e.nombre));
+    if (c.anuncio) chips.append(el("span", "border-noche bg-verde-burbuja rounded-full border px-2 text-xs font-extrabold", `Anuncio${leerAnuncio(c).app ? ` · ${APPS[leerAnuncio(c).app!] ?? leerAnuncio(c).app}` : ""}`));
+    if (c.etiqueta) chips.append(el("span", "border-noche bg-crema rounded-full border px-2 text-xs font-extrabold", "Etiqueta"));
+    if (c.sin_leer > 0) chips.append(el("span", "bg-rojo-texto ml-auto rounded-full px-2 text-xs leading-5 font-extrabold text-white", String(c.sin_leer)));
+    b.append(chips);
+    b.addEventListener("click", () => void abrir(c.jid, true));
+    return b;
+  }
+
+  async function abrir(jid: string, desplazar: boolean) {
+    abierto = jid;
+    pintarLista();
+    const res = await api(`/api/admin/whatsapp?chat=${encodeURIComponent(jid)}`).catch(() => null);
+    if (res?.status === 401) return sinSesion();
+    const mensajes = res?.ok ? ((await res.json()) as { mensajes: Mensaje[] }).mensajes : null;
+    const c = chats.find((x) => x.jid === jid);
+    if (!c || abierto !== jid) return;
+    pintarChat(c, mensajes);
+    if (desplazar && window.matchMedia("(max-width: 1023px)").matches) vista.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (c.sin_leer > 0) {
+      c.sin_leer = 0;
+      pintarLista();
+      void api("/api/admin/whatsapp", { method: "POST", body: JSON.stringify({ accion: "leido", jid }) });
+    }
+  }
+
+  function pintarChat(c: Chat, mensajes: Mensaje[] | null) {
+    const anuncio = leerAnuncio(c);
+    const cabeza = el("div", "border-noche flex flex-col gap-2 border-b-2 p-4");
+    const fila1 = el("div", "flex flex-wrap items-center justify-between gap-2");
+    const quien = el("div", "flex min-w-0 flex-col");
+    quien.append(el("p", "font-display text-xl font-semibold", nombreDe(c)));
+    if (c.telefono) {
+      const tel = el("p", "flex flex-wrap gap-x-2 text-sm");
+      tel.append(el("span", "font-semibold", `+${c.telefono}`));
+      tel.append(enlace(`https://wa.me/${c.telefono}`, "Abrir en WhatsApp"));
+      quien.append(tel);
+    } else quien.append(el("p", "text-noche-suave text-xs", "WhatsApp no comparte el teléfono de este chat"));
+    fila1.append(quien);
+
+    const acciones = el("div", "flex flex-wrap gap-2");
+    acciones.append(
+      boton("Crear reserva", "border-noche bg-verde-burbuja", () => {
+        const [nombre, ...resto] = (c.nombre ?? "").split(/\s+/);
+        document.dispatchEvent(new CustomEvent("panel:abrir-pestana", { detail: "reservas" }));
+        document.dispatchEvent(
+          new CustomEvent("panel:nueva-reserva", {
+            detail: {
+              nombre: nombre ?? "",
+              apellido: resto.join(" "),
+              telefono: c.telefono ? `+${c.telefono}` : "",
+              notas: `Desde WhatsApp${c.anuncio ? ` (anuncio${anuncio.titulo ? `: ${anuncio.titulo}` : ""})` : ""}`,
+            },
+          }),
+        );
+      }),
+    );
+    if (c.estado === "nueva") acciones.append(boton("Marcar contactada", "border-noche bg-sol", () => void enviar({ accion: "estado", jid: c.jid, estado: "contactada" }, "Marcado como contactado")));
+    if (c.estado !== "cerrada") acciones.append(boton("Cerrar", "border-noche bg-crema", () => void enviar({ accion: "estado", jid: c.jid, estado: "cerrada" }, "Chat cerrado")));
+    else acciones.append(boton("Reabrir", "border-noche bg-crema", () => void enviar({ accion: "estado", jid: c.jid, estado: "contactada" }, "Chat reabierto")));
+    fila1.append(acciones);
+    cabeza.append(fila1);
+
+    if (c.anuncio) {
+      const caja = el("div", "bg-verde-burbuja/30 flex flex-col gap-0.5 rounded-xl px-3 py-2 text-sm");
+      caja.append(el("p", "font-extrabold", `Llegó desde un anuncio${anuncio.app ? ` de ${APPS[anuncio.app] ?? anuncio.app}` : ""}`));
+      if (anuncio.titulo) caja.append(el("p", "font-semibold", anuncio.titulo));
+      if (anuncio.texto) caja.append(el("p", "text-noche-suave line-clamp-2", anuncio.texto));
+      if (anuncio.url) caja.append(enlace(anuncio.url, "Ver el anuncio", "text-azul-texto w-fit text-xs underline"));
+      cabeza.append(caja);
+    }
+
+    // Notas internas.
+    const notas = el("div", "flex flex-col gap-1 text-sm");
+    if (c.notas) notas.append(el("p", "bg-sol/25 rounded-lg px-2 py-1", `Nota: ${c.notas}`));
+    notas.append(
+      boton(c.notas ? "Editar nota" : "Agregar nota", "border-noche/30 bg-crema w-fit", () => {
+        const area = el("textarea", "border-noche bg-crema w-full rounded-xl border-2 px-3 py-2") as HTMLTextAreaElement;
+        area.rows = 2;
+        area.maxLength = 2000;
+        area.value = c.notas ?? "";
+        area.placeholder = "Ej.: quiere el castillo para el sábado, espera precio con despacho";
+        notas.replaceChildren(area, boton("Guardar nota", "border-noche bg-noche text-crema w-fit", () => void enviar({ accion: "notas", jid: c.jid, notas: area.value }, "Nota guardada")));
+        area.focus();
+      }),
+    );
+    cabeza.append(notas);
+
+    const cuerpo = el("div", "bg-crema/60 flex max-h-[55vh] min-h-[240px] flex-1 flex-col gap-2 overflow-y-auto p-4");
+    if (!mensajes) cuerpo.append(el("p", "text-rojo-texto m-auto text-sm font-bold", "No se pudieron cargar los mensajes"));
+    else if (!mensajes.length) cuerpo.append(el("p", "text-noche-suave m-auto text-sm", "Todavía no hay mensajes guardados de este chat"));
+    for (const m of mensajes ?? []) {
+      const burbuja = el(
+        "div",
+        `max-w-[85%] rounded-2xl border-2 px-3 py-2 text-sm whitespace-pre-wrap break-words ${m.de_mi ? "border-noche bg-sol/50 self-end" : "border-noche/30 bg-blanco self-start"}`,
+      );
+      burbuja.append(el("p", "", m.texto));
+      burbuja.append(el("p", "text-noche-suave mt-1 text-right text-[11px] font-semibold", `${cuando(m.enviado)}${m.por ? ` · ${m.por}` : ""}`));
+      cuerpo.append(burbuja);
+    }
+
+    const pie = el("form", "border-noche flex items-end gap-2 border-t-2 p-3") as HTMLFormElement;
+    if (puedeResponder) {
+      const area = el("textarea", "border-noche bg-crema min-h-11 flex-1 rounded-xl border-2 px-3 py-2") as HTMLTextAreaElement;
+      area.rows = 2;
+      area.maxLength = 4000;
+      area.placeholder = "Escribe la respuesta… (Enter envía, Shift+Enter salta de línea)";
+      const mandar = el("button", "bg-noche text-crema min-h-11 cursor-pointer rounded-full px-5 font-extrabold disabled:opacity-50", "Enviar") as HTMLButtonElement;
+      pie.append(area, mandar);
+      area.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          pie.requestSubmit();
+        }
+      });
+      pie.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const texto = area.value.trim();
+        if (!texto) return;
+        mandar.disabled = true;
+        const ok = await enviar({ accion: "responder", jid: c.jid, texto });
+        mandar.disabled = false;
+        if (ok) {
+          area.value = "";
+          void abrir(c.jid, false);
+        }
+      });
+    } else pie.append(el("p", "text-noche-suave text-sm", "Para responder desde aquí falta conectar Evolution API (ver el aviso de arriba)."));
+
+    vista.replaceChildren(cabeza, cuerpo, pie);
+    cuerpo.scrollTop = cuerpo.scrollHeight;
+  }
+
+  root.querySelectorAll<HTMLButtonElement>("[data-filtro-wa]").forEach((b) =>
+    b.addEventListener("click", () => {
+      filtro = b.dataset.filtroWa!;
+      root.querySelectorAll("[data-filtro-wa]").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      pintarLista();
+    }),
+  );
+  buscar.addEventListener("input", pintarLista);
+
+  importar.addEventListener("click", async () => {
+    importar.disabled = true;
+    importar.textContent = "Importando… (puede tardar un minuto)";
+    const res = await api("/api/admin/whatsapp", { method: "POST", body: JSON.stringify({ accion: "importar" }) }).catch(() => null);
+    importar.disabled = false;
+    importar.textContent = "Importar chats de anuncios";
+    if (res?.status === 401) return sinSesion();
+    if (!res?.ok) return avisar("No se pudo importar: WhatsApp no respondió");
+    const r = (await res.json()) as { revisados: number; chats: number; mensajes: number };
+    avisar(`Listo: ${r.chats} chats de anuncios (${r.mensajes} mensajes nuevos) de ${r.revisados.toLocaleString("es-CL")} revisados`);
+    void cargar();
+  });
+
+  document.addEventListener("panel:listo", () => {
+    activo = true;
+    void cargar();
+  });
+  document.addEventListener("panel:pestana", (e) => {
+    if (activo && (e as CustomEvent<string>).detail === "whatsapp") void cargar();
+  });
+  setInterval(() => {
+    if (activo && document.visibilityState === "visible") void cargar();
+  }, 20_000);
+  document.addEventListener("panel:cerrado", () => {
+    activo = false;
+    chats = [];
+    abierto = null;
+    conocidos = undefined;
+    lista.replaceChildren();
+  });
+</script>

@@ -71,7 +71,18 @@ npx wrangler secret put META_CAPI_ACCESS_TOKEN
 npx wrangler secret put CRM_WEBHOOK_URL
 npx wrangler secret put CRM_WEBHOOK_SECRET
 npx wrangler secret put ADMIN_USUARIOS   # usuarios del panel /admin (ver «Panel de reservas»)
+# WhatsApp en /admin → pestaña «WhatsApp» (Evolution API en Easypanel)
+npx wrangler secret put EVOLUTION_API_URL         # https://evolution-api-evolution-api.db8enk.easypanel.host
+npx wrangler secret put EVOLUTION_API_KEY         # AUTHENTICATION_API_KEY de Evolution
+npx wrangler secret put EVOLUTION_WEBHOOK_SECRET  # clave larga al azar
+# Opcionales: EVOLUTION_INSTANCIA (por defecto «Saltabum») y WHATSAPP_ETIQUETA_ID (por defecto «12» = SALTABUM | LEADS)
 ```
+
+**WhatsApp en el panel.** Evolution API manda cada mensaje a `/api/whatsapp`, y el sitio guarda en D1 solo los chats
+que llegaron por un anuncio de Meta (Click-to-WhatsApp) o que tienen la etiqueta «SALTABUM | LEADS». El webhook de la
+instancia se configura en Evolution con la URL `https://saltabum.cl/api/whatsapp?clave=<EVOLUTION_WEBHOOK_SECRET>`
+y los eventos `MESSAGES_UPSERT`, `SEND_MESSAGE` y `LABELS_ASSOCIATION` (sin «by events» ni base64). Los chats de
+anuncios anteriores se traen con el botón «Importar chats de anuncios» de la pestaña.
 
 Las consultas del formulario de contacto (`/api/lead`) se guardan en D1 y se ven en `/admin` → Consultas; el CRM
 (`CRM_WEBHOOK_URL`) es opcional y, si existe, también las recibe. Antispam: honeypot (`website`) y máximo 5

@@ -74,6 +74,15 @@ export default defineConfig({
       // Usuarios del panel de reservas (/admin): «usuario:pbkdf2$…:<totp>», uno por línea. Se generan con
       // node scripts/admin-usuario.mjs (ver src/lib/server/admin-auth.ts).
       ADMIN_USUARIOS: envField.string({ context: "server", access: "secret", optional: true }),
+      // WhatsApp vía Evolution API (Easypanel). Ver src/lib/server/evolution.ts y la pestaña «WhatsApp» del panel.
+      //   EVOLUTION_API_URL: https://evolution-api-evolution-api.db8enk.easypanel.host
+      //   EVOLUTION_API_KEY: AUTHENTICATION_API_KEY de Evolution (para importar chats y responder desde el panel)
+      //   EVOLUTION_WEBHOOK_SECRET: clave larga al azar; va en la URL del webhook (?clave=…)
+      EVOLUTION_API_URL: envField.string({ context: "server", access: "secret", optional: true }),
+      EVOLUTION_API_KEY: envField.string({ context: "server", access: "secret", optional: true }),
+      EVOLUTION_WEBHOOK_SECRET: envField.string({ context: "server", access: "secret", optional: true }),
+      EVOLUTION_INSTANCIA: envField.string({ context: "server", access: "secret", optional: true }), // por defecto «Saltabum»
+      WHATSAPP_ETIQUETA_ID: envField.string({ context: "server", access: "secret", optional: true }), // por defecto «12» (SALTABUM | LEADS)
     },
   },
 });

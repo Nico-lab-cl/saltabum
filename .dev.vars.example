@@ -12,3 +12,10 @@ CRM_WEBHOOK_SECRET=
 
 # Usuarios del panel de reservas (/admin), uno por línea. Se generan con:  node scripts/admin-usuario.mjs
 ADMIN_USUARIOS=
+
+# WhatsApp en /admin (Evolution API en Easypanel)
+EVOLUTION_API_URL=https://evolution-api-evolution-api.db8enk.easypanel.host
+EVOLUTION_API_KEY=
+EVOLUTION_WEBHOOK_SECRET=
+# EVOLUTION_INSTANCIA=Saltabum
+# WHATSAPP_ETIQUETA_ID=12
