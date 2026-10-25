@@ -34,11 +34,40 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
         }
       </div>
       <input data-wa-buscar type="search" placeholder="Buscar nombre, teléfono, mensaje…" class={`${campo} w-full sm:w-[240px]`} />
+      <button data-wa-actualizar type="button" class="border-noche bg-blanco min-h-11 cursor-pointer rounded-full border-2 px-4 text-sm font-extrabold disabled:opacity-50">
+        ↻ Actualizar
+      </button>
+      <button data-wa-nuevo type="button" class="border-noche bg-verde-burbuja min-h-11 cursor-pointer rounded-full border-2 px-4 text-sm font-extrabold">
+        + Agregar número
+      </button>
       <button data-wa-importar type="button" class="border-noche bg-sol min-h-11 cursor-pointer rounded-full border-2 px-4 text-sm font-extrabold disabled:opacity-50">
         Importar chats de anuncios
       </button>
     </div>
   </div>
+
+  <!-- Agregar un número: queda en el panel y con la etiqueta «SALTABUM | LEADS» en WhatsApp -->
+  <form data-wa-form-nuevo hidden class="border-noche bg-blanco grid gap-3 rounded-2xl border-2 p-4 md:grid-cols-[1fr_1fr_2fr_auto] md:items-end">
+    <label class="flex flex-col gap-1 text-sm font-bold">
+      Teléfono
+      <input name="telefono" required inputmode="tel" autocomplete="off" placeholder="+56 9 1234 5678" maxlength="25" class={campo} />
+    </label>
+    <label class="flex flex-col gap-1 text-sm font-bold">
+      Nombre (opcional)
+      <input name="nombre" autocomplete="off" maxlength="120" placeholder="Ej.: Camila Rojas" class={campo} />
+    </label>
+    <label class="flex flex-col gap-1 text-sm font-bold">
+      Primer mensaje (opcional)
+      <input name="mensaje" autocomplete="off" maxlength="4000" placeholder="Hola, te escribimos de Saltabum 🎈" class={campo} />
+    </label>
+    <div class="flex gap-2">
+      <button class="bg-noche text-crema min-h-11 cursor-pointer rounded-full px-5 font-extrabold disabled:opacity-50">Agregar</button>
+      <button type="button" data-wa-cancelar-nuevo class="border-noche min-h-11 cursor-pointer rounded-full border-2 px-4 font-extrabold">Cancelar</button>
+    </div>
+    <p class="text-noche-suave text-xs md:col-span-4">
+      Se revisa que el número tenga WhatsApp, se le pone la etiqueta «SALTABUM | LEADS» y aparece aquí con su historial.
+    </p>
+  </form>
   <p data-wa-config hidden class="border-rojo-texto bg-rojo-suave text-rojo-texto rounded-xl border-2 px-3 py-2 text-sm font-bold"></p>
   <p data-wa-estado class="text-noche-suave text-sm" aria-live="polite"></p>
 
@@ -90,6 +119,11 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     cerrada: { nombre: "Cerrada", clase: "border-noche/40 bg-arena" },
   } as const;
   const APPS: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", whatsapp: "WhatsApp" };
+  const EMOJIS = [
+    "😊", "😁", "😂", "🥰", "😍", "😉", "🤩", "😎", "🤗", "🙂", "😅", "🤔", "🙏", "👍", "👏", "🙌",
+    "💪", "👌", "👋", "🤝", "✅", "❌", "⭐", "✨", "🔥", "❤️", "💛", "💙", "💚", "🎉", "🥳", "🎈",
+    "🎂", "🎁", "🏰", "🎪", "🛝", "🤸", "☀️", "🌈", "📍", "📅", "⏰", "💰", "💵", "🚚", "📸", "📲",
+  ];
 
   let chats: Chat[] = [];
   let filtro = "pendientes";
@@ -294,14 +328,45 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
       cuerpo.append(burbuja);
     }
 
-    const pie = el("form", "border-noche flex items-end gap-2 border-t-2 p-3") as HTMLFormElement;
+    const pie = el("form", "border-noche relative flex flex-col gap-2 border-t-2 p-3") as HTMLFormElement;
     if (puedeResponder) {
-      const area = el("textarea", "border-noche bg-crema min-h-11 flex-1 rounded-xl border-2 px-3 py-2") as HTMLTextAreaElement;
+      const area = el("textarea", "border-noche bg-crema min-h-11 min-w-0 flex-1 rounded-xl border-2 px-3 py-2") as HTMLTextAreaElement;
       area.rows = 2;
       area.maxLength = 4000;
       area.placeholder = "Escribe la respuesta… (Enter envía, Shift+Enter salta de línea)";
       const mandar = el("button", "bg-noche text-crema min-h-11 cursor-pointer rounded-full px-5 font-extrabold disabled:opacity-50", "Enviar") as HTMLButtonElement;
-      pie.append(area, mandar);
+
+      // Emojis: se insertan donde está el cursor.
+      const panelEmojis = el("div", "border-noche bg-blanco shadow-pop absolute bottom-full left-3 z-10 mb-2 grid max-h-56 w-[min(340px,calc(100%-24px))] grid-cols-8 gap-1 overflow-y-auto rounded-2xl border-2 p-2");
+      panelEmojis.hidden = true;
+      for (const emoji of EMOJIS) {
+        const b = el("button", "hover:bg-crema size-9 cursor-pointer rounded-lg text-xl", emoji) as HTMLButtonElement;
+        b.type = "button";
+        b.addEventListener("click", () => {
+          const ini = area.selectionStart ?? area.value.length;
+          area.setRangeText(emoji, ini, area.selectionEnd ?? ini, "end");
+          area.focus();
+        });
+        panelEmojis.append(b);
+      }
+      const botonEmojis = el("button", "border-noche bg-crema size-11 shrink-0 cursor-pointer rounded-full border-2 text-xl", "😊") as HTMLButtonElement;
+      botonEmojis.type = "button";
+      botonEmojis.title = "Emojis";
+      botonEmojis.setAttribute("aria-label", "Emojis");
+      botonEmojis.addEventListener("click", () => (panelEmojis.hidden = !panelEmojis.hidden));
+
+      // Nota de voz: se graba en el navegador y se envía como audio de WhatsApp.
+      const botonMicro = el("button", "border-noche bg-crema size-11 shrink-0 cursor-pointer rounded-full border-2 text-xl", "🎤") as HTMLButtonElement;
+      botonMicro.type = "button";
+      botonMicro.title = "Grabar nota de voz";
+      botonMicro.setAttribute("aria-label", "Grabar nota de voz");
+      const filaTexto = el("div", "flex items-end gap-2");
+      filaTexto.append(botonEmojis, botonMicro, area, mandar);
+      const filaAudio = el("div", "flex flex-wrap items-center gap-2");
+      filaAudio.hidden = true;
+      botonMicro.addEventListener("click", () => void grabarNota(c, filaTexto, filaAudio));
+
+      pie.append(panelEmojis, filaTexto, filaAudio);
       area.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
@@ -326,6 +391,87 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     cuerpo.scrollTop = cuerpo.scrollHeight;
   }
 
+  // ── Nota de voz ─────────────────────────────────────────────────────────
+  const MAX_SEGUNDOS = 180;
+  let grabando: MediaRecorder | null = null;
+
+  async function grabarNota(c: Chat, filaTexto: HTMLElement, filaAudio: HTMLElement) {
+    if (grabando) return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") return avisar("Este navegador no permite grabar audio");
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      return avisar("No se pudo usar el micrófono: revisa el permiso del navegador");
+    }
+    const tipo = ["audio/ogg;codecs=opus", "audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((t) => MediaRecorder.isTypeSupported(t));
+    const rec = new MediaRecorder(stream, tipo ? { mimeType: tipo } : undefined);
+    grabando = rec;
+    const partes: Blob[] = [];
+    rec.addEventListener("dataavailable", (e) => e.data.size && partes.push(e.data));
+
+    const inicio = Date.now();
+    const reloj = el("span", "text-rojo-texto font-extrabold", "● 0:00");
+    const tick = setInterval(() => {
+      const s = Math.floor((Date.now() - inicio) / 1000);
+      reloj.textContent = `● ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+      if (s >= MAX_SEGUNDOS) rec.stop();
+    }, 250);
+
+    let cancelado = false;
+    const cancelar = boton("Cancelar", "border-noche bg-crema", () => {
+      cancelado = true;
+      rec.stop();
+    });
+    const listo = boton("Detener y revisar", "border-noche bg-sol", () => rec.stop());
+    filaAudio.replaceChildren(reloj, el("span", "text-noche-suave text-sm", "Grabando nota de voz…"), cancelar, listo);
+    filaTexto.hidden = true;
+    filaAudio.hidden = false;
+
+    rec.addEventListener("stop", () => {
+      clearInterval(tick);
+      stream.getTracks().forEach((t) => t.stop());
+      grabando = null;
+      const volver = () => {
+        filaAudio.hidden = true;
+        filaTexto.hidden = false;
+        filaAudio.replaceChildren();
+      };
+      if (cancelado || !partes.length) return volver();
+      const blob = new Blob(partes, { type: rec.mimeType || "audio/webm" });
+      const url = URL.createObjectURL(blob);
+      const reproductor = document.createElement("audio");
+      reproductor.controls = true;
+      reproductor.src = url;
+      reproductor.className = "h-10 max-w-full";
+      const descartar = boton("Descartar", "border-noche bg-crema", () => {
+        URL.revokeObjectURL(url);
+        volver();
+      });
+      const mandarAudio = boton("Enviar nota de voz", "border-noche bg-noche text-crema", async () => {
+        mandarAudio.disabled = true;
+        descartar.disabled = true;
+        const base64 = await new Promise<string>((ok) => {
+          const lector = new FileReader();
+          lector.onload = () => ok(String(lector.result).split(",")[1] ?? "");
+          lector.readAsDataURL(blob);
+        });
+        const enviado = await enviar({ accion: "audio", jid: c.jid, audio: base64 });
+        URL.revokeObjectURL(url);
+        if (enviado) {
+          avisar("Nota de voz enviada");
+          volver();
+          void abrir(c.jid, false);
+        } else {
+          mandarAudio.disabled = false;
+          descartar.disabled = false;
+        }
+      });
+      filaAudio.replaceChildren(reproductor, descartar, mandarAudio);
+    });
+    rec.start(1000);
+  }
+
   root.querySelectorAll<HTMLButtonElement>("[data-filtro-wa]").forEach((b) =>
     b.addEventListener("click", () => {
       filtro = b.dataset.filtroWa!;
@@ -346,6 +492,83 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     const r = (await res.json()) as { revisados: number; chats: number; mensajes: number };
     avisar(`Listo: ${r.chats} chats de anuncios (${r.mensajes} mensajes nuevos) de ${r.revisados.toLocaleString("es-CL")} revisados`);
     void cargar();
+  });
+
+  // ── Actualizar: vuelve a consultar a WhatsApp los últimos mensajes de cada chat ─────────────────────
+  const actualizar = root.querySelector<HTMLButtonElement>("[data-wa-actualizar]")!;
+  let sincronizando = false;
+  async function sincronizar(limite?: number, silencioso = false) {
+    if (sincronizando || !puedeResponder) return;
+    sincronizando = true;
+    actualizar.disabled = true;
+    const jids = chats.slice(0, limite ?? chats.length).map((c) => c.jid);
+    let mensajes = 0;
+    let fallo = false;
+    // De a 15 chats por consulta, para no pasarse del límite de llamadas del servidor.
+    for (let i = 0; i < jids.length; i += 15) {
+      if (!silencioso) actualizar.textContent = `↻ ${Math.min(i + 15, jids.length)}/${jids.length}`;
+      const res = await api("/api/admin/whatsapp", { method: "POST", body: JSON.stringify({ accion: "sincronizar", jids: jids.slice(i, i + 15) }) }).catch(() => null);
+      if (res?.status === 401) {
+        sinSesion();
+        break;
+      }
+      if (!res?.ok) fallo = true;
+      else mensajes += ((await res.json()) as { mensajes: number }).mensajes;
+    }
+    actualizar.textContent = "↻ Actualizar";
+    actualizar.disabled = false;
+    sincronizando = false;
+    if (!silencioso) avisar(fallo ? "WhatsApp no respondió del todo, inténtalo de nuevo" : mensajes ? `${mensajes} mensajes nuevos` : "Todo al día");
+    await cargar();
+    if (abierto) void abrir(abierto, false);
+  }
+  actualizar.addEventListener("click", async () => {
+    await cargar();
+    await sincronizar();
+  });
+  // Cada 5 minutos, con el panel abierto, revisa en silencio los 15 chats más recientes.
+  setInterval(() => {
+    if (activo && document.visibilityState === "visible") void sincronizar(15, true);
+  }, 5 * 60_000);
+
+  // ── Agregar número ───────────────────────────────────────────────────────
+  const formNuevo = root.querySelector<HTMLFormElement>("[data-wa-form-nuevo]")!;
+  root.querySelector("[data-wa-nuevo]")!.addEventListener("click", () => {
+    formNuevo.hidden = !formNuevo.hidden;
+    if (!formNuevo.hidden) formNuevo.querySelector<HTMLInputElement>("[name=telefono]")!.focus();
+  });
+  root.querySelector("[data-wa-cancelar-nuevo]")!.addEventListener("click", () => {
+    formNuevo.reset();
+    formNuevo.hidden = true;
+  });
+  formNuevo.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const datos = new FormData(formNuevo);
+    const btn = formNuevo.querySelector<HTMLButtonElement>("button:not([type])")!;
+    btn.disabled = true;
+    btn.textContent = "Agregando…";
+    const res = await api("/api/admin/whatsapp", {
+      method: "POST",
+      body: JSON.stringify({
+        accion: "agregar",
+        telefono: String(datos.get("telefono") ?? ""),
+        nombre: String(datos.get("nombre") ?? "") || undefined,
+        mensaje: String(datos.get("mensaje") ?? "") || undefined,
+      }),
+    }).catch(() => null);
+    btn.disabled = false;
+    btn.textContent = "Agregar";
+    if (res?.status === 401) return sinSesion();
+    if (!res?.ok) {
+      const error = ((await res?.json().catch(() => ({}))) as { error?: string } | undefined)?.error;
+      return avisar(error === "sin_whatsapp" ? "Ese número no tiene WhatsApp" : error === "validacion" ? "Revisa el teléfono" : "No se pudo agregar, inténtalo de nuevo");
+    }
+    const { jid } = (await res.json()) as { jid: string };
+    formNuevo.reset();
+    formNuevo.hidden = true;
+    avisar("Número agregado con la etiqueta SALTABUM | LEADS");
+    await cargar();
+    void abrir(jid, true);
   });
 
   document.addEventListener("panel:listo", () => {

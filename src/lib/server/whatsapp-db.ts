@@ -145,6 +145,12 @@ export async function asegurarChat(c: {
   return previo.jid;
 }
 
+/** Nombre escrito en el panel (manda sobre el nombre de perfil de WhatsApp). */
+export async function renombrarChat(jid: string, nombre: string): Promise<void> {
+  const d = await db();
+  await d.prepare("UPDATE wa_chats SET nombre = ?, actualizado = ? WHERE jid = ?").bind(nombre, new Date().toISOString(), jid).run();
+}
+
 /** Quita la etiqueta (el chat queda guardado, y sigue visible si vino de un anuncio). */
 export async function quitarEtiqueta(...jids: string[]): Promise<void> {
   const chat = await buscarChat(...jids);

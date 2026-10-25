@@ -59,7 +59,7 @@ export function textoDe(m: MensajeEvolution): string | null {
     case "videoMessage":
       return `🎬 Video${str(cuerpo.caption) ? `: ${str(cuerpo.caption)}` : ""}`;
     case "audioMessage":
-      return "🎤 Audio";
+      return "🎤 Nota de voz";
     case "stickerMessage":
       return "Sticker";
     case "documentMessage":
@@ -155,6 +155,23 @@ export async function buscarMensajes(where: Record<string, unknown>, pagina = 1,
 export async function nombreDeContacto(jid: string): Promise<string | null> {
   const r = await llamar<{ pushName?: string | null }[]>(`/chat/findContacts/${encodeURIComponent(instancia())}`, { where: { remoteJid: jid } });
   return (Array.isArray(r) ? r : []).map((c) => nombreDe({ pushName: c.pushName })).find(Boolean) ?? null;
+}
+
+/** Revisa si un teléfono tiene WhatsApp. Devuelve el identificador del chat (…@s.whatsapp.net) o null. */
+export async function verificarNumero(telefono: string): Promise<string | null> {
+  const r = await llamar<{ exists?: boolean; jid?: string }[]>(`/chat/whatsappNumbers/${encodeURIComponent(instancia())}`, { numbers: [telefono] });
+  const x = (Array.isArray(r) ? r : [])[0];
+  return x?.exists && x.jid ? x.jid : null;
+}
+
+/** Pone (o quita) una etiqueta de WhatsApp Business a un chat. */
+export async function cambiarEtiqueta(numero: string, etiqueta: string, accion: "add" | "remove"): Promise<void> {
+  await llamar(`/label/handleLabel/${encodeURIComponent(instancia())}`, { number: numero, labelId: etiqueta, action: accion });
+}
+
+/** Envía una nota de voz. `audioBase64` sin el prefijo «data:»; Evolution la convierte al formato de WhatsApp. */
+export async function enviarAudio(numero: string, audioBase64: string): Promise<MensajeEvolution> {
+  return llamar<MensajeEvolution>(`/message/sendWhatsAppAudio/${encodeURIComponent(instancia())}`, { number: numero, audio: audioBase64 });
 }
 
 /** Envía un texto. `numero` puede ser el teléfono o el identificador del chat (…@lid). */

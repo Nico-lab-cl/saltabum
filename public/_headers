@@ -16,22 +16,27 @@
   Cache-Control: public, max-age=604800
 
 # Panel interno: sin caché, sin indexar, sin iframes y solo scripts propios. Mapa de los QR con teselas de OpenStreetMap.
+# Micrófono permitido solo aquí, para las notas de voz de la pestaña WhatsApp.
 /admin
   ! X-Frame-Options
   ! Referrer-Policy
+  ! Permissions-Policy
   Cache-Control: no-store
+  Permissions-Policy: camera=(), microphone=(self), geolocation=()
   X-Robots-Tag: noindex, nofollow
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer
   Cross-Origin-Opener-Policy: same-origin
-  Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://tile.openstreetmap.org; font-src https://fonts.gstatic.com; form-action 'none'; base-uri 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://tile.openstreetmap.org; media-src 'self' blob:; font-src https://fonts.gstatic.com; form-action 'none'; base-uri 'none'; frame-ancestors 'none'
 
 /admin/*
   ! X-Frame-Options
   ! Referrer-Policy
+  ! Permissions-Policy
   Cache-Control: no-store
+  Permissions-Policy: camera=(), microphone=(self), geolocation=()
   X-Robots-Tag: noindex, nofollow
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer
   Cross-Origin-Opener-Policy: same-origin
-  Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://tile.openstreetmap.org; font-src https://fonts.gstatic.com; form-action 'none'; base-uri 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://tile.openstreetmap.org; media-src 'self' blob:; font-src https://fonts.gstatic.com; form-action 'none'; base-uri 'none'; frame-ancestors 'none'
