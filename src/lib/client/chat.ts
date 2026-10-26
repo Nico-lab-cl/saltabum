@@ -27,7 +27,7 @@ interface Estado {
 }
 
 const CLAVE = "sb_chat_v3";
-const AVISO_ERROR = "Ups, no pude responder ahora. ¿Seguimos por WhatsApp? Te atendemos altiro.";
+const AVISO_ERROR = "Ups, no pude responder ahora. ¿Seguimos por WhatsApp? Te atendemos de inmediato.";
 const AVISO_LIMITE = "Llegamos al máximo de mensajes por hoy en este chat. Sigamos por WhatsApp 😊";
 const AVISO_EQUIPO = "Le avisamos al equipo, te responden aquí mismo en un ratito 🙌";
 /** Cada cuánto se revisan mensajes nuevos del equipo: con el chat abierto y cerrado. */
