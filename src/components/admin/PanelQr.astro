@@ -27,63 +27,77 @@ const RANKINGS = [
         Período
         <select data-qr-dias class="border-noche min-h-11 rounded-xl border-2 px-3">
           <option value="7">Últimos 7 días</option>
-          <option value="30" selected>Últimos 30 días</option>
+          <option value="30" selected>
+            Últimos 30 días
+          </option>
           <option value="90">Últimos 90 días</option>
           <option value="365">Último año</option>
         </select>
       </label>
-      <button data-qr-csv type="button" class="border-noche min-h-11 cursor-pointer rounded-full border-2 px-5 font-extrabold">
+      <button
+        data-qr-csv
+        type="button"
+        class="border-noche min-h-11 cursor-pointer rounded-full border-2 px-5 font-extrabold"
+      >
         Descargar CSV
       </button>
     </div>
   </div>
 
   <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
-    {
-      [
-        ["escaneos", "Escaneos"],
-        ["personas", "Personas distintas"],
-        ["hoy", "Hoy"],
-        ["ciudades", "Ciudades"],
-      ].map(([clave, titulo]) => (
-        <div class={tarjeta}>
-          <p class="text-noche-suave text-sm font-bold">{titulo}</p>
-          <p class="font-display text-4xl font-semibold" data-qr-kpi={clave}>0</p>
-        </div>
-      ))
-    }
+    {[
+      ["escaneos", "Escaneos"],
+      ["personas", "Personas distintas"],
+      ["hoy", "Hoy"],
+      ["ciudades", "Ciudades"],
+    ].map(([clave, titulo]) => (
+      <div class={tarjeta}>
+        <p class="text-noche-suave text-sm font-bold">{titulo}</p>
+        <p class="font-display text-4xl font-semibold" data-qr-kpi={clave}>
+          0
+        </p>
+      </div>
+    ))}
   </div>
 
   <div class={`${tarjeta} flex flex-col gap-3`}>
     <div class="flex flex-wrap items-baseline justify-between gap-2">
       <h3 class="font-display text-xl font-semibold">Dónde escanearon</h3>
-      <p class="text-noche-suave text-xs">Ubicación aproximada según la conexión (ciudad), no el GPS del celular</p>
+      <p class="text-noche-suave text-xs">
+        Ubicación aproximada según la conexión (ciudad), no el GPS del celular
+      </p>
     </div>
     <div data-qr-mapa class="border-noche/20 h-[380px] overflow-hidden rounded-xl border"></div>
   </div>
 
   <div class="grid gap-5 lg:grid-cols-2">
     <div class={`${tarjeta} flex flex-col gap-3`}>
-      <h3 class="font-display text-xl font-semibold" data-qr-titulo-dias>Escaneos por día</h3>
+      <h3 class="font-display text-xl font-semibold" data-qr-titulo-dias>
+        Escaneos por día
+      </h3>
       <div data-qr-dias-barras class="flex h-40 items-end gap-[2px]"></div>
       <div data-qr-dias-ejes class="text-noche-suave flex justify-between text-xs"></div>
     </div>
     <div class={`${tarjeta} flex flex-col gap-3`}>
       <h3 class="font-display text-xl font-semibold">A qué hora escanean</h3>
       <div data-qr-horas class="flex h-40 items-end gap-[2px]"></div>
-      <div class="text-noche-suave flex justify-between text-xs"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
+      <div class="text-noche-suave flex justify-between text-xs">
+        <span>00</span>
+        <span>06</span>
+        <span>12</span>
+        <span>18</span>
+        <span>23</span>
+      </div>
     </div>
   </div>
 
   <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-    {
-      RANKINGS.map(([clave, titulo]) => (
-        <div class={`${tarjeta} flex flex-col gap-3`}>
-          <h3 class="font-display text-xl font-semibold">{titulo}</h3>
-          <ol data-qr-ranking={clave} class="flex flex-col gap-2 text-sm" />
-        </div>
-      ))
-    }
+    {RANKINGS.map(([clave, titulo]) => (
+      <div class={`${tarjeta} flex flex-col gap-3`}>
+        <h3 class="font-display text-xl font-semibold">{titulo}</h3>
+        <ol data-qr-ranking={clave} class="flex flex-col gap-2 text-sm" />
+      </div>
+    ))}
   </div>
 
   <div class="flex flex-col gap-3">
@@ -92,17 +106,23 @@ const RANKINGS = [
       <table class="w-full text-left text-sm">
         <thead class="bg-arena sticky top-0">
           <tr>
-            <th class="p-3">Fecha y hora</th><th class="p-3">Campaña</th><th class="p-3">Lugar</th><th class="p-3">Celular</th>
-            <th class="p-3">Sistema</th><th class="p-3">Navegador</th><th class="p-3">Compañía</th><th class="p-3">Persona</th>
+            <th class="p-3">Fecha y hora</th>
+            <th class="p-3">Campaña</th>
+            <th class="p-3">Lugar</th>
+            <th class="p-3">Celular</th>
+            <th class="p-3">Sistema</th>
+            <th class="p-3">Navegador</th>
+            <th class="p-3">Compañía</th>
+            <th class="p-3">Persona</th>
           </tr>
         </thead>
         <tbody data-qr-filas></tbody>
       </table>
     </div>
     <p class="text-noche-suave text-xs">
-      Se cuentan todos los escaneos, aunque la persona no acepte cookies. No se guarda la IP. «Persona» es un código que
-      agrupa los escaneos del mismo celular en un mismo día. El modelo del celular solo lo entregan los Android con
-      Chrome; los iPhone no lo informan.
+      Se cuentan todos los escaneos, aunque la persona no acepte cookies. No se guarda la IP. «Persona» es un
+      código que agrupa los escaneos del mismo celular en un mismo día. El modelo del celular solo lo entregan
+      los Android con Chrome; los iPhone no lo informan.
     </p>
   </div>
 </section>
@@ -135,8 +155,13 @@ const RANKINGS = [
   const selDias = $<HTMLSelectElement>("[data-qr-dias]");
   const ZONA = "America/Santiago";
   const diaChile = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: ZONA });
-  const horaChile = (iso: string) => Number(new Date(iso).toLocaleString("en-US", { timeZone: ZONA, hour: "2-digit", hourCycle: "h23" }));
-  const fechaHora = new Intl.DateTimeFormat("es-CL", { dateStyle: "medium", timeStyle: "short", timeZone: ZONA });
+  const horaChile = (iso: string) =>
+    Number(new Date(iso).toLocaleString("en-US", { timeZone: ZONA, hour: "2-digit", hourCycle: "h23" }));
+  const fechaHora = new Intl.DateTimeFormat("es-CL", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: ZONA,
+  });
 
   let todos: Escaneo[] = [];
   let mapa: L.Map | undefined;
@@ -152,10 +177,18 @@ const RANKINGS = [
     [/pacifico cable|mundo/i, "Mundo"],
     [/gtd|telsur/i, "GTD"],
   ];
-  const compania = (e: Escaneo) => (e.operador ? (MARCAS.find(([re]) => re.test(e.operador!))?.[1] ?? e.operador) : "Sin dato");
+  const compania = (e: Escaneo) =>
+    e.operador ? (MARCAS.find(([re]) => re.test(e.operador!))?.[1] ?? e.operador) : "Sin dato";
   const lugar = (e: Escaneo) => [e.ciudad, e.region].filter(Boolean).join(", ") || "Sin dato";
   const equipo = (e: Escaneo) =>
-    e.modelo || (e.dispositivo === "ios" ? "iPhone" : e.dispositivo === "android" ? "Android (sin modelo)" : e.dispositivo === "ipad" ? "iPad" : "Computador u otro");
+    e.modelo ||
+    (e.dispositivo === "ios"
+      ? "iPhone"
+      : e.dispositivo === "android"
+        ? "Android (sin modelo)"
+        : e.dispositivo === "ipad"
+          ? "iPad"
+          : "Computador u otro");
   const valor: Record<string, (e: Escaneo) => string> = {
     ciudad: (e) => e.ciudad || "Sin dato",
     equipo,
@@ -189,15 +222,31 @@ const RANKINGS = [
   }
 
   function ranking(lista: HTMLElement, datos: [string, number][], total: number) {
-    if (!datos.length) return lista.replaceChildren(Object.assign(document.createElement("li"), { textContent: "Sin escaneos", className: "text-noche-suave" }));
+    if (!datos.length)
+      return lista.replaceChildren(
+        Object.assign(document.createElement("li"), {
+          textContent: "Sin escaneos",
+          className: "text-noche-suave",
+        }),
+      );
     lista.replaceChildren(
       ...datos.slice(0, 8).map(([nombre, n]) => {
         const li = document.createElement("li");
         li.className = "flex flex-col gap-1";
         const fila = document.createElement("div");
         fila.className = "flex justify-between gap-3";
-        fila.append(Object.assign(document.createElement("span"), { textContent: nombre, className: "truncate font-bold" }));
-        fila.append(Object.assign(document.createElement("span"), { textContent: `${n} · ${Math.round((n / total) * 100)} %`, className: "text-noche-suave shrink-0" }));
+        fila.append(
+          Object.assign(document.createElement("span"), {
+            textContent: nombre,
+            className: "truncate font-bold",
+          }),
+        );
+        fila.append(
+          Object.assign(document.createElement("span"), {
+            textContent: `${n} · ${Math.round((n / total) * 100)} %`,
+            className: "text-noche-suave shrink-0",
+          }),
+        );
         const pista = document.createElement("div");
         pista.className = "bg-arena h-2 rounded-full";
         const relleno = document.createElement("div");
@@ -239,10 +288,15 @@ const RANKINGS = [
         fillColor: "#c9361a",
         fillOpacity: 0.75,
       })
-        .bindTooltip(`<strong>${p.lugar.replace(/</g, "&lt;")}</strong><br>${p.n} ${p.n === 1 ? "escaneo" : "escaneos"}`)
+        .bindTooltip(
+          `<strong>${p.lugar.replace(/</g, "&lt;")}</strong><br>${p.n} ${p.n === 1 ? "escaneo" : "escaneos"}`,
+        )
         .addTo(capa!);
     }
-    if (puntos.size) mapa.fitBounds(L.latLngBounds([...puntos.values()].map((p) => [p.lat, p.lon])).pad(0.4), { maxZoom: 11 });
+    if (puntos.size)
+      mapa.fitBounds(L.latLngBounds([...puntos.values()].map((p) => [p.lat, p.lon])).pad(0.4), {
+        maxZoom: 11,
+      });
     // El mapa se crea con la sección oculta: hay que recalcular su tamaño al mostrarla.
     setTimeout(() => mapa!.invalidateSize(), 50);
   }
@@ -264,17 +318,28 @@ const RANKINGS = [
     const hoy = diaChile(new Date().toISOString());
 
     $("[data-qr-kpi=escaneos]").textContent = String(lista.length);
-    $("[data-qr-kpi=personas]").textContent = String(new Set(lista.map((e) => e.visitante ?? `id${e.id}`)).size);
+    $("[data-qr-kpi=personas]").textContent = String(
+      new Set(lista.map((e) => e.visitante ?? `id${e.id}`)).size,
+    );
     $("[data-qr-kpi=hoy]").textContent = String(lista.filter((e) => diaChile(e.creado) === hoy).length);
-    $("[data-qr-kpi=ciudades]").textContent = String(new Set(lista.map((e) => e.ciudad).filter(Boolean)).size);
+    $("[data-qr-kpi=ciudades]").textContent = String(
+      new Set(lista.map((e) => e.ciudad).filter(Boolean)).size,
+    );
 
     // Por día (o por mes en el último año), con los días sin escaneos en cero.
     const porMes = dias > 90;
     $("[data-qr-titulo-dias]").textContent = porMes ? "Escaneos por mes" : "Escaneos por día";
-    const cuenta = new Map(contar(lista, (e) => (porMes ? diaChile(e.creado).slice(0, 7) : diaChile(e.creado))));
+    const cuenta = new Map(
+      contar(lista, (e) => (porMes ? diaChile(e.creado).slice(0, 7) : diaChile(e.creado))),
+    );
     const serie: [string, number][] = [];
     const etiqueta = (k: string) =>
-      new Date(`${porMes ? `${k}-01` : k}T12:00:00Z`).toLocaleDateString("es-CL", porMes ? { month: "short", year: "2-digit", timeZone: "UTC" } : { day: "numeric", month: "short", timeZone: "UTC" });
+      new Date(`${porMes ? `${k}-01` : k}T12:00:00Z`).toLocaleDateString(
+        "es-CL",
+        porMes
+          ? { month: "short", year: "2-digit", timeZone: "UTC" }
+          : { day: "numeric", month: "short", timeZone: "UTC" },
+      );
     if (porMes) {
       const d = new Date();
       for (let i = 11; i >= 0; i--) {
@@ -289,14 +354,20 @@ const RANKINGS = [
     }
     barras($("[data-qr-dias-barras]"), serie);
     $("[data-qr-dias-ejes]").replaceChildren(
-      ...[serie[0], serie[Math.floor(serie.length / 2)], serie.at(-1)!].map(([t]) => Object.assign(document.createElement("span"), { textContent: t })),
+      ...[serie[0], serie[Math.floor(serie.length / 2)], serie.at(-1)!].map(([t]) =>
+        Object.assign(document.createElement("span"), { textContent: t }),
+      ),
     );
 
     const horas = Array.from({ length: 24 }, () => 0);
     for (const e of lista) horas[horaChile(e.creado)]++;
-    barras($("[data-qr-horas]"), horas.map((n, h) => [`${String(h).padStart(2, "0")}:00 a ${String(h).padStart(2, "0")}:59`, n]));
+    barras(
+      $("[data-qr-horas]"),
+      horas.map((n, h) => [`${String(h).padStart(2, "0")}:00 a ${String(h).padStart(2, "0")}:59`, n]),
+    );
 
-    for (const clave of Object.keys(valor)) ranking($(`[data-qr-ranking=${clave}]`), contar(lista, valor[clave]), lista.length);
+    for (const clave of Object.keys(valor))
+      ranking($(`[data-qr-ranking=${clave}]`), contar(lista, valor[clave]), lista.length);
 
     dibujarMapa(lista);
 
@@ -317,42 +388,76 @@ const RANKINGS = [
             );
             return tr;
           })
-        : [Object.assign(document.createElement("tr"), { innerHTML: '<td class="p-3" colspan="8">Todavía no hay escaneos en este período</td>' })]),
+        : [
+            Object.assign(document.createElement("tr"), {
+              innerHTML: '<td class="p-3" colspan="8">Todavía no hay escaneos en este período</td>',
+            }),
+          ]),
     );
   }
 
   async function cargar() {
-    const res = await fetch(`/api/admin/qr?dias=${selDias.value}`, { credentials: "same-origin", headers: { "x-saltabum-admin": "1" } });
+    const res = await fetch(`/api/admin/qr?dias=${selDias.value}`, {
+      credentials: "same-origin",
+      headers: { "x-saltabum-admin": "1" },
+    });
     if (!res.ok) return;
     todos = ((await res.json()) as { escaneos: Escaneo[] }).escaneos;
     const elegida = selCampana.value;
     const campanas = [...new Set(todos.map((e) => e.codigo))].sort();
-    selCampana.replaceChildren(new Option("Todas", ""), ...campanas.map((c) => new Option(c, c, false, c === elegida)));
+    selCampana.replaceChildren(
+      new Option("Todas", ""),
+      ...campanas.map((c) => new Option(c, c, false, c === elegida)),
+    );
     seccion.hidden = false;
     dibujar();
   }
 
-  selDias.addEventListener("change", () => void cargar());
-  selCampana.addEventListener("change", dibujar);
+  // El empaquetador comparte este archivo con el visor 3D de la web: fuera del panel no hay nada que enganchar.
+  if (seccion) iniciar();
+  function iniciar() {
+    selDias.addEventListener("change", () => void cargar());
+    selCampana.addEventListener("change", dibujar);
 
-  $("[data-qr-csv]").addEventListener("click", () => {
-    const cols = ["creado", "codigo", "ciudad", "region", "pais", "lat", "lon", "operador", "dispositivo", "so", "modelo", "navegador", "idioma", "visitante"] as const;
-    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const csv = [cols.join(","), ...filtrados().map((e) => cols.map((c) => esc(c === "creado" ? fechaHora.format(new Date(e.creado)) : e[c])).join(","))].join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
-    a.download = `escaneos-qr-saltabum-${diaChile(new Date().toISOString())}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  });
+    $("[data-qr-csv]").addEventListener("click", () => {
+      const cols = [
+        "creado",
+        "codigo",
+        "ciudad",
+        "region",
+        "pais",
+        "lat",
+        "lon",
+        "operador",
+        "dispositivo",
+        "so",
+        "modelo",
+        "navegador",
+        "idioma",
+        "visitante",
+      ] as const;
+      const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const csv = [
+        cols.join(","),
+        ...filtrados().map((e) =>
+          cols.map((c) => esc(c === "creado" ? fechaHora.format(new Date(e.creado)) : e[c])).join(","),
+        ),
+      ].join("\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+      a.download = `escaneos-qr-saltabum-${diaChile(new Date().toISOString())}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
 
-  document.addEventListener("panel:listo", () => void cargar());
-  // El mapa se dibuja con la pestaña oculta: al mostrarla hay que recalcular su tamaño.
-  document.addEventListener("panel:pestana", (e) => {
-    if ((e as CustomEvent<string>).detail === "qr" && mapa) setTimeout(() => mapa!.invalidateSize(), 50);
-  });
-  document.addEventListener("panel:cerrado", () => {
-    seccion.hidden = true;
-    todos = [];
-  });
+    document.addEventListener("panel:listo", () => void cargar());
+    // El mapa se dibuja con la pestaña oculta: al mostrarla hay que recalcular su tamaño.
+    document.addEventListener("panel:pestana", (e) => {
+      if ((e as CustomEvent<string>).detail === "qr" && mapa) setTimeout(() => mapa!.invalidateSize(), 50);
+    });
+    document.addEventListener("panel:cerrado", () => {
+      seccion.hidden = true;
+      todos = [];
+    });
+  }
 </script>

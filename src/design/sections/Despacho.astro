@@ -131,7 +131,8 @@ const valorDespacho = (d: number) => (d ? `+${pesos(d)}` : "Gratis");
   import { pesos } from "@/lib/reservas";
   import { mensajeWhatsapp, PRODUCTO } from "../data";
 
-  document.querySelectorAll<HTMLElement>("[data-despacho]").forEach((root) => {
+  // Solo la sección (los botones de cada comuna también llevan data-despacho, con su valor).
+  document.querySelectorAll<HTMLElement>("[data-despacho]:has([data-mapa])").forEach((root) => {
     const radios = [...root.querySelectorAll<HTMLButtonElement>("[role=radio]")];
     const link = root.querySelector<HTMLAnchorElement>("[data-detalle] a[data-track]");
     const reservar = root.querySelector<HTMLAnchorElement>("[data-reservar]")!;
