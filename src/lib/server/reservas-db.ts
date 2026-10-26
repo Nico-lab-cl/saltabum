@@ -104,6 +104,7 @@ const COLUMNAS_NUEVAS = [
   "notas TEXT",
   "origen TEXT",
   "actualizado TEXT",
+  "atribucion TEXT",
 ];
 
 /** Columnas que se leen para el panel (todas menos la huella de IP y los datos de medición). */
@@ -172,13 +173,20 @@ export async function horariosOcupados(
  */
 export async function crearReserva(
   datos: DatosReserva,
-  opciones: { origen: OrigenReserva; ipHash?: string | null; medicion?: MedicionReserva; forzar?: boolean },
+  opciones: {
+    origen: OrigenReserva;
+    ipHash?: string | null;
+    medicion?: MedicionReserva;
+    forzar?: boolean;
+    /** De qué campaña llegó (utm_source, utm_campaign, fbclid…), para la pestaña Leads del panel. */
+    atribucion?: Record<string, string>;
+  },
 ): Promise<number | null> {
   const db = await baseReservas();
   const res = await db
     .prepare(
-      `INSERT INTO agenda (${CAMPOS.join(", ")}, estado, origen, ip_hash, creado, fbp, fbc)
-       SELECT ${CAMPOS.map(() => "?").join(", ")}, 'reservado', ?, ?, ?, ?, ?
+      `INSERT INTO agenda (${CAMPOS.join(", ")}, estado, origen, ip_hash, creado, fbp, fbc, atribucion)
+       SELECT ${CAMPOS.map(() => "?").join(", ")}, 'reservado', ?, ?, ?, ?, ?, ?
        WHERE ? OR NOT EXISTS (${CHOQUE})`,
     )
     .bind(
@@ -188,6 +196,7 @@ export async function crearReserva(
       new Date().toISOString(),
       opciones.medicion?.fbp ?? null,
       opciones.medicion?.fbc ?? null,
+      opciones.atribucion && Object.keys(opciones.atribucion).length ? JSON.stringify(opciones.atribucion) : null,
       opciones.forzar ? 1 : 0,
       ...paramsChoque(datos),
     )

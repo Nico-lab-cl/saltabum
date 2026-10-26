@@ -5,6 +5,7 @@
 //   · Consultas: los mensajes del formulario de contacto (se pueden pasar a reserva).
 //   · WhatsApp: chats que llegaron por anuncios de Meta o con la etiqueta «SALTABUM | LEADS» (vía Evolution API).
 //   · Chat web: conversaciones del chat con IA de la web; el equipo puede tomar el control y responder.
+//   · Leads: todos los contactos (formularios, chat, reservas, WhatsApp de anuncios) con sus UTM, descargables en CSV.
 //   · Historial: todo lo que pasó con las reservas y consultas, quién lo hizo y qué cambió.
 //   · Códigos QR: escaneos del QR impreso.
 // Acceso con contraseña y código de verificación (TOTP). La seguridad vive en src/lib/server/admin-auth.ts y los
@@ -12,6 +13,7 @@
 import "@/styles/global.css";
 import PanelChatWeb from "@/components/admin/PanelChatWeb.astro";
 import PanelConsultas from "@/components/admin/PanelConsultas.astro";
+import PanelLeads from "@/components/admin/PanelLeads.astro";
 import PanelHistorial from "@/components/admin/PanelHistorial.astro";
 import PanelQr from "@/components/admin/PanelQr.astro";
 import PanelReservas from "@/components/admin/PanelReservas.astro";
@@ -23,6 +25,7 @@ const PESTANAS = [
   ["consultas", "Consultas"],
   ["whatsapp", "WhatsApp"],
   ["chatweb", "Chat web"],
+  ["leads", "Leads"],
   ["historial", "Historial"],
   ["qr", "Códigos QR"],
 ] as const;
@@ -128,6 +131,7 @@ const PESTANAS = [
         <div id="panel-consultas" role="tabpanel" aria-labelledby="pestana-consultas" data-pestana-panel="consultas" hidden><PanelConsultas /></div>
         <div id="panel-whatsapp" role="tabpanel" aria-labelledby="pestana-whatsapp" data-pestana-panel="whatsapp" hidden><PanelWhatsapp /></div>
         <div id="panel-chatweb" role="tabpanel" aria-labelledby="pestana-chatweb" data-pestana-panel="chatweb" hidden><PanelChatWeb /></div>
+        <div id="panel-leads" role="tabpanel" aria-labelledby="pestana-leads" data-pestana-panel="leads" hidden><PanelLeads /></div>
         <div id="panel-historial" role="tabpanel" aria-labelledby="pestana-historial" data-pestana-panel="historial" hidden><PanelHistorial /></div>
         <div id="panel-qr" role="tabpanel" aria-labelledby="pestana-qr" data-pestana-panel="qr" hidden><PanelQr /></div>
       </div>
@@ -205,7 +209,7 @@ const PESTANAS = [
         document.dispatchEvent(new CustomEvent("panel:listo", { detail: datos }));
         // «#chatweb=<id>» (enlace de los avisos de WhatsApp) abre esa conversación en la pestaña Chat web.
         const pedida = location.hash.slice(1).split("=")[0];
-        abrirPestana(["consultas", "whatsapp", "chatweb", "historial", "qr"].includes(pedida) ? pedida : "reservas");
+        abrirPestana(["consultas", "whatsapp", "chatweb", "leads", "historial", "qr"].includes(pedida) ? pedida : "reservas");
       }
 
       document.addEventListener("panel:sin-sesion", () => mostrarLogin("Tu sesión expiró, vuelve a ingresar"));

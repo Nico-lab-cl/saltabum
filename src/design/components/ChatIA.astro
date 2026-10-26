@@ -5,6 +5,8 @@
 //   [data-chat-lista] (mensajes) · <template data-chat-plantilla="cliente|ia|equipo|sistema"> con [data-chat-texto]
 //   [data-chat-escribiendo] · <form data-chat-form> con <textarea name="texto"> · [data-chat-whatsapp] (enlace oculto)
 //   [data-chat-pendientes] (contador de respuestas del equipo que llegaron con el chat cerrado)
+//   <form data-chat-contacto> con nombre, email y telefono (se pide antes de chatear) y [data-chat-contacto-error]
+//   El <form data-chat-form> parte oculto y se muestra cuando ya están los datos.
 import Icon from "./Icon.astro";
 ---
 
@@ -21,8 +23,11 @@ import Icon from "./Icon.astro";
         <Icon name="chat" size={22} />
       </span>
       <div class="min-w-0 flex-1">
-        <p class="font-display text-lg leading-tight font-semibold">Asistente Saltabum</p>
-        <p class="text-noche-suave text-xs font-bold">Asistente con IA y equipo Saltabum</p>
+        <p class="font-display text-lg leading-tight font-semibold">Saltabum</p>
+        <p class="text-noche-suave flex items-center gap-1.5 text-xs font-bold">
+          <span class="bg-verde size-2 rounded-full"></span>
+          En línea · responde al instante
+        </p>
       </div>
       <button type="button" data-chat-cerrar aria-label="Cerrar chat" class="bounce grid size-10 place-items-center rounded-full">
         <Icon name="cerrar" size={22} />
@@ -31,7 +36,7 @@ import Icon from "./Icon.astro";
 
     <div data-chat-lista aria-live="polite" class="flex flex-1 flex-col gap-2.5 overflow-y-auto px-3 py-4">
       <p class="bg-blanco border-noche/15 max-w-[85%] self-start rounded-2xl rounded-bl-md border px-3.5 py-2.5 text-[15px] leading-snug">
-        ¡Hola! 🎈 Soy el asistente de Saltabum. Te ayudo a ver disponibilidad, cotizar con despacho y dejar tu reserva lista. ¿Para qué fecha y comuna sería?
+        ¡Hola! 🎈 Te ayudo a ver disponibilidad, cotizar con despacho y dejar tu reserva lista. Para partir, déjame tus datos así no se pierde nada 👇
       </p>
     </div>
 
@@ -64,7 +69,13 @@ import Icon from "./Icon.astro";
       <p data-chat-texto class="text-noche-suave self-center px-4 text-center text-xs font-bold"></p>
     </template>
 
-    <p data-chat-escribiendo hidden class="text-noche-suave px-4 pb-2 text-sm font-bold">Escribiendo…</p>
+    <div data-chat-escribiendo hidden aria-label="Escribiendo" class="px-3 pb-2">
+      <span class="bg-blanco border-noche/15 inline-flex items-center gap-1 rounded-2xl rounded-bl-md border px-3.5 py-3">
+        <span class="bg-noche-suave size-2 animate-bounce rounded-full"></span>
+        <span class="bg-noche-suave size-2 animate-bounce rounded-full [animation-delay:150ms]"></span>
+        <span class="bg-noche-suave size-2 animate-bounce rounded-full [animation-delay:300ms]"></span>
+      </span>
+    </div>
 
     <a
       data-chat-whatsapp
@@ -80,7 +91,18 @@ import Icon from "./Icon.astro";
       Seguir por WhatsApp
     </a>
 
-    <form data-chat-form class="border-noche bg-blanco flex items-end gap-2 border-t-2 p-2.5">
+    <form data-chat-contacto novalidate class="border-noche bg-blanco flex flex-col gap-2 border-t-2 p-3">
+      <input name="nombre" required autocomplete="name" maxlength="120" placeholder="Nombre y apellido" aria-label="Nombre y apellido" class="bg-crema min-h-11 rounded-xl px-3.5 text-base outline-none focus-visible:ring-2 focus-visible:ring-azul" />
+      <input name="email" type="email" required autocomplete="email" maxlength="200" placeholder="Correo" aria-label="Correo" class="bg-crema min-h-11 rounded-xl px-3.5 text-base outline-none focus-visible:ring-2 focus-visible:ring-azul" />
+      <input name="telefono" type="tel" required autocomplete="tel" inputmode="tel" maxlength="30" placeholder="WhatsApp (+56 9…)" aria-label="Teléfono o WhatsApp" class="bg-crema min-h-11 rounded-xl px-3.5 text-base outline-none focus-visible:ring-2 focus-visible:ring-azul" />
+      <p data-chat-contacto-error class="text-rojo-texto text-sm font-bold" aria-live="polite"></p>
+      <button class="bounce bg-sol border-noche shadow-pop-s min-h-11 rounded-full border-2 font-extrabold disabled:opacity-50">Empezar a chatear</button>
+      <p class="text-noche-suave text-center text-[11px]">
+        Usamos tus datos solo para responderte y coordinar tu reserva. <a href="/politica-de-privacidad" class="underline">Privacidad</a>
+      </p>
+    </form>
+
+    <form data-chat-form hidden class="border-noche bg-blanco flex items-end gap-2 border-t-2 p-2.5">
       <label class="sr-only" for="chat-texto">Escribe tu mensaje</label>
       <textarea
         id="chat-texto"
@@ -98,8 +120,8 @@ import Icon from "./Icon.astro";
         <Icon name="enviar" size={20} />
       </button>
     </form>
-    <p class="text-noche-suave bg-blanco px-3 pb-2 text-center text-[11px]">
-      Asistente con IA, puede equivocarse. El equipo confirma cada reserva por WhatsApp.
+    <p data-chat-pie hidden class="text-noche-suave bg-blanco px-3 pb-2 text-center text-[11px]">
+      Asistente virtual de Saltabum · el equipo revisa cada reserva
     </p>
   </section>
 

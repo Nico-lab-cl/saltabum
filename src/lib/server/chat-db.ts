@@ -17,6 +17,9 @@ export interface Conversacion {
   ayuda: number;
   nombre: string | null;
   telefono: string | null;
+  email: string | null;
+  /** De qué campaña o página llegó (utm_source, utm_campaign, fbclid…), como JSON. */
+  origen: string | null;
   reserva_id: number | null;
   pagina: string | null;
   mensajes: number;
@@ -66,13 +69,22 @@ const ESQUEMAS = [
   "CREATE INDEX IF NOT EXISTS chat_conversaciones_actualizado ON chat_conversaciones (actualizado)",
 ];
 
+// Columnas agregadas después (ALTER TABLE falla si ya existen, y se ignora).
+const COLUMNAS_NUEVAS = ["email TEXT", "origen TEXT"];
+
 // Se guarda «ya está lista» y no la promesa (ver reservas-db.ts).
 let tablasListas = false;
+
+/** La base con las tablas del chat listas (también la usa la pestaña Leads). */
+export async function baseChat() {
+  return db();
+}
 
 async function db() {
   const d = await baseReservas();
   if (!tablasListas) {
     for (const sql of ESQUEMAS) await d.prepare(sql).run();
+    for (const c of COLUMNAS_NUEVAS) await d.prepare(`ALTER TABLE chat_conversaciones ADD COLUMN ${c}`).run().catch(() => undefined);
     tablasListas = true;
   }
   return d;
@@ -97,15 +109,21 @@ export async function contarMensaje(dia: string, visitante: string, maxVisitante
   return (fila?.mensajes ?? 0) > maxVisitante ? "visitante" : "ok";
 }
 
-/** La conversación, creándola si es la primera vez que escribe ese navegador. */
-export async function asegurarConversacion(id: string, pagina?: string): Promise<Conversacion> {
+/** Crea la conversación con los datos que la persona dejó antes de chatear (o los actualiza si ya existía). */
+export async function registrarContacto(
+  id: string,
+  datos: { nombre: string; email: string; telefono: string; origen: Record<string, string>; pagina?: string },
+): Promise<void> {
   const d = await db();
   const ahora = new Date().toISOString();
+  const origen = Object.keys(datos.origen).length ? JSON.stringify(datos.origen) : null;
   await d
-    .prepare("INSERT INTO chat_conversaciones (id, creado, actualizado, pagina) VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING")
-    .bind(id, ahora, ahora, pagina?.slice(0, 500) ?? null)
+    .prepare(
+      `INSERT INTO chat_conversaciones (id, creado, actualizado, nombre, email, telefono, origen, pagina) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (id) DO UPDATE SET nombre = excluded.nombre, email = excluded.email, telefono = excluded.telefono, actualizado = excluded.actualizado`,
+    )
+    .bind(id, ahora, ahora, datos.nombre, datos.email, datos.telefono, origen, datos.pagina?.slice(0, 500) ?? null)
     .run();
-  return (await obtenerConversacion(id))!;
 }
 
 export async function obtenerConversacion(id: string): Promise<Conversacion | null> {
@@ -150,7 +168,7 @@ export async function ultimosMensajes(conversacion: string, n: number): Promise<
 
 export async function actualizarConversacion(
   id: string,
-  cambios: Partial<Pick<Conversacion, "modo" | "atiende" | "ayuda" | "nombre" | "telefono" | "reserva_id" | "aviso">>,
+  cambios: Partial<Pick<Conversacion, "modo" | "atiende" | "ayuda" | "reserva_id" | "aviso">>,
 ): Promise<void> {
   const campos = Object.keys(cambios) as (keyof typeof cambios)[];
   if (!campos.length) return;
@@ -161,11 +179,11 @@ export async function actualizarConversacion(
     .run();
 }
 
-/** Conversaciones con al menos un mensaje, la más reciente primero. */
+/** Conversaciones con datos de contacto o mensajes, la más reciente primero. */
 export async function listarConversaciones(limite = 200): Promise<Conversacion[]> {
   const d = await db();
   const { results } = await d
-    .prepare("SELECT * FROM chat_conversaciones WHERE mensajes > 0 ORDER BY actualizado DESC LIMIT ?")
+    .prepare("SELECT * FROM chat_conversaciones WHERE mensajes > 0 OR telefono IS NOT NULL ORDER BY actualizado DESC LIMIT ?")
     .bind(limite)
     .all<Conversacion>();
   return results;

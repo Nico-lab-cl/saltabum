@@ -52,6 +52,7 @@
     ayuda: number;
     nombre: string | null;
     telefono: string | null;
+    email: string | null;
     reserva_id: number | null;
     pagina: string | null;
     mensajes: number;
@@ -175,7 +176,7 @@
     const cabeza = el("div", "border-noche flex flex-wrap items-center justify-between gap-2 border-b-2 p-3");
     const datos = el("div", "flex min-w-0 flex-col");
     datos.append(el("p", "font-extrabold", c.nombre ?? "Visitante de la web"));
-    const detalle = [c.telefono, c.reserva_id ? `reserva N° ${c.reserva_id}` : "", `desde ${cuando(c.creado)}`].filter(Boolean).join(" · ");
+    const detalle = [c.telefono, c.email, c.reserva_id ? `reserva N° ${c.reserva_id}` : "", `desde ${cuando(c.creado)}`].filter(Boolean).join(" · ");
     datos.append(el("p", "text-noche-suave text-xs", detalle));
     const acciones = el("div", "flex flex-wrap gap-2");
     if (c.telefono) {

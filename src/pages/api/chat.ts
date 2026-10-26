@@ -1,4 +1,6 @@
 // Chat de la web. Cada navegador tiene su conversación (id al azar) guardada en D1, que el equipo ve en /admin.
+//   POST { accion: "contacto", conversacion, nombre, email, telefono, attribution?, page_url? } → abre la conversación
+//        con los datos del formulario previo (también quedan como lead en el panel).
 //   POST { conversacion, texto, page_url? } → guarda el mensaje del cliente y, si la conversación la atiende la IA,
 //        devuelve su respuesta: { ok, modo, ids, texto?, whatsapp?, reserva? }. Si la atiende una persona, solo la guarda
 //        y avisa al grupo del equipo.
@@ -11,11 +13,11 @@ import { hoyChile } from "@/lib/reservas";
 import { avisarGrupo, enlacePanel } from "@/lib/server/chat-avisos";
 import {
   actualizarConversacion,
-  asegurarConversacion,
   contarMensaje,
   guardarMensaje,
   mensajesDesde,
   obtenerConversacion,
+  registrarContacto,
   ultimosMensajes,
 } from "@/lib/server/chat-db";
 import { chatConfigurado, responderChat } from "@/lib/server/chat-ia";
@@ -37,9 +39,29 @@ const json = (status: number, data: Record<string, unknown>) =>
     headers: { "content-type": "application/json", "cache-control": "no-store" },
   });
 
-const pedidoSchema = z.object({
+/** Datos de origen que se guardan con el lead (de qué campaña o página llegó), igual que en /api/lead. */
+const ORIGEN = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "fbclid", "gclid", "referrer", "landing_page"];
+
+const leerOrigen = (s: string | null): Record<string, string> => {
+  try {
+    return s ? (JSON.parse(s) as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+};
+
+const mensajeSchema = z.object({
   conversacion: z.uuid(),
   texto: z.string().trim().min(1).max(1000),
+  page_url: z.string().max(1000).optional(),
+});
+const contactoSchema = z.object({
+  accion: z.literal("contacto"),
+  conversacion: z.uuid(),
+  nombre: z.string().trim().min(2).max(120),
+  email: z.string().trim().toLowerCase().max(200).regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/),
+  telefono: z.string().trim().max(30).refine((t) => t.replace(/\D/g, "").length >= 8),
+  attribution: z.record(z.string(), z.string().max(1000)).default({}),
   page_url: z.string().max(1000).optional(),
 });
 
@@ -64,12 +86,28 @@ export const POST: APIRoute = async ({ request }) => {
 
   const raw = await request.text();
   if (raw.length > 8_000) return json(413, { ok: false, error: "too_large" });
-  let parsed;
+  let body: unknown;
   try {
-    parsed = pedidoSchema.safeParse(JSON.parse(raw));
+    body = JSON.parse(raw);
   } catch {
     return json(400, { ok: false, error: "invalid_json" });
   }
+
+  // Formulario previo: nombre, correo y teléfono antes de empezar a chatear.
+  if ((body as { accion?: string })?.accion === "contacto") {
+    const c = contactoSchema.safeParse(body);
+    if (!c.success) return json(422, { ok: false, error: "validation", campos: [...new Set(c.error.issues.map((i) => String(i.path[0])))] });
+    const origen = Object.fromEntries(Object.entries(c.data.attribution).filter(([k]) => ORIGEN.includes(k)));
+    try {
+      await registrarContacto(c.data.conversacion, { ...c.data, origen, pagina: c.data.page_url });
+    } catch (err) {
+      console.error("[chat] D1:", String(err));
+      return json(503, { ok: false, error: "db" });
+    }
+    return json(200, { ok: true });
+  }
+
+  const parsed = mensajeSchema.safeParse(body);
   if (!parsed.success) return json(422, { ok: false, error: "validation" });
   const { conversacion, texto, page_url } = parsed.data;
 
@@ -80,9 +118,11 @@ export const POST: APIRoute = async ({ request }) => {
   let conv;
   let idCliente: number;
   try {
+    conv = await obtenerConversacion(conversacion);
+    // Sin los datos del formulario previo no se puede chatear.
+    if (!conv?.telefono) return json(409, { ok: false, error: "sin_contacto" });
     const cupo = await contarMensaje(dia, visitante, MAX_POR_VISITANTE, MAX_POR_DIA);
     if (cupo !== "ok") return json(429, { ok: false, error: "limite" });
-    conv = await asegurarConversacion(conversacion, page_url);
     idCliente = await guardarMensaje(conv.id, "cliente", texto);
   } catch (err) {
     console.error("[chat] D1:", String(err));
@@ -105,6 +145,8 @@ export const POST: APIRoute = async ({ request }) => {
     const r = await responderChat(await ultimosMensajes(conv.id, HISTORIAL), {
       request,
       conversacion: conv.id,
+      cliente: { nombre: conv.nombre, email: conv.email, telefono: conv.telefono },
+      origen: leerOrigen(conv.origen),
       ipHash: ip ? await sha256Hex(`reservas:${ip}`) : null,
       pageUrl: page_url,
     });

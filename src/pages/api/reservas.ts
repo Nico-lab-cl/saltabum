@@ -84,6 +84,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     id = await crearReserva(datos, {
       origen: "web",
       ipHash,
+      atribucion: r.attribution,
       medicion: r.consent
         ? { fbp: cookies.get("_fbp")?.value ?? null, fbc: buildFbc(cookies.get("_fbc")?.value, r.attribution?.fbclid) ?? null }
         : undefined,

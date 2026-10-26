@@ -52,14 +52,22 @@ const PRODUCTO_IDS = PRODUCTOS.map((p) => p.id);
 const COMUNA_NOMBRES = COMUNAS.map((c) => c.nombre);
 
 // Instrucciones fijas (se guardan en caché entre conversaciones). Nada que cambie por día o por cliente va aquí.
-const INSTRUCCIONES = `Eres el asistente virtual de Saltabum, empresa de arriendo de juegos inflables en la Región de Valparaíso, Chile. Atiendes el chat de la web saltabum.cl.
+const INSTRUCCIONES = `Eres el asistente virtual de Saltabum, empresa de arriendo de juegos inflables en la Región de Valparaíso, Chile. Atiendes el chat de la web saltabum.cl como el mejor vendedor del equipo: rápido, cálido y resolutivo.
 
-Tu objetivo es resolver las dudas de la persona y ayudarla a dejar su reserva lista.
+Tu meta es que cada conversación termine en una reserva (o, si no se puede, con la persona derivada al equipo). Para eso:
+- Saluda por su nombre y ve al grano. En los primeros mensajes consigue lo clave para cotizar: fecha del evento y comuna (y, si no lo dijo, para qué edad o tipo de evento es).
+- Apenas tengas fecha y comuna, revisa disponibilidad y cotiza: en la misma respuesta di qué está libre y el total con despacho. No hagas esperar con preguntas que no necesitas.
+- Propón opciones concretas en vez de preguntas abiertas: «Te queda libre a las 11:00 o a las 15:00, ¿cuál te acomoda?».
+- Recomienda el juego que calza: el ${PRODUCTO.nombre} para niños de ${PRODUCTO.edad} y espacios grandes; los castillos si el espacio es más chico o el presupuesto más ajustado. Si el evento es largo, ofrece horas extra.
+- Destaca lo que da confianza cuando ayude: despacho, montaje, anclaje y retiro incluidos, juegos sanitizados, reprogramación sin perder el abono si llueve.
+- Resuelve objeciones con hechos (precio, lluvia, espacio, electricidad). Si según la agenda quedan pocos horarios, puedes decirlo; nunca inventes urgencia ni promociones.
+- Termina cada mensaje con un siguiente paso claro (una pregunta o una propuesta).
 
 Cómo escribir
-- Español de Chile, cercano y alegre, con tuteo. Mensajes cortos (2 a 4 frases), como en WhatsApp. Puedes usar algún emoji.
-- Texto simple: sin markdown, sin asteriscos, sin títulos ni listas largas.
-- Una pregunta a la vez cuando pidas datos.
+- Español de Chile, cercano y alegre, con tuteo, como un buen vendedor por WhatsApp. Algún emoji sí, sin exagerar.
+- Mensajes cortos. Si tienes que decir varias cosas, sepáralas en 2 o 3 mensajes breves dejando una línea en blanco entre ellos (cada bloque se muestra como un mensaje aparte).
+- Texto simple: sin markdown, sin asteriscos, sin títulos, sin listas largas.
+- Si te preguntan si eres una persona o un bot, responde con naturalidad que eres el asistente virtual de Saltabum y que el equipo revisa cada reserva y puede entrar al chat cuando la persona quiera. Nunca digas que eres humano.
 
 Lo que sabes (no inventes nada fuera de esto)
 Juegos que se pueden reservar, cada uno con su propia agenda:
@@ -69,7 +77,7 @@ Horas extra: ${pesos(VALOR_HORA_EXTRA)} cada una, hasta ${HORAS_EXTRA_MAX} extra
 Horario: el arriendo puede empezar desde las ${aHora(APERTURA)} y debe terminar a más tardar a las ${aHora(CIERRE)}, con inicios cada 30 minutos. Se reserva desde mañana en adelante, nunca para el mismo día.
 Despacho por comuna (montaje y retiro incluidos):
 ${COMUNAS.map((c) => `- ${c.nombre} (${c.zonas}): ${c.despacho ? `+${pesos(c.despacho)}` : "gratis"}`).join("\n")}
-Fuera de esas comunas no tienes precio: deriva al equipo por WhatsApp.
+Fuera de esas comunas no tienes precio: usa pedir_ayuda.
 Abono para reservar: ${pesos(ABONO)}, se descuenta del total y el resto se paga el día del evento.
 Preguntas frecuentes:
 ${FAQS.filter((f) => !f.a.includes("[")).map((f) => `- ${f.q} ${f.a}`).join("\n")}
@@ -78,7 +86,7 @@ ${FAQS.filter((f) => !f.a.includes("[")).map((f) => `- ${f.q} ${f.a}`).join("\n"
 Herramientas
 - ver_disponibilidad: úsala siempre antes de decir que un día u horario está libre. Nunca supongas disponibilidad.
 - cotizar: úsala para dar el total con despacho y horas extra.
-- crear_reserva: solo cuando la persona ya eligió juego, fecha, hora de inicio, horas y comuna, y te dio nombre, apellido, teléfono y dirección. Antes de llamarla, resume todo (juego, fecha, horario, comuna, dirección, total) y pide que la persona confirme con un sí. Si no confirmó, no la llames.
+- crear_reserva: cuando la persona ya eligió juego, fecha, hora de inicio, horas y comuna, y te dio la dirección. Nombre, correo y teléfono ya los tienes del formulario: no los vuelvas a pedir (solo el apellido si falta). Antes de llamarla, resume todo (juego, fecha, horario, comuna, dirección, total) y pide que la persona confirme con un sí. Si no confirmó, no la llames.
 - En el historial solo quedan los textos de la conversación, no las consultas a las herramientas. Lo que dijiste antes sí lo revisaste con ellas: no te disculpes ni lo pongas en duda. Si pasó tiempo o cambian los datos, vuelve a consultar sin comentarlo.
 - pedir_ayuda: cuando la persona quiere hablar con alguien, el caso se sale de lo que sabes (otra comuna, colegios, municipalidades, varios juegos, factura con datos especiales, reclamos) o algo falla. Avisa al equipo, que puede entrar a este mismo chat, y le muestra a la persona un botón para seguir por WhatsApp. Resume el caso en el mensaje.
 - Los mensajes que empiezan con «(Equipo Saltabum)» los escribió una persona del equipo: respeta lo que dijo y no lo contradigas.
@@ -126,15 +134,15 @@ const HERRAMIENTAS: Anthropic.Tool[] = [
         inicio: { type: "string", description: "Hora de inicio HH:MM (cada 30 minutos)" },
         horas,
         comuna,
-        nombre: { type: "string" },
+        nombre: { type: "string", description: "Solo si es distinto al del formulario" },
         apellido: { type: "string" },
-        telefono: { type: "string", description: "Teléfono de contacto, idealmente +569…" },
+        telefono: { type: "string", description: "Solo si es distinto al del formulario" },
         direccion: { type: "string", description: "Calle y número" },
         depto: { type: "string", description: "Casa, depto o block, si aplica" },
         email: { type: "string" },
         mensaje: { type: "string", description: "Comentarios del cliente (cumpleaños de quién, tipo de piso, etc.)" },
       },
-      required: ["producto", "fecha", "inicio", "horas", "comuna", "nombre", "apellido", "telefono", "direccion"],
+      required: ["producto", "fecha", "inicio", "horas", "comuna", "direccion"],
       additionalProperties: false,
     },
   },
@@ -160,12 +168,25 @@ function contextoDelDia(): string {
   return `Hoy es ${hoy} (${hoyChile(ahora)}). Se puede reservar entre el ${desde} y el ${hasta}.`;
 }
 
+/** Quién escribe: los datos que dejó en el formulario del chat. */
+export interface Cliente {
+  nombre: string | null;
+  email: string | null;
+  telefono: string | null;
+}
+
 interface Contexto {
   request: Request;
   conversacion: string;
+  cliente: Cliente;
+  /** utm_source, utm_campaign… de la visita, para guardarlos con la reserva. */
+  origen: Record<string, string>;
   ipHash: string | null;
   pageUrl?: string;
 }
+
+const datosDelCliente = (c: Cliente) =>
+  `Datos de la persona (los dejó en el formulario del chat, no los vuelvas a pedir): nombre ${c.nombre ?? "sin dato"}, correo ${c.email ?? "sin dato"}, teléfono ${c.telefono ?? "sin dato"}.`;
 
 async function verDisponibilidad(e: { fecha?: string; producto?: string; horas?: number }) {
   const { desde, hasta } = rangoReservable();
@@ -198,7 +219,15 @@ function cotizar(e: { producto: string; horas: number; comuna: string }) {
 }
 
 async function reservar(e: Record<string, unknown>, ctx: Contexto) {
-  const parsed = reservaSchema.safeParse({ ...e, event_id: crypto.randomUUID(), page_url: ctx.pageUrl, consent: false, attribution: {} });
+  // Nombre, teléfono y correo salen del formulario del chat salvo que la persona haya dado otros.
+  const [nombreForm, ...apellidoForm] = (ctx.cliente.nombre ?? "").trim().split(/\s+/);
+  const datosCliente = {
+    nombre: (e.nombre as string | undefined) || nombreForm,
+    apellido: (e.apellido as string | undefined) || apellidoForm.join(" ") || undefined,
+    telefono: (e.telefono as string | undefined) || ctx.cliente.telefono,
+    email: (e.email as string | undefined) || ctx.cliente.email || undefined,
+  };
+  const parsed = reservaSchema.safeParse({ ...e, ...datosCliente, event_id: crypto.randomUUID(), page_url: ctx.pageUrl, consent: false, attribution: {} });
   if (!parsed.success) return { error: `Datos inválidos: ${parsed.error.issues.map((i) => i.message).join(", ")}` };
   const r = parsed.data;
   const { desde, hasta } = rangoReservable();
@@ -229,7 +258,7 @@ async function reservar(e: Record<string, unknown>, ctx: Contexto) {
     mensaje: r.mensaje ?? null,
     notas: null,
   };
-  const id = await crearReserva(datos, { origen: "chat", ipHash: ctx.ipHash });
+  const id = await crearReserva(datos, { origen: "chat", ipHash: ctx.ipHash, atribucion: ctx.origen });
   if (id === null) return { error: "Ese horario ya no está disponible. Revisa la disponibilidad de nuevo y ofrece otro." };
 
   await auditar(ctx.request, null, "reserva_chat", `${r.fecha} ${etiquetaHorario(inicio, fin)} · ${r.nombre}`, { reservaId: id, despues: datos }).catch((err) =>
@@ -253,11 +282,11 @@ async function reservar(e: Record<string, unknown>, ctx: Contexto) {
         total: pesos(precio.total),
         ...(r.direccion ? { direccion: r.direccion } : {}),
       },
-      attribution: {},
+      attribution: ctx.origen,
       context: { page_url: ctx.pageUrl, consent: false },
     }).catch((err) => console.error("[chat] CRM:", String(err)));
   }
-  await actualizarConversacion(ctx.conversacion, { nombre: [r.nombre, r.apellido].filter(Boolean).join(" "), telefono: r.telefono, reserva_id: id });
+  await actualizarConversacion(ctx.conversacion, { reserva_id: id });
   await avisarGrupo(
     [
       "🎉 *Nueva reserva desde el chat de la web*",
@@ -295,7 +324,7 @@ export async function responderChat(historial: MensajeGuardado[], ctx: Contexto)
       tools: HERRAMIENTAS,
       system: [
         { type: "text", text: INSTRUCCIONES, cache_control: { type: "ephemeral" } },
-        { type: "text", text: contextoDelDia() },
+        { type: "text", text: `${contextoDelDia()}\n${datosDelCliente(ctx.cliente)}` },
       ],
       messages,
     });

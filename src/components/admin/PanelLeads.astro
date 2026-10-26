@@ -1,0 +1,199 @@
+---
+// Pestaña «Leads» del panel /admin: todos los contactos que llegan (formulario, chat de la web, reservas y WhatsApp
+// de anuncios) en una sola tabla con su origen (utm_*, anuncio, página de entrada). Se filtra por fuente, fecha y
+// texto, y se descarga en CSV (abre en Excel o Google Sheets). Si el mismo teléfono aparece en varias fuentes se marca.
+const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
+---
+
+<section data-leads-panel class="flex flex-col gap-4">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h2 class="font-display text-3xl font-semibold">Leads</h2>
+      <p class="text-noche-suave text-sm">Todos los contactos con su origen: formularios, chat, reservas y WhatsApp de anuncios</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <select data-leads-fuente aria-label="Fuente" class={campo}>
+        <option value="">Todas las fuentes</option>
+        <option value="chat">Chat de la web</option>
+        <option value="formulario">Formularios</option>
+        <option value="reserva">Reservas</option>
+        <option value="whatsapp">WhatsApp</option>
+      </select>
+      <select data-leads-dias aria-label="Período" class={campo}>
+        <option value="7">Últimos 7 días</option>
+        <option value="30" selected>Últimos 30 días</option>
+        <option value="90">Últimos 90 días</option>
+        <option value="0">Todo</option>
+      </select>
+      <input data-leads-buscar type="search" placeholder="Buscar nombre, teléfono, campaña…" class={`${campo} w-full sm:w-[240px]`} />
+      <button data-leads-csv type="button" class="border-noche bg-sol min-h-11 cursor-pointer rounded-full border-2 px-4 text-sm font-extrabold">
+        Descargar CSV
+      </button>
+    </div>
+  </div>
+  <div data-leads-resumen class="flex flex-wrap gap-2 text-sm"></div>
+  <p data-leads-estado class="text-noche-suave text-sm" aria-live="polite"></p>
+  <div class="border-noche bg-blanco overflow-x-auto rounded-2xl border-2">
+    <table class="w-full min-w-[1000px] text-left text-sm">
+      <thead class="border-noche bg-crema border-b-2">
+        <tr>
+          {["Fecha", "Fuente", "Nombre", "Contacto", "Origen", "Campaña", "Detalle", "Estado"].map((t) => <th class="px-3 py-2 font-extrabold">{t}</th>)}
+        </tr>
+      </thead>
+      <tbody data-leads-filas></tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+  type Lead = {
+    fuente: "formulario" | "chat" | "reserva" | "whatsapp";
+    id: string;
+    creado: string;
+    nombre: string | null;
+    telefono: string | null;
+    email: string | null;
+    utm_source: string | null;
+    utm_medium: string | null;
+    utm_campaign: string | null;
+    utm_content: string | null;
+    utm_term: string | null;
+    anuncio: string | null;
+    referrer: string | null;
+    landing: string | null;
+    detalle: string | null;
+    estado: string | null;
+  };
+
+  const root = document.querySelector<HTMLElement>("[data-leads-panel]")!;
+  const filas = root.querySelector<HTMLElement>("[data-leads-filas]")!;
+  const estado = root.querySelector<HTMLElement>("[data-leads-estado]")!;
+  const resumen = root.querySelector<HTMLElement>("[data-leads-resumen]")!;
+  const fuente = root.querySelector<HTMLSelectElement>("[data-leads-fuente]")!;
+  const dias = root.querySelector<HTMLSelectElement>("[data-leads-dias]")!;
+  const buscar = root.querySelector<HTMLInputElement>("[data-leads-buscar]")!;
+
+  const FUENTES = {
+    chat: { nombre: "Chat web", clase: "bg-celeste" },
+    formulario: { nombre: "Formulario", clase: "bg-sol" },
+    reserva: { nombre: "Reserva", clase: "bg-verde" },
+    whatsapp: { nombre: "WhatsApp", clase: "bg-verde-burbuja" },
+  } as const;
+  const fechaHora = new Intl.DateTimeFormat("es-CL", { day: "numeric", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  /** Últimos 8 dígitos: el mismo celular escrito con o sin +56. */
+  const claveTelefono = (t: string | null) => (t ? t.replace(/\D/g, "").slice(-8) : "");
+
+  let leads: Lead[] = [];
+  let activo = false;
+
+  const api = (ruta: string) => fetch(ruta, { credentials: "same-origin", headers: { "x-saltabum-admin": "1" } });
+
+  function el(tag: string, clase: string, texto?: string | null) {
+    const e = document.createElement(tag);
+    e.className = clase;
+    if (texto) e.textContent = texto;
+    return e;
+  }
+
+  async function cargar() {
+    estado.textContent = "Cargando…";
+    const res = await api("/api/admin/leads").catch(() => null);
+    if (res?.status === 401) return void document.dispatchEvent(new CustomEvent("panel:sin-sesion"));
+    if (!res?.ok) return void (estado.textContent = "No se pudieron cargar los leads");
+    leads = ((await res.json()) as { leads: Lead[] }).leads;
+    pintar();
+  }
+
+  function visibles(): Lead[] {
+    const q = sinTildes(buscar.value.trim());
+    const desde = Number(dias.value) ? Date.now() - Number(dias.value) * 86_400_000 : 0;
+    return leads.filter(
+      (l) =>
+        (!fuente.value || l.fuente === fuente.value) &&
+        Date.parse(l.creado) >= desde &&
+        (!q || sinTildes(Object.values(l).filter(Boolean).join(" ")).includes(q)),
+    );
+  }
+
+  function pintar() {
+    const lista = visibles();
+    // En qué fuentes aparece cada teléfono (para marcar al que llegó por más de un lado).
+    const fuentesPorTelefono = new Map<string, Set<string>>();
+    for (const l of leads) {
+      const k = claveTelefono(l.telefono);
+      if (k) fuentesPorTelefono.set(k, (fuentesPorTelefono.get(k) ?? new Set()).add(l.fuente));
+    }
+
+    const conteo = (f: string) => lista.filter((l) => l.fuente === f).length;
+    resumen.replaceChildren(
+      el("span", "border-noche bg-noche text-crema rounded-full border-2 px-3 py-1 font-extrabold", `${lista.length} leads`),
+      ...(Object.keys(FUENTES) as (keyof typeof FUENTES)[]).map((f) =>
+        el("span", `border-noche rounded-full border-2 px-3 py-1 font-bold ${FUENTES[f].clase}`, `${FUENTES[f].nombre}: ${conteo(f)}`),
+      ),
+      el("span", "border-noche bg-blanco rounded-full border-2 px-3 py-1 font-bold", `Con anuncio: ${lista.filter((l) => l.anuncio || l.utm_source).length}`),
+    );
+
+    filas.replaceChildren(
+      ...lista.map((l) => {
+        const tr = el("tr", "border-noche/10 border-b align-top");
+        const td = (...hijos: (Node | string)[]) => {
+          const c = el("td", "px-3 py-2");
+          c.append(...hijos);
+          tr.append(c);
+          return c;
+        };
+        td(fechaHora.format(new Date(l.creado)));
+        td(el("span", `border-noche rounded-full border px-2 text-xs font-extrabold whitespace-nowrap ${FUENTES[l.fuente].clase}`, FUENTES[l.fuente].nombre));
+        const nombre = td(el("p", "font-extrabold", l.nombre ?? "—"));
+        const otras = [...(fuentesPorTelefono.get(claveTelefono(l.telefono)) ?? [])].filter((f) => f !== l.fuente);
+        if (otras.length) nombre.append(el("p", "text-noche-suave text-xs", `También en: ${otras.map((f) => FUENTES[f as keyof typeof FUENTES].nombre).join(", ")}`));
+        const contacto = td();
+        if (l.telefono) {
+          const d = l.telefono.replace(/\D/g, "");
+          const a = el("a", "text-azul-texto block font-semibold underline", l.telefono) as HTMLAnchorElement;
+          a.href = `https://wa.me/${d.length === 9 ? `56${d}` : d}`;
+          a.target = "_blank";
+          a.rel = "noopener";
+          contacto.append(a);
+        }
+        if (l.email) contacto.append(el("p", "text-noche-suave break-all text-xs", l.email));
+        td(
+          el("p", "font-bold", [l.anuncio ? `Anuncio ${l.anuncio}` : "", l.utm_source, l.utm_medium].filter(Boolean).join(" · ") || (l.referrer ? new URL(l.referrer, location.href).hostname : "Directo")),
+        );
+        td(el("p", "", [l.utm_campaign, l.utm_content, l.utm_term].filter(Boolean).join(" · ") || "—"));
+        td(el("p", "text-noche-suave line-clamp-3 max-w-[280px]", l.detalle ?? ""));
+        td(el("p", "font-semibold whitespace-nowrap", l.estado ?? ""));
+        return tr;
+      }),
+    );
+    estado.textContent = lista.length ? "" : "No hay leads con estos filtros";
+  }
+
+  /** CSV con punto y coma (Excel en español lo abre directo) y BOM para las tildes. */
+  function descargarCsv() {
+    const columnas: (keyof Lead)[] = ["creado", "fuente", "nombre", "telefono", "email", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "anuncio", "referrer", "landing", "detalle", "estado"];
+    const celda = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
+    const texto = [columnas.join(";"), ...visibles().map((l) => columnas.map((c) => celda(c === "creado" ? new Date(l.creado).toLocaleString("es-CL") : l[c])).join(";"))].join("\r\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["﻿" + texto], { type: "text/csv;charset=utf-8" }));
+    a.download = `leads-saltabum-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  fuente.addEventListener("change", pintar);
+  dias.addEventListener("change", pintar);
+  buscar.addEventListener("input", pintar);
+  root.querySelector("[data-leads-csv]")!.addEventListener("click", descargarCsv);
+
+  document.addEventListener("panel:listo", () => (activo = true));
+  document.addEventListener("panel:pestana", (e) => {
+    if (activo && (e as CustomEvent<string>).detail === "leads") void cargar();
+  });
+  document.addEventListener("panel:cerrado", () => {
+    activo = false;
+    leads = [];
+    filas.replaceChildren();
+  });
+</script>
