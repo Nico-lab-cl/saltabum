@@ -85,6 +85,8 @@ export default defineConfig({
       WHATSAPP_ETIQUETA_ID: envField.string({ context: "server", access: "secret", optional: true }), // por defecto «12» (SALTABUM | LEADS)
       // Chat con IA de la web (Claude, console.anthropic.com). Sin la clave, la burbuja ofrece WhatsApp. Ver src/lib/server/chat-ia.ts.
       ANTHROPIC_API_KEY: envField.string({ context: "server", access: "secret", optional: true }),
+      // Grupo de WhatsApp que recibe los avisos del chat (reservas, pedidos de ayuda). Por defecto el grupo del equipo.
+      WHATSAPP_GRUPO_AVISOS: envField.string({ context: "server", access: "secret", optional: true }),
     },
   },
 });

@@ -2,8 +2,9 @@
 // Burbuja del chat con IA (abajo a la derecha). Solo lo visual: la lógica está en src/lib/client/chat.ts y se engancha
 // por estos atributos:
 //   [data-chat] (raíz, recibe data-abierto) · [data-chat-abrir] · [data-chat-cerrar] · [data-chat-panel]
-//   [data-chat-lista] (mensajes) · <template data-chat-plantilla="cliente|ia"> con [data-chat-texto]
+//   [data-chat-lista] (mensajes) · <template data-chat-plantilla="cliente|ia|equipo|sistema"> con [data-chat-texto]
 //   [data-chat-escribiendo] · <form data-chat-form> con <textarea name="texto"> · [data-chat-whatsapp] (enlace oculto)
+//   [data-chat-pendientes] (contador de respuestas del equipo que llegaron con el chat cerrado)
 import Icon from "./Icon.astro";
 ---
 
@@ -21,7 +22,7 @@ import Icon from "./Icon.astro";
       </span>
       <div class="min-w-0 flex-1">
         <p class="font-display text-lg leading-tight font-semibold">Asistente Saltabum</p>
-        <p class="text-noche-suave text-xs font-bold">Respuestas al instante con IA</p>
+        <p class="text-noche-suave text-xs font-bold">Asistente con IA y equipo Saltabum</p>
       </div>
       <button type="button" data-chat-cerrar aria-label="Cerrar chat" class="bounce grid size-10 place-items-center rounded-full">
         <Icon name="cerrar" size={22} />
@@ -47,6 +48,20 @@ import Icon from "./Icon.astro";
         class="bg-blanco border-noche/15 max-w-[85%] self-start rounded-2xl rounded-bl-md border px-3.5 py-2.5 text-[15px] leading-snug whitespace-pre-line"
       >
       </p>
+    </template>
+
+    <template data-chat-plantilla="equipo">
+      <div class="flex max-w-[85%] flex-col gap-0.5 self-start">
+        <span class="text-noche-suave px-1 text-[11px] font-extrabold">Equipo Saltabum</span>
+        <p
+          data-chat-texto
+          class="bg-celeste border-noche/20 rounded-2xl rounded-bl-md border px-3.5 py-2.5 text-[15px] leading-snug whitespace-pre-line"
+        >
+        </p>
+      </div>
+    </template>
+    <template data-chat-plantilla="sistema">
+      <p data-chat-texto class="text-noche-suave self-center px-4 text-center text-xs font-bold"></p>
     </template>
 
     <p data-chat-escribiendo hidden class="text-noche-suave px-4 pb-2 text-sm font-bold">Escribiendo…</p>
@@ -92,9 +107,14 @@ import Icon from "./Icon.astro";
     type="button"
     data-chat-abrir
     aria-label="Abrir chat con el asistente"
-    class="bounce bg-sol border-noche shadow-pop text-noche flex min-h-14 items-center gap-2 rounded-full border-2 px-4 font-extrabold group-data-[abierto]:hidden"
+    class="bounce bg-sol border-noche shadow-pop text-noche relative flex min-h-14 items-center gap-2 rounded-full border-2 px-4 font-extrabold group-data-[abierto]:hidden"
   >
     <Icon name="chat" size={24} />
     <span class="hidden sm:inline">¿Te ayudo?</span>
+    <span
+      data-chat-pendientes
+      hidden
+      class="bg-rojo-texto absolute -top-1.5 -right-1.5 inline-flex min-w-6 items-center justify-center rounded-full px-1.5 text-xs leading-6 text-white"
+    ></span>
   </button>
 </div>

@@ -1,7 +1,8 @@
 // Asistente con IA del chat de la web (Claude Haiku vía API de Anthropic, clave ANTHROPIC_API_KEY).
 // Responde con la información del sitio y usa la agenda real: revisa disponibilidad, cotiza con el mismo cálculo de
 // la página y deja reservas que aparecen en /admin con origen «chat». El equipo las confirma con el abono por WhatsApp.
-// La conversación no se guarda: el navegador manda el historial visible en cada mensaje.
+// La conversación se guarda en D1 (chat-db.ts) y se ve en /admin, donde el equipo puede tomar el control. Las reservas
+// y los pedidos de ayuda se avisan al grupo de WhatsApp del equipo (chat-avisos.ts).
 import Anthropic from "@anthropic-ai/sdk";
 import { ANTHROPIC_API_KEY, CRM_WEBHOOK_SECRET, CRM_WEBHOOK_URL } from "astro:env/server";
 import { ABONO, COMUNAS, FAQS, PRODUCTO, PRODUCTOS } from "@design/data";
@@ -26,6 +27,8 @@ import {
   ZONA_HORARIA,
 } from "@/lib/reservas";
 import { auditar } from "@/lib/server/admin-auth";
+import { avisarGrupo, enlacePanel } from "@/lib/server/chat-avisos";
+import { actualizarConversacion, type MensajeGuardado } from "@/lib/server/chat-db";
 import { sendToCrm } from "@/lib/server/crm";
 import { crearReserva, horariosOcupados, reservasRecientes } from "@/lib/server/reservas-db";
 
@@ -36,11 +39,6 @@ const MAX_VUELTAS = 6;
 const MAX_RESERVAS_POR_IP = 3;
 
 export const chatConfigurado = () => !!ANTHROPIC_API_KEY;
-
-export interface MensajeChat {
-  rol: "cliente" | "ia";
-  texto: string;
-}
 
 export interface RespuestaChat {
   texto: string;
@@ -82,7 +80,8 @@ Herramientas
 - cotizar: úsala para dar el total con despacho y horas extra.
 - crear_reserva: solo cuando la persona ya eligió juego, fecha, hora de inicio, horas y comuna, y te dio nombre, apellido, teléfono y dirección. Antes de llamarla, resume todo (juego, fecha, horario, comuna, dirección, total) y pide que la persona confirme con un sí. Si no confirmó, no la llames.
 - En el historial solo quedan los textos de la conversación, no las consultas a las herramientas. Lo que dijiste antes sí lo revisaste con ellas: no te disculpes ni lo pongas en duda. Si pasó tiempo o cambian los datos, vuelve a consultar sin comentarlo.
-- derivar_whatsapp: cuando la persona quiere hablar con alguien, el caso se sale de lo que sabes (otra comuna, colegios, municipalidades, varios juegos, factura con datos especiales, reclamos) o algo falla. Resume el caso en el mensaje.
+- pedir_ayuda: cuando la persona quiere hablar con alguien, el caso se sale de lo que sabes (otra comuna, colegios, municipalidades, varios juegos, factura con datos especiales, reclamos) o algo falla. Avisa al equipo, que puede entrar a este mismo chat, y le muestra a la persona un botón para seguir por WhatsApp. Resume el caso en el mensaje.
+- Los mensajes que empiezan con «(Equipo Saltabum)» los escribió una persona del equipo: respeta lo que dijo y no lo contradigas.
 
 Después de reservar
 La reserva queda pendiente hasta que se pague el abono de ${pesos(ABONO)}. Dile a la persona que el equipo le escribirá por WhatsApp al teléfono que dio para confirmar y coordinar el abono. No prometas descuentos, regalos ni cambios de precio. No pidas datos de tarjetas ni de cuentas bancarias.
@@ -140,8 +139,8 @@ const HERRAMIENTAS: Anthropic.Tool[] = [
     },
   },
   {
-    name: "derivar_whatsapp",
-    description: "Muestra a la persona un botón para seguir por WhatsApp con el equipo, con su caso resumido.",
+    name: "pedir_ayuda",
+    description: "Avisa al equipo por WhatsApp que esta conversación necesita una persona y le muestra al cliente un botón para seguir por WhatsApp.",
     input_schema: {
       type: "object",
       properties: { resumen: { type: "string", description: "El caso en una o dos frases, escrito como si lo dijera el cliente" } },
@@ -163,6 +162,7 @@ function contextoDelDia(): string {
 
 interface Contexto {
   request: Request;
+  conversacion: string;
   ipHash: string | null;
   pageUrl?: string;
 }
@@ -257,13 +257,34 @@ async function reservar(e: Record<string, unknown>, ctx: Contexto) {
       context: { page_url: ctx.pageUrl, consent: false },
     }).catch((err) => console.error("[chat] CRM:", String(err)));
   }
+  await actualizarConversacion(ctx.conversacion, { nombre: [r.nombre, r.apellido].filter(Boolean).join(" "), telefono: r.telefono, reserva_id: id });
+  await avisarGrupo(
+    [
+      "🎉 *Nueva reserva desde el chat de la web*",
+      `${nombreJuego(r.producto)} · ${r.fecha} · ${etiquetaHorario(inicio, fin)}`,
+      `${r.comuna}${r.direccion ? `, ${r.direccion}` : ""}${r.depto ? ` (${r.depto})` : ""}`,
+      `${[r.nombre, r.apellido].filter(Boolean).join(" ")} · ${r.telefono}`,
+      `Total ${pesos(precio.total)} · pendiente del abono de ${pesos(ABONO)}`,
+      r.mensaje ? `Nota: ${r.mensaje}` : "",
+      `Conversación: ${enlacePanel(ctx.conversacion)}`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
   return { ok: true, reserva: id, horario: etiquetaHorario(inicio, fin), total: pesos(precio.total), abono: pesos(ABONO), estado: "pendiente del abono" };
 }
 
-/** Responde el último mensaje del cliente. El historial ya viene validado (empieza y termina en el cliente). */
-export async function responderChat(historial: MensajeChat[], ctx: Contexto): Promise<RespuestaChat> {
+/** Responde el último mensaje del cliente con lo más reciente de la conversación guardada. */
+export async function responderChat(historial: MensajeGuardado[], ctx: Contexto): Promise<RespuestaChat> {
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY, maxRetries: 1, timeout: 45_000 });
-  const messages: Anthropic.MessageParam[] = historial.map((m) => ({ role: m.rol === "cliente" ? "user" : "assistant", content: m.texto }));
+  const visibles = historial.filter((m) => m.rol !== "sistema");
+  // Lo que lee la IA empieza siempre con un mensaje del cliente.
+  while (visibles.length && visibles[0].rol !== "cliente") visibles.shift();
+  const messages: Anthropic.MessageParam[] = visibles.map((m) =>
+    m.rol === "cliente"
+      ? { role: "user", content: m.texto }
+      : { role: "assistant", content: m.rol === "equipo" ? `(Equipo Saltabum) ${m.texto}` : m.texto },
+  );
   const salida: RespuestaChat = { texto: "" };
 
   for (let vuelta = 0; vuelta < MAX_VUELTAS; vuelta++) {
@@ -307,9 +328,12 @@ export async function responderChat(historial: MensajeChat[], ctx: Contexto): Pr
         else if (b.name === "crear_reserva") {
           resultado = await reservar(e, ctx);
           if ((resultado as { ok?: boolean }).ok) salida.reserva = true;
-        } else if (b.name === "derivar_whatsapp") {
-          salida.whatsapp = `Hola, vengo del chat de saltabum.cl. ${String(e.resumen ?? "").slice(0, 500)}`.trim();
-          resultado = { ok: true, nota: "Ya se muestra el botón de WhatsApp. Avísale a la persona." };
+        } else if (b.name === "pedir_ayuda") {
+          const resumen = String(e.resumen ?? "").slice(0, 500);
+          salida.whatsapp = `Hola, vengo del chat de saltabum.cl. ${resumen}`.trim();
+          await actualizarConversacion(ctx.conversacion, { ayuda: 1 });
+          await avisarGrupo(`🙋 *El chat de la web necesita una persona*\n${resumen}\nTomar el control: ${enlacePanel(ctx.conversacion)}`);
+          resultado = { ok: true, nota: "El equipo ya fue avisado y la persona ve un botón de WhatsApp. Dile que alguien del equipo le escribirá aquí o puede seguir por WhatsApp." };
         } else resultado = { error: "Herramienta desconocida" };
       } catch (err) {
         console.error(`[chat] ${b.name}:`, String(err));

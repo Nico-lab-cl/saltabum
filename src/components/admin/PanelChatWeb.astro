@@ -1,0 +1,276 @@
+---
+// Pestaña «Chat web» del panel /admin: las conversaciones del chat de saltabum.cl. A la izquierda la lista y a la
+// derecha la conversación. «Tomar el control» hace que la IA deje de responder y el equipo conteste desde aquí
+// (el cliente lo ve en la misma burbuja); «Devolver a la IA» la vuelve a activar. Se actualiza cada 5 segundos con
+// una conversación abierta y cada 20 la lista.
+---
+
+<section data-chatweb-panel class="flex flex-col gap-4">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h2 class="font-display text-3xl font-semibold">Chat web</h2>
+      <p class="text-noche-suave text-sm">Conversaciones del chat de saltabum.cl con la IA o con el equipo</p>
+    </div>
+    <div role="radiogroup" aria-label="Qué conversaciones ver" class="border-noche bg-blanco flex rounded-full border-2 p-1">
+      {
+        [
+          ["todas", "Todas"],
+          ["ayuda", "Piden ayuda"],
+          ["humano", "Con el equipo"],
+          ["reserva", "Con reserva"],
+        ].map(([id, nombre], i) => (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={i === 0 ? "true" : "false"}
+            data-filtro-chatweb={id}
+            class="aria-checked:bg-noche aria-checked:text-crema min-h-9 cursor-pointer rounded-full px-3 text-sm font-extrabold whitespace-nowrap"
+          >
+            {nombre}
+          </button>
+        ))
+      }
+    </div>
+  </div>
+  <p data-chatweb-estado class="text-noche-suave text-sm" aria-live="polite"></p>
+
+  <div class="grid gap-4 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+    <div data-chatweb-lista class="flex max-h-[75vh] flex-col gap-2 overflow-y-auto pr-1"></div>
+    <div data-chatweb-chat class="border-noche bg-blanco flex min-h-[460px] flex-col rounded-2xl border-2">
+      <p class="text-noche-suave m-auto p-6 text-center text-sm">Elige una conversación para verla</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  type Conversacion = {
+    id: string;
+    creado: string;
+    actualizado: string;
+    modo: "ia" | "humano";
+    atiende: string | null;
+    ayuda: number;
+    nombre: string | null;
+    telefono: string | null;
+    reserva_id: number | null;
+    pagina: string | null;
+    mensajes: number;
+    ultimo: string | null;
+  };
+  type Mensaje = { id: number; rol: "cliente" | "ia" | "equipo" | "sistema"; texto: string; autor: string | null; creado: string };
+
+  const root = document.querySelector<HTMLElement>("[data-chatweb-panel]")!;
+  const lista = root.querySelector<HTMLElement>("[data-chatweb-lista]")!;
+  const vista = root.querySelector<HTMLElement>("[data-chatweb-chat]")!;
+  const estado = root.querySelector<HTMLElement>("[data-chatweb-estado]")!;
+
+  const hora = new Intl.DateTimeFormat("es-CL", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const dia = new Intl.DateTimeFormat("es-CL", { weekday: "short", day: "numeric", month: "short" });
+  const cuando = (iso: string) => {
+    const f = new Date(iso);
+    return f.toDateString() === new Date().toDateString() ? hora.format(f) : `${dia.format(f)} ${hora.format(f)}`;
+  };
+  const QUIEN = { cliente: "Cliente", ia: "IA", equipo: "Equipo", sistema: "" } as const;
+
+  let conversaciones: Conversacion[] = [];
+  let filtro = "todas";
+  let abierta: string | null = null;
+  let pintada: string | null = null;
+  let ultimoPintado = "";
+  let activo = false;
+  let visible = false;
+  let conocidas: Map<string, string> | undefined;
+
+  const api = (ruta: string, init?: RequestInit) =>
+    fetch(ruta, { ...init, credentials: "same-origin", headers: { "x-saltabum-admin": "1", "content-type": "application/json" } });
+  const avisar = (texto: string) => document.dispatchEvent(new CustomEvent("panel:aviso", { detail: texto }));
+  const sinSesion = () => document.dispatchEvent(new CustomEvent("panel:sin-sesion"));
+
+  function el(tag: string, clase: string, texto?: string | null) {
+    const e = document.createElement(tag);
+    e.className = clase;
+    if (texto) e.textContent = texto;
+    return e;
+  }
+  function boton(texto: string, clase: string, accion: () => void) {
+    const b = el("button", `min-h-9 cursor-pointer rounded-full border-2 px-3 text-sm font-extrabold disabled:opacity-50 ${clase}`, texto) as HTMLButtonElement;
+    b.type = "button";
+    b.addEventListener("click", accion);
+    return b;
+  }
+  const etiqueta = (texto: string, clase: string) => el("span", `rounded-full border px-2 text-xs font-extrabold whitespace-nowrap ${clase}`, texto);
+
+  async function cargarLista() {
+    const res = await api("/api/admin/chatweb").catch(() => null);
+    if (res?.status === 401) return sinSesion();
+    if (!res?.ok) return void (estado.textContent = "No se pudieron cargar las conversaciones");
+    const nuevas = ((await res.json()) as { conversaciones: Conversacion[] }).conversaciones;
+    // Aviso cuando la IA pide ayuda en una conversación nueva para el panel.
+    if (conocidas) {
+      const piden = nuevas.filter((c) => c.ayuda && conocidas!.get(c.id) !== c.actualizado && c.id !== abierta);
+      if (piden.length) avisar(`Chat web: ${piden[0].nombre ?? "un cliente"} necesita una persona`);
+    }
+    conocidas = new Map(nuevas.map((c) => [c.id, c.actualizado]));
+    conversaciones = nuevas;
+    document.dispatchEvent(new CustomEvent("panel:contador", { detail: { pestana: "chatweb", n: conversaciones.filter((c) => c.ayuda).length } }));
+    pintarLista();
+  }
+
+  function pintarLista() {
+    const visibles = conversaciones.filter((c) =>
+      filtro === "ayuda" ? c.ayuda : filtro === "humano" ? c.modo === "humano" : filtro === "reserva" ? c.reserva_id : true,
+    );
+    lista.replaceChildren(
+      ...visibles.map((c) => {
+        const b = el(
+          "button",
+          `border-noche flex w-full cursor-pointer flex-col gap-1 rounded-2xl border-2 p-3 text-left ${c.id === abierta ? "bg-sol/40" : "bg-blanco"}`,
+        ) as HTMLButtonElement;
+        b.type = "button";
+        const fila = el("div", "flex items-center justify-between gap-2");
+        fila.append(el("p", "truncate font-extrabold", c.nombre ?? "Visitante"), el("span", "text-noche-suave shrink-0 text-xs", cuando(c.actualizado)));
+        const marcas = el("div", "flex flex-wrap gap-1");
+        if (c.ayuda) marcas.append(etiqueta("Pide ayuda", "border-rojo-texto bg-rojo-suave text-rojo-texto"));
+        marcas.append(c.modo === "humano" ? etiqueta(`Equipo${c.atiende ? ` · ${c.atiende}` : ""}`, "border-noche bg-celeste") : etiqueta("IA", "border-noche/30 bg-crema"));
+        if (c.reserva_id) marcas.append(etiqueta("Reservó", "border-noche bg-verde"));
+        b.append(fila, marcas);
+        if (c.ultimo) b.append(el("p", "text-noche-suave line-clamp-2 text-sm", c.ultimo));
+        b.addEventListener("click", () => void abrir(c.id));
+        return b;
+      }),
+    );
+    estado.textContent = visibles.length ? "" : "No hay conversaciones en esta vista";
+  }
+
+  async function abrir(id: string, forzar = true) {
+    if (forzar) ultimoPintado = "";
+    abierta = id;
+    history.replaceState(null, "", `#chatweb=${id}`);
+    const res = await api(`/api/admin/chatweb?id=${encodeURIComponent(id)}`).catch(() => null);
+    if (res?.status === 401) return sinSesion();
+    if (!res?.ok) return void avisar("No se pudo abrir la conversación");
+    const { conversacion, mensajes } = (await res.json()) as { conversacion: Conversacion; mensajes: Mensaje[] };
+    // Si no cambió nada, no se repinta (así no se borra lo que el equipo está escribiendo).
+    const firma = `${conversacion.modo}|${conversacion.atiende}|${mensajes.at(-1)?.id ?? 0}`;
+    if (firma === ultimoPintado) return;
+    ultimoPintado = firma;
+    pintarConversacion(conversacion, mensajes);
+    pintarLista();
+  }
+
+  async function enviar(datos: Record<string, unknown>, ok: string) {
+    const res = await api("/api/admin/chatweb", { method: "POST", body: JSON.stringify(datos) }).catch(() => null);
+    if (res?.status === 401) return sinSesion();
+    avisar(res?.ok ? ok : "No se pudo guardar, inténtalo de nuevo");
+    if (abierta) await abrir(abierta);
+    void cargarLista();
+  }
+
+  function pintarConversacion(c: Conversacion, mensajes: Mensaje[]) {
+    // Lo que el equipo estaba escribiendo se mantiene al llegar mensajes nuevos.
+    const previa = pintada === c.id ? vista.querySelector<HTMLTextAreaElement>("textarea") : null;
+    const borrador = previa?.value ?? "";
+    const enfocado = !!previa && document.activeElement === previa;
+    pintada = c.id;
+    const cabeza = el("div", "border-noche flex flex-wrap items-center justify-between gap-2 border-b-2 p-3");
+    const datos = el("div", "flex min-w-0 flex-col");
+    datos.append(el("p", "font-extrabold", c.nombre ?? "Visitante de la web"));
+    const detalle = [c.telefono, c.reserva_id ? `reserva N° ${c.reserva_id}` : "", `desde ${cuando(c.creado)}`].filter(Boolean).join(" · ");
+    datos.append(el("p", "text-noche-suave text-xs", detalle));
+    const acciones = el("div", "flex flex-wrap gap-2");
+    if (c.telefono) {
+      const d = c.telefono.replace(/\D/g, "");
+      const wa = el("a", "border-noche bg-verde inline-flex min-h-9 items-center rounded-full border-2 px-3 text-sm font-extrabold no-underline", "WhatsApp") as HTMLAnchorElement;
+      wa.href = `https://wa.me/${d.length === 9 ? `56${d}` : d}`;
+      wa.target = "_blank";
+      wa.rel = "noopener";
+      acciones.append(wa);
+    }
+    acciones.append(
+      c.modo === "ia"
+        ? boton("✋ Tomar el control", "border-noche bg-sol", () => void enviar({ accion: "modo", id: c.id, modo: "humano" }, "Tomaste el control: la IA ya no responde"))
+        : boton("🤖 Devolver a la IA", "border-noche bg-crema", () => void enviar({ accion: "modo", id: c.id, modo: "ia" }, "La IA vuelve a responder")),
+    );
+    cabeza.append(datos, acciones);
+
+    const caja = el("div", "flex max-h-[60vh] flex-1 flex-col gap-2 overflow-y-auto p-3");
+    for (const m of mensajes) {
+      if (m.rol === "sistema") {
+        caja.append(el("p", "text-noche-suave self-center text-center text-xs font-bold", `${m.texto} · ${cuando(m.creado)}`));
+        continue;
+      }
+      const propio = m.rol !== "cliente";
+      const burbuja = el(
+        "div",
+        `max-w-[80%] rounded-2xl px-3 py-2 text-sm whitespace-pre-line ${propio ? "self-end rounded-br-md" : "self-start rounded-bl-md"} ${m.rol === "equipo" ? "bg-celeste" : m.rol === "ia" ? "bg-arena" : "bg-crema border-noche/20 border"}`,
+      );
+      burbuja.append(el("p", "", m.texto));
+      burbuja.append(el("p", "text-noche-suave mt-1 text-[11px] font-bold", `${QUIEN[m.rol]}${m.autor && m.rol === "equipo" ? ` (${m.autor})` : ""} · ${cuando(m.creado)}`));
+      caja.append(burbuja);
+    }
+
+    const form = el("form", "border-noche flex items-end gap-2 border-t-2 p-3") as HTMLFormElement;
+    const area = el("textarea", "border-noche bg-crema max-h-40 min-h-11 flex-1 resize-y rounded-xl border-2 px-3 py-2") as HTMLTextAreaElement;
+    area.rows = 2;
+    area.maxLength = 2000;
+    area.placeholder = c.modo === "ia" ? "Escribe para responder tú (la IA deja de responder)" : "Escribe tu respuesta…";
+    const mandar = el("button", "bg-noche text-crema min-h-11 cursor-pointer rounded-full px-5 font-extrabold disabled:opacity-50", "Enviar") as HTMLButtonElement;
+    area.value = borrador;
+    form.append(area, mandar);
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const texto = area.value.trim();
+      if (!texto) return;
+      mandar.disabled = true;
+      area.value = "";
+      await enviar({ accion: "responder", id: c.id, texto }, "Respuesta enviada al chat");
+    });
+    area.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    vista.replaceChildren(cabeza, caja, form);
+    caja.scrollTop = caja.scrollHeight;
+    if (enfocado) area.focus();
+  }
+
+  root.querySelectorAll<HTMLButtonElement>("[data-filtro-chatweb]").forEach((b) =>
+    b.addEventListener("click", () => {
+      filtro = b.dataset.filtroChatweb!;
+      root.querySelectorAll("[data-filtro-chatweb]").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      pintarLista();
+    }),
+  );
+
+  document.addEventListener("panel:listo", () => {
+    activo = true;
+    void cargarLista();
+    // Enlace directo desde el aviso de WhatsApp: /admin#chatweb=<id>
+    const enlace = location.hash.match(/^#chatweb=([0-9a-f-]{36})$/);
+    if (enlace) {
+      document.dispatchEvent(new CustomEvent("panel:abrir-pestana", { detail: "chatweb" }));
+      void abrir(enlace[1]);
+    }
+  });
+  document.addEventListener("panel:pestana", (e) => {
+    visible = (e as CustomEvent<string>).detail === "chatweb";
+    if (activo && visible) void cargarLista();
+  });
+  setInterval(() => {
+    if (activo && visible && abierta && document.visibilityState === "visible") void abrir(abierta, false);
+  }, 5_000);
+  setInterval(() => {
+    if (activo && document.visibilityState === "visible") void cargarLista();
+  }, 20_000);
+  document.addEventListener("panel:cerrado", () => {
+    activo = false;
+    conversaciones = [];
+    conocidas = undefined;
+    abierta = null;
+    pintada = null;
+    lista.replaceChildren();
+  });
+</script>
