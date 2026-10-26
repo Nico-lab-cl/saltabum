@@ -83,6 +83,8 @@ export default defineConfig({
       EVOLUTION_WEBHOOK_SECRET: envField.string({ context: "server", access: "secret", optional: true }),
       EVOLUTION_INSTANCIA: envField.string({ context: "server", access: "secret", optional: true }), // por defecto «Saltabum»
       WHATSAPP_ETIQUETA_ID: envField.string({ context: "server", access: "secret", optional: true }), // por defecto «12» (SALTABUM | LEADS)
+      // Chat con IA de la web (Claude, console.anthropic.com). Sin la clave, la burbuja ofrece WhatsApp. Ver src/lib/server/chat-ia.ts.
+      ANTHROPIC_API_KEY: envField.string({ context: "server", access: "secret", optional: true }),
     },
   },
 });

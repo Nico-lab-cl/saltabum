@@ -2,6 +2,7 @@
 // Layout raíz: SEO, tracking, consentimiento y scripts de conversión.
 // El diseño visual (header, footer, secciones) vive en src/design y se inserta vía <slot />.
 import "@/styles/global.css";
+import ChatIA from "@design/components/ChatIA.astro";
 import CookieBanner from "@/components/core/CookieBanner.astro";
 import SEO, { type SEOProps } from "@/components/core/SEO.astro";
 import Tracking from "@/components/core/Tracking.astro";
@@ -28,16 +29,19 @@ type Props = SEOProps;
   </head>
   <body>
     <slot />
+    <ChatIA />
     <CookieBanner />
 
     <script>
       import { captureAttribution } from "@/lib/client/attribution";
+      import { bindChat } from "@/lib/client/chat";
       import { bindLeadForms } from "@/lib/client/lead-form";
       import { bindDeclarativeTracking } from "@/lib/client/track";
 
       captureAttribution();
       bindDeclarativeTracking();
       bindLeadForms();
+      bindChat();
     </script>
   </body>
 </html>

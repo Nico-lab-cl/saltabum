@@ -1,0 +1,100 @@
+---
+// Burbuja del chat con IA (abajo a la derecha). Solo lo visual: la lógica está en src/lib/client/chat.ts y se engancha
+// por estos atributos:
+//   [data-chat] (raíz, recibe data-abierto) · [data-chat-abrir] · [data-chat-cerrar] · [data-chat-panel]
+//   [data-chat-lista] (mensajes) · <template data-chat-plantilla="cliente|ia"> con [data-chat-texto]
+//   [data-chat-escribiendo] · <form data-chat-form> con <textarea name="texto"> · [data-chat-whatsapp] (enlace oculto)
+import Icon from "./Icon.astro";
+---
+
+<div data-chat class="group fixed right-4 bottom-24 z-40 lg:right-6 lg:bottom-6">
+  <section
+    data-chat-panel
+    role="dialog"
+    aria-label="Chat con Saltabum"
+    hidden
+    class="border-noche bg-crema text-noche shadow-pop-l fixed inset-x-3 top-20 bottom-3 flex flex-col overflow-hidden rounded-[24px] border-2 sm:absolute sm:inset-auto sm:right-0 sm:bottom-0 sm:h-[min(620px,calc(100dvh-120px))] sm:w-[380px]"
+  >
+    <header class="border-noche bg-sol flex items-center gap-3 border-b-2 px-4 py-3">
+      <span class="border-noche bg-blanco grid size-10 shrink-0 place-items-center rounded-full border-2">
+        <Icon name="chat" size={22} />
+      </span>
+      <div class="min-w-0 flex-1">
+        <p class="font-display text-lg leading-tight font-semibold">Asistente Saltabum</p>
+        <p class="text-noche-suave text-xs font-bold">Respuestas al instante con IA</p>
+      </div>
+      <button type="button" data-chat-cerrar aria-label="Cerrar chat" class="bounce grid size-10 place-items-center rounded-full">
+        <Icon name="cerrar" size={22} />
+      </button>
+    </header>
+
+    <div data-chat-lista aria-live="polite" class="flex flex-1 flex-col gap-2.5 overflow-y-auto px-3 py-4">
+      <p class="bg-blanco border-noche/15 max-w-[85%] self-start rounded-2xl rounded-bl-md border px-3.5 py-2.5 text-[15px] leading-snug">
+        ¡Hola! 🎈 Soy el asistente de Saltabum. Te ayudo a ver disponibilidad, cotizar con despacho y dejar tu reserva lista. ¿Para qué fecha y comuna sería?
+      </p>
+    </div>
+
+    <template data-chat-plantilla="cliente">
+      <p
+        data-chat-texto
+        class="bg-azul text-blanco max-w-[85%] self-end rounded-2xl rounded-br-md px-3.5 py-2.5 text-[15px] leading-snug whitespace-pre-line"
+      >
+      </p>
+    </template>
+    <template data-chat-plantilla="ia">
+      <p
+        data-chat-texto
+        class="bg-blanco border-noche/15 max-w-[85%] self-start rounded-2xl rounded-bl-md border px-3.5 py-2.5 text-[15px] leading-snug whitespace-pre-line"
+      >
+      </p>
+    </template>
+
+    <p data-chat-escribiendo hidden class="text-noche-suave px-4 pb-2 text-sm font-bold">Escribiendo…</p>
+
+    <a
+      data-chat-whatsapp
+      hidden
+      href="#"
+      target="_blank"
+      rel="noopener"
+      data-track="whatsapp"
+      data-track-placement="chat"
+      class="bounce bg-verde border-noche shadow-pop-s mx-3 mb-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-full border-2 px-4 font-extrabold no-underline"
+    >
+      <Icon name="whatsapp" size={20} />
+      Seguir por WhatsApp
+    </a>
+
+    <form data-chat-form class="border-noche bg-blanco flex items-end gap-2 border-t-2 p-2.5">
+      <label class="sr-only" for="chat-texto">Escribe tu mensaje</label>
+      <textarea
+        id="chat-texto"
+        name="texto"
+        rows="1"
+        maxlength="1000"
+        placeholder="Escribe tu mensaje…"
+        class="bg-crema max-h-32 min-h-11 flex-1 resize-none rounded-2xl px-3.5 py-2.5 text-base leading-snug outline-none focus-visible:ring-2 focus-visible:ring-azul"
+      ></textarea>
+      <button
+        type="submit"
+        aria-label="Enviar"
+        class="bounce bg-sol border-noche shadow-pop-s grid size-11 shrink-0 place-items-center rounded-full border-2 disabled:opacity-50"
+      >
+        <Icon name="enviar" size={20} />
+      </button>
+    </form>
+    <p class="text-noche-suave bg-blanco px-3 pb-2 text-center text-[11px]">
+      Asistente con IA, puede equivocarse. El equipo confirma cada reserva por WhatsApp.
+    </p>
+  </section>
+
+  <button
+    type="button"
+    data-chat-abrir
+    aria-label="Abrir chat con el asistente"
+    class="bounce bg-sol border-noche shadow-pop text-noche flex min-h-14 items-center gap-2 rounded-full border-2 px-4 font-extrabold group-data-[abierto]:hidden"
+  >
+    <Icon name="chat" size={24} />
+    <span class="hidden sm:inline">¿Te ayudo?</span>
+  </button>
+</div>

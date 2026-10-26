@@ -7,8 +7,8 @@ import { env, type D1Database } from "cloudflare:workers";
 import { MARGEN } from "@/lib/reservas";
 
 export type EstadoHorario = "reservado" | "bloqueado";
-/** Quién creó la fila: el cliente en la web o el equipo en el panel. */
-export type OrigenReserva = "web" | "panel";
+/** Quién creó la fila: el cliente en la web, el chat con IA o el equipo en el panel. */
+export type OrigenReserva = "web" | "chat" | "panel";
 
 export interface FilaAgenda {
   id: number;

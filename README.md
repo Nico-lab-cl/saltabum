@@ -75,6 +75,7 @@ npx wrangler secret put ADMIN_USUARIOS   # usuarios del panel /admin (ver «Pane
 npx wrangler secret put EVOLUTION_API_URL         # https://evolution-api-evolution-api.db8enk.easypanel.host
 npx wrangler secret put EVOLUTION_API_KEY         # AUTHENTICATION_API_KEY de Evolution
 npx wrangler secret put EVOLUTION_WEBHOOK_SECRET  # clave larga al azar
+npx wrangler secret put ANTHROPIC_API_KEY         # chat con IA de la web (console.anthropic.com)
 # Opcionales: EVOLUTION_INSTANCIA (por defecto «Saltabum») y WHATSAPP_ETIQUETA_ID (por defecto «12» = SALTABUM | LEADS)
 ```
 
