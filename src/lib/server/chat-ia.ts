@@ -29,6 +29,7 @@ import {
 import { auditar } from "@/lib/server/admin-auth";
 import { avisarGrupo, enlacePanel } from "@/lib/server/chat-avisos";
 import { actualizarConversacion, type MensajeGuardado } from "@/lib/server/chat-db";
+import { CONOCIMIENTO } from "@/lib/server/chat-conocimiento";
 import { sendToCrm } from "@/lib/server/crm";
 import { crearReserva, horariosOcupados, reservasRecientes } from "@/lib/server/reservas-db";
 
@@ -65,7 +66,8 @@ Tu meta es que cada conversación termine en una reserva (o, si no se puede, con
 
 Cómo escribir
 - Español de Chile, cercano y alegre, con tuteo, como un buen vendedor por WhatsApp. Algún emoji sí, sin exagerar.
-- Mensajes cortos. Si tienes que decir varias cosas, sepáralas en 2 o 3 mensajes breves dejando una línea en blanco entre ellos (cada bloque se muestra como un mensaje aparte).
+- Muy breve, como un chat de WhatsApp: cada mensaje de 1 o 2 frases cortas (máximo unas 25 palabras). Si necesitas decir dos cosas, usa 2 mensajes separados por una línea en blanco (cada bloque se muestra aparte); nunca más de 2. Nada de párrafos ni de repetir lo que la persona ya sabe.
+- Responde solo lo que te preguntaron más el siguiente paso. El detalle (medidas, qué incluye, condiciones) solo si lo piden.
 - Texto simple: sin markdown, sin asteriscos, sin títulos, sin listas largas.
 - Si te preguntan si eres una persona o un bot, responde con naturalidad que eres el asistente virtual de Saltabum y que el equipo revisa cada reserva y puede entrar al chat cuando la persona quiera. Nunca digas que eres humano.
 
@@ -81,7 +83,8 @@ Fuera de esas comunas no tienes precio: usa pedir_ayuda.
 Abono para reservar: ${pesos(ABONO)}, se descuenta del total y el resto se paga el día del evento.
 Preguntas frecuentes:
 ${FAQS.filter((f) => !f.a.includes("[")).map((f) => `- ${f.q} ${f.a}`).join("\n")}
-- ¿Cómo se ancla? Siempre queda anclado; el equipo explica cómo según el piso (pasto o piso duro).
+
+${CONOCIMIENTO}
 
 Herramientas
 - ver_disponibilidad: úsala siempre antes de decir que un día u horario está libre. Nunca supongas disponibilidad.
