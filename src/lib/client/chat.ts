@@ -183,7 +183,7 @@ export function bindChat(): void {
     estado.contacto = nombre.split(/\s+/)[0];
     actualizarFormularios();
     campo.focus();
-    await mostrar({ rol: "ia", texto: `¡Buena, ${estado.contacto}! 🙌\n\n¿Para qué fecha y en qué comuna sería el evento?` });
+    await mostrar({ rol: "ia", texto: `Perfecto, ${estado.contacto}. Cuéntame, ¿para qué fecha y en qué comuna es el evento?` });
   });
 
   // ── Mensajes ───────────────────────────────────────────────────────────
