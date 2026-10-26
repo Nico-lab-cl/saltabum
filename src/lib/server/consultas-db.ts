@@ -43,11 +43,14 @@ const ESQUEMA = `CREATE TABLE IF NOT EXISTS consultas (
 
 const COLUMNAS = "id, creado, formulario, nombre, telefono, email, mensaje, extra, origen, pagina, estado, notas, actualizado";
 
-let lista: Promise<unknown> | undefined;
+// Bandera y no promesa compartida (ver baseReservas).
+let lista = false;
 async function db() {
   const d = await baseReservas();
-  lista ??= d.batch([d.prepare(ESQUEMA), d.prepare("CREATE INDEX IF NOT EXISTS consultas_creado ON consultas (creado)")]);
-  await lista;
+  if (!lista) {
+    await d.batch([d.prepare(ESQUEMA), d.prepare("CREATE INDEX IF NOT EXISTS consultas_creado ON consultas (creado)")]);
+    lista = true;
+  }
   return d;
 }
 

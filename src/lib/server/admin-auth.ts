@@ -96,11 +96,14 @@ async function verificarTotp(secreto: string, codigo: string): Promise<number | 
 
 // ---------- Tablas ----------
 
-let tablas: Promise<unknown> | undefined;
+// Bandera y no promesa compartida (ver baseReservas).
+let tablas = false;
 async function db() {
   const d = await baseReservas();
-  tablas ??= crearTablas(d);
-  await tablas;
+  if (!tablas) {
+    await crearTablas(d);
+    tablas = true;
+  }
   return d;
 }
 

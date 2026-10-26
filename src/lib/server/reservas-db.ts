@@ -135,19 +135,21 @@ const paramsChoque = (d: Pick<DatosReserva, "fecha" | "producto" | "inicio" | "f
   excluir,
 ];
 
-let tablaLista: Promise<unknown> | undefined;
+// Se guarda «ya está lista» y no la promesa: en Workers una promesa de otro pedido puede quedar colgada para
+// siempre si ese pedido se corta (ej. recargar la página), y con ella todos los pedidos que la esperan.
+let tablaLista = false;
 
 /** Devuelve la base de datos con la tabla creada (la primera vez la crea y traspasa las reservas antiguas). */
 export async function baseReservas(): Promise<D1Database> {
   const db = env.DB;
   if (!db) throw new Error("Binding DB no configurado");
-  tablaLista ??= (async () => {
+  if (!tablaLista) {
     await db.prepare(ESQUEMA).run();
     await db.prepare("CREATE INDEX IF NOT EXISTS agenda_fecha ON agenda (fecha)").run();
     await db.prepare(TRASPASO).run().catch(() => undefined);
     for (const c of COLUMNAS_NUEVAS) await db.prepare(`ALTER TABLE agenda ADD COLUMN ${c}`).run().catch(() => undefined);
-  })();
-  await tablaLista;
+    tablaLista = true;
+  }
   return db;
 }
 

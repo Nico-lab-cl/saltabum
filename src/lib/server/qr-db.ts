@@ -47,16 +47,17 @@ export interface FilaEscaneo extends Escaneo {
   creado: string;
 }
 
-let tablaLista: Promise<unknown> | undefined;
+// Bandera y no promesa compartida (ver baseReservas).
+let tablaLista = false;
 
 async function baseQr() {
   const db = await baseReservas();
-  tablaLista ??= (async () => {
+  if (!tablaLista) {
     await db.prepare(ESQUEMA).run();
     await db.prepare("CREATE INDEX IF NOT EXISTS qr_escaneos_creado ON qr_escaneos (creado)").run();
     for (const c of COLUMNAS_NUEVAS) await db.prepare(`ALTER TABLE qr_escaneos ADD COLUMN ${c}`).run().catch(() => undefined);
-  })();
-  await tablaLista;
+    tablaLista = true;
+  }
   return db;
 }
 

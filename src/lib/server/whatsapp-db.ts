@@ -78,11 +78,14 @@ const ESQUEMA = [
 const COLUMNAS =
   "jid, jid_alt, telefono, nombre, anuncio, anuncio_datos, etiqueta, estado, notas, creado, ultimo, ultimo_texto, ultimo_de_mi, sin_leer, actualizado";
 
-let lista: Promise<unknown> | undefined;
+// Bandera y no promesa compartida (ver baseReservas).
+let lista = false;
 async function db() {
   const d = await baseReservas();
-  lista ??= d.batch(ESQUEMA.map((s) => d.prepare(s)));
-  await lista;
+  if (!lista) {
+    await d.batch(ESQUEMA.map((s) => d.prepare(s)));
+    lista = true;
+  }
   return d;
 }
 

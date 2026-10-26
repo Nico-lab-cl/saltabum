@@ -236,9 +236,15 @@ const PESTANAS = [
             clave: String(datos.get("clave") ?? ""),
             codigo: String(datos.get("codigo") ?? "") || undefined,
           }),
+          // Si el servidor no contesta, el botón no queda bloqueado para siempre.
+          signal: AbortSignal.timeout(20_000),
         }).catch(() => null);
         btn.disabled = false;
-        if (res?.ok) return void cargar();
+        if (!res) {
+          errorLogin.textContent = "El panel no respondió, vuelve a intentarlo";
+          return;
+        }
+        if (res.ok) return void cargar();
         if (res?.status === 401 && ((await res.json().catch(() => ({}))) as { error?: string }).error === "codigo") {
           campoCodigo.hidden = false;
           errorLogin.textContent = "Escribe el código de 6 dígitos de tu app";
