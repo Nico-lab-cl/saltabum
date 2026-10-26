@@ -7,6 +7,7 @@
 //   [data-chat-pendientes] (contador de respuestas del equipo que llegaron con el chat cerrado)
 //   <form data-chat-contacto> con nombre, email y telefono (se pide antes de chatear) y [data-chat-contacto-error]
 //   El <form data-chat-form> parte oculto y se muestra cuando ya están los datos.
+//   <template data-chat-bienvenida> y <template data-chat-saludo> (con [nombre]): textos que «escribe» Eduardo.
 import Icon from "./Icon.astro";
 ---
 
@@ -34,11 +35,18 @@ import Icon from "./Icon.astro";
       </button>
     </header>
 
-    <div data-chat-lista aria-live="polite" class="flex flex-1 flex-col gap-2.5 overflow-y-auto px-3 py-4">
-      <p class="bg-blanco border-noche/15 max-w-[85%] self-start rounded-2xl rounded-bl-md border px-3.5 py-2.5 text-[15px] leading-snug">
-        Hola, soy Eduardo, asistente comercial de Saltabum 👋 ¿Cómo te puedo ayudar?
-      </p>
-    </div>
+    <div data-chat-lista aria-live="polite" class="flex flex-1 flex-col gap-2.5 overflow-y-auto px-3 py-4"></div>
+
+    <!-- Bienvenida: Eduardo la «escribe» al abrir el chat por primera vez. Cada <p> es un mensaje aparte. -->
+    <template data-chat-bienvenida>
+      <p>¡Hola! 👋 Te saluda Eduardo de Saltabum</p>
+      <p>Consulta con nuestros asesores fechas, disponibilidad y precios para tu evento 🎈 Déjanos tus datos y te respondemos altiro 👇</p>
+    </template>
+    <!-- Saludo después del formulario; [nombre] es el nombre de pila del cliente. -->
+    <template data-chat-saludo>
+      <p>¡Hola, [nombre]! Un gusto 🙌</p>
+      <p>Cuéntame, [nombre], ¿para qué fecha y en qué comuna es tu evento?</p>
+    </template>
 
     <template data-chat-plantilla="cliente">
       <p

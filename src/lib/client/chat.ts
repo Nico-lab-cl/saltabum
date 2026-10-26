@@ -35,7 +35,12 @@ const REVISAR_ABIERTO = 5_000;
 const REVISAR_CERRADO = 30_000;
 
 /** Cuánto «escribe» antes de mostrar un mensaje, según su largo (milisegundos). */
-const tiempoEscribiendo = (texto: string) => Math.min(4_500, Math.max(900, 350 + texto.length * 28));
+/** Unos 25 caracteres por segundo, como alguien que escribe rápido en el celular, entre 1,2 y 7 segundos. */
+const tiempoEscribiendo = (texto: string) => Math.min(7_000, Math.max(1_200, 500 + texto.length * 40));
+/** Aunque el servidor haya tardado, «escribiendo…» se ve al menos este tiempo antes de cada mensaje. */
+const ESCRIBIENDO_MINIMO = 900;
+/** Pausa entre un mensaje y el siguiente de la misma respuesta, antes de volver a «escribir». */
+const PAUSA_ENTRE_MENSAJES = 450;
 /** Una respuesta con líneas en blanco se muestra como varios mensajes seguidos. */
 const partes = (texto: string) => texto.split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean);
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -99,12 +104,32 @@ export function bindChat(): void {
     guardar(estado);
     if (m.rol !== "ia" && m.rol !== "equipo") return burbuja(m.rol, m.texto);
     for (const [i, t] of partes(m.texto).entries()) {
+      if (i > 0) await esperar(PAUSA_ENTRE_MENSAJES);
       escribiendo.hidden = false;
       lista.scrollTop = lista.scrollHeight;
-      await esperar(Math.max(0, tiempoEscribiendo(t) - (i === 0 ? yaEspero : 0)));
+      await esperar(Math.max(ESCRIBIENDO_MINIMO, tiempoEscribiendo(t) - (i === 0 ? yaEspero : 0)));
       escribiendo.hidden = true;
       burbuja(m.rol, t);
     }
+  }
+
+  /** Textos de las plantillas del diseño (bienvenida y saludo): cada <p> es un mensaje aparte. */
+  const plantilla = (attr: string) =>
+    [...(raiz.querySelector<HTMLTemplateElement>(`template[${attr}]`)?.content.querySelectorAll("p") ?? [])]
+      .map((p) => p.textContent?.trim() ?? "")
+      .filter(Boolean)
+      .join("\n\n");
+  let bienvenidaEnCurso = false;
+  /** Al abrir por primera vez, Eduardo «escribe» la bienvenida y después aparece el formulario. */
+  async function darBienvenida() {
+    if (estado.mensajes.length || bienvenidaEnCurso) return;
+    bienvenidaEnCurso = true;
+    contacto.hidden = true;
+    await esperar(500);
+    const texto = plantilla("data-chat-bienvenida");
+    if (texto) await mostrar({ rol: "ia", texto });
+    actualizarFormularios();
+    if (window.matchMedia("(min-width: 640px)").matches) contacto.querySelector("input")?.focus();
   }
 
   const mostrarWhatsapp = (mensaje?: string) => {
@@ -136,6 +161,7 @@ export function bindChat(): void {
       marcarSinLeer(0);
       lista.scrollTop = lista.scrollHeight;
       if (window.matchMedia("(min-width: 640px)").matches) (estado.contacto ? campo : contacto.querySelector("input"))?.focus();
+      void darBienvenida();
       void revisar();
     }
   };
@@ -183,7 +209,8 @@ export function bindChat(): void {
     estado.contacto = nombre.split(/\s+/)[0];
     actualizarFormularios();
     campo.focus();
-    await mostrar({ rol: "ia", texto: `Perfecto, ${estado.contacto}. Cuéntame, ¿para qué fecha y en qué comuna es el evento?` });
+    const saludo = plantilla("data-chat-saludo") || "¡Hola, [nombre]! ¿Para qué fecha y en qué comuna es tu evento?";
+    await mostrar({ rol: "ia", texto: saludo.replaceAll("[nombre]", estado.contacto) });
   });
 
   // ── Mensajes ───────────────────────────────────────────────────────────
