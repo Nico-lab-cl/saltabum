@@ -7,8 +7,7 @@ import type { APIRoute } from "astro";
 import { EVOLUTION_WEBHOOK_SECRET } from "astro:env/server";
 import { sha256Hex } from "@/lib/server/crypto";
 import { etiquetaLeads, instancia, type MensajeEvolution } from "@/lib/server/evolution";
-import { quitarEtiqueta } from "@/lib/server/whatsapp-db";
-import { etiquetaAgregada, procesarMensaje } from "@/lib/server/whatsapp-sync";
+import { etiquetaAgregada, etiquetaQuitada, procesarMensaje } from "@/lib/server/whatsapp-sync";
 
 export const prerender = false;
 
@@ -60,7 +59,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       const chat = String(a.chatId ?? d.chatId ?? "");
       const tipo = String(d.type ?? a.type ?? "add");
       if (etiqueta !== etiquetaLeads() || !chat) return respuesta(200, { ok: true, ignorado: "etiqueta" });
-      if (tipo === "remove") await quitarEtiqueta(chat);
+      if (tipo === "remove") await etiquetaQuitada(chat);
       else await etiquetaAgregada(chat);
       return respuesta(200, { ok: true });
     }

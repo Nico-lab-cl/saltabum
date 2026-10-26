@@ -9,6 +9,7 @@ import {
   listarChatsEvolution,
   nombreDe,
   nombreDeContacto,
+  telefonoDeLid,
   type MensajeEvolution,
 } from "./evolution";
 import { asegurarChat, buscarChat, guardarMensajes, quitarEtiqueta } from "./whatsapp-db";
@@ -33,12 +34,26 @@ export async function procesarMensaje(m: MensajeEvolution): Promise<"guardado" |
   return "guardado";
 }
 
+/** Identificadores de un chat de la etiqueta: si llegó como «@lid», el principal pasa a ser el del teléfono. */
+async function idsDeEtiqueta(jid: string): Promise<{ jid: string; jidAlt: string | null }> {
+  if (!jid.endsWith("@lid")) return { jid, jidAlt: null };
+  const telefono = await telefonoDeLid(jid).catch(() => null);
+  return telefono ? { jid: telefono, jidAlt: jid } : { jid, jidAlt: null };
+}
+
 /** Le pusieron la etiqueta a un chat: se agrega al panel con su historial. */
 export async function etiquetaAgregada(jid: string): Promise<void> {
   if (!esChatPersonal(jid)) return;
-  const canonico = await asegurarChat({ jid, etiqueta: true });
+  const ids = await idsDeEtiqueta(jid);
+  const canonico = await asegurarChat({ ...ids, etiqueta: true });
   const chat = await buscarChat(canonico);
   await importarHistorial(canonico, chat?.jid_alt ?? null).catch(() => 0);
+}
+
+/** Le quitaron la etiqueta a un chat. */
+export async function etiquetaQuitada(jid: string): Promise<void> {
+  const ids = await idsDeEtiqueta(jid);
+  await quitarEtiqueta(ids.jid, ...(ids.jidAlt ? [ids.jidAlt] : []));
 }
 
 /**

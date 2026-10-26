@@ -180,6 +180,21 @@ export async function etiquetasDeChat(jid: string): Promise<string[]> {
   return Array.isArray(chat?.labels) ? chat.labels.map(String) : [];
 }
 
+/**
+ * Identificador con teléfono (…@s.whatsapp.net) de un chat «@lid». Las etiquetas del celular a veces llegan con el
+ * «@lid», pero Evolution guarda los mensajes con el teléfono y deja el «@lid» en `remoteJidAlt`.
+ */
+export async function telefonoDeLid(lid: string): Promise<string | null> {
+  // Se filtra por los dos campos: Evolution los une con OR y, si falta uno, devuelve cualquier mensaje.
+  const r = await buscarMensajes({ key: { remoteJid: lid, remoteJidAlt: lid } }, 1, 20);
+  const m = r.records.find((x) => x.key?.remoteJidAlt === lid && x.key.remoteJid?.endsWith("@s.whatsapp.net"));
+  if (m) return m.key!.remoteJid!;
+  // Si no hay mensajes, Evolution puede tenerlo en su caché de números.
+  const v = await llamar<{ exists?: boolean; jid?: string }[]>(`/chat/whatsappNumbers/${encodeURIComponent(instancia())}`, { numbers: [lid] });
+  const jid = (Array.isArray(v) ? v : []).find((x) => x.jid?.endsWith("@s.whatsapp.net"))?.jid;
+  return jid ?? null;
+}
+
 /** Revisa si un teléfono tiene WhatsApp. Devuelve el identificador del chat (…@s.whatsapp.net) o null. */
 export async function verificarNumero(telefono: string): Promise<string | null> {
   const r = await llamar<{ exists?: boolean; jid?: string }[]>(`/chat/whatsappNumbers/${encodeURIComponent(instancia())}`, { numbers: [telefono] });
