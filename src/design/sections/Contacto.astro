@@ -5,15 +5,20 @@ import Redes from "../components/Redes.astro";
 import WaButton from "../components/WaButton.astro";
 import TituloSeccion from "../components/TituloSeccion.astro";
 
+interface Props {
+  /** En /contacto/ es lo primero de la página: el título va como h1 y sin borde arriba. */
+  principal?: boolean;
+}
+const { principal = false } = Astro.props;
 const comunas = COMUNAS.flatMap((c) => c.mapa ?? [c.nombre]).length;
 const input =
   "border-noche bg-blanco text-noche placeholder:text-noche-suave/70 min-h-12 w-full min-w-0 rounded-xl border-2 px-3.5 lg:min-h-13 group-data-[state=sending]:bg-arena group-data-[state=sending]:opacity-80";
 ---
 
-<section id="contacto" aria-labelledby="contacto-titulo" class="border-noche bg-arena border-t-2">
+<section id="contacto" aria-labelledby="contacto-titulo" class:list={["border-noche bg-arena", principal ? "border-b-2" : "border-t-2"]}>
   <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-11 lg:flex-row lg:items-start lg:gap-14 lg:px-10 lg:py-20">
     <div class="flex flex-col gap-4 lg:flex-1 lg:gap-4.5">
-      <TituloSeccion id="contacto-titulo" eyebrow="Estamos para ayudarte" titulo="Contáctanos" bajada="Nuestros asesores te responderán a la brevedad" />
+      <TituloSeccion id="contacto-titulo" nivel={principal ? "h1" : "h2"} eyebrow="Estamos para ayudarte" titulo="Contáctanos" bajada="Nuestros asesores te responderán a la brevedad" />
       <WaButton placement="contacto" size="l" class="lg:self-start">Escribir por WhatsApp</WaButton>
       <ul class="mt-2 hidden flex-col gap-2.5 lg:flex">
         <li class="flex items-center gap-2.5"><Icon name="puntual" size={22} />Respondemos de [09:00 a 21:00], todos los días</li>

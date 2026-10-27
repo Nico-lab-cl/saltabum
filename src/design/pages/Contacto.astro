@@ -1,5 +1,5 @@
 ---
-// /contacto/ — todos los canales para hablar con Saltabum (WhatsApp, teléfono, correo y redes) y el formulario de
+// /contacto/ — primero el formulario de contacto (h1) y debajo todos los canales para hablar con Saltabum (WhatsApp, teléfono, correo y redes) y el formulario de
 // contacto (la misma sección del home: las consultas llegan a /admin → Consultas y después a /gracias/).
 import { PUBLIC_WHATSAPP_NUMBER } from "astro:env/client";
 import { SITE } from "@/config/site";
@@ -8,6 +8,7 @@ import { RUTAS } from "../seo";
 import Icon from "../components/Icon.astro";
 import Rayos from "../components/Rayos.astro";
 import Redes from "../components/Redes.astro";
+import TituloSeccion from "../components/TituloSeccion.astro";
 import PaginaSeo, { type Miga } from "../layouts/PaginaSeo.astro";
 import Contacto from "../sections/Contacto.astro";
 
@@ -23,16 +24,13 @@ const circulo = "border-noche flex size-12 shrink-0 items-center justify-center 
 ---
 
 <PaginaSeo migas={migas}>
-  <section class="border-noche bg-sol text-noche relative isolate overflow-clip border-b-2" aria-labelledby="contacto-pagina-titulo">
+
+  <Contacto principal />
+
+  <section class="border-noche bg-sol text-noche relative isolate overflow-clip border-b-2" aria-labelledby="canales-titulo">
     <Rayos x="85%" y="10%" />
     <div class="mx-auto flex max-w-[1320px] flex-col gap-7 px-4 py-10 lg:gap-10 lg:px-10 lg:py-16">
-      <div class="max-w-[720px]">
-        <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Contacto</p>
-        <h1 id="contacto-pagina-titulo" class="font-display mt-1.5 text-[38px] leading-[42px] font-semibold lg:text-6xl lg:leading-[64px]">
-          Hablemos de tu evento
-        </h1>
-        <p class="mt-3 text-lg lg:text-xl">Escríbenos por donde te acomode y te respondemos el mismo día</p>
-      </div>
+      <TituloSeccion id="canales-titulo" eyebrow="Todos nuestros canales" titulo="Hablemos de tu evento" bajada="Escríbenos por donde te acomode y te respondemos el mismo día" />
 
       <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
         <li>
@@ -82,10 +80,8 @@ const circulo = "border-noche flex size-12 shrink-0 items-center justify-center 
         class="border-noche bg-blanco/80 flex flex-col gap-1 rounded-2xl border-2 border-dashed px-4 py-3 font-bold no-underline sm:flex-row sm:items-center sm:gap-3 lg:self-start"
       >
         <span class="flex items-center gap-2"><Icon name="calendario" size={20} />¿Ya sabes la fecha?</span>
-        <span class="text-azul-texto underline">Reserva en línea y ve el total al tiro</span>
+        <span class="text-azul-texto underline">Reserva en línea y ve el total de inmediato</span>
       </a>
     </div>
   </section>
-
-  <Contacto />
 </PaginaSeo>

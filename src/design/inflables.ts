@@ -108,6 +108,7 @@ const pirata: Omit<Inflable, "preguntas"> = {
   caracteristicas: ["Tobogán inflable", "Zona de salto", "Obstáculos inflables"],
   superficies: SUPERFICIES,
   precio: 49990,
+  pdf: "/fichas/ficha-tecnica-castillo-pirata.pdf",
   fotos: [
     { src: pirataFrente, alt: "Castillo Pirata armado en la calle, con el capitán, el garfio, el aro de básquetbol y la malla" },
     { src: pirataInterior, alt: "Interior del Castillo Pirata con el capitán asomado, la zona de salto y los obstáculos", pos: "50% 52%" },

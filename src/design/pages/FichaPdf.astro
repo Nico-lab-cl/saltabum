@@ -1,0 +1,258 @@
+---
+// Ficha técnica para imprimir o descargar en PDF: A4 vertical, 2 páginas, con los datos de src/design/inflables.ts.
+// Página 1: marca, nombre, foto, datos clave, precio y qué trae. Página 2: especificaciones, plano de seguridad,
+// superficies, normas, más fotos y contacto. Los PDF se generan con `node scripts/generar-fichas-pdf.mjs`.
+import { getImage } from "astro:assets";
+import { SITE } from "@/config/site";
+import { DESDE_HORAS, HORA_EXTRA } from "../data";
+import { NORMAS, base, edadTexto, espacio, espacioTexto, medidas, metros, pesos, type Inflable } from "../inflables";
+import Icon from "../components/Icon.astro";
+import Wordmark from "../components/Wordmark.astro";
+
+interface Props {
+  inflable: Inflable;
+}
+const { inflable: i } = Astro.props;
+const e = espacio(i);
+const fotos = await Promise.all(i.fotos.map(async (f) => ({ ...f, src: (await getImage({ src: f.src, width: 1200, format: "jpg", quality: 85 })).src })));
+const ahorro = i.precioNormal ? Math.floor((i.precioNormal - i.precio) / 1000) * 1000 : 0;
+const plano = {
+  izq: (i.seguridad / e.largo) * 100,
+  arriba: (i.seguridad / e.ancho) * 100,
+  ancho: (i.medidas.largo / e.largo) * 100,
+  alto: (i.medidas.ancho / e.ancho) * 100,
+};
+const CLAVES = [
+  { icon: "despacho", t: "Medidas", v: medidas(i), color: "bg-sol" },
+  { icon: "ubicacion", t: "Espacio libre", v: espacioTexto(i), color: "bg-verde" },
+  { icon: "capacidad", t: "Capacidad", v: `${i.capacidad} niños`, color: "bg-celeste" },
+  { icon: "edad", t: "Edad", v: edadTexto(i), color: "bg-rosa" },
+] as const;
+const FILAS = [
+  ["Categoría", i.categoria],
+  ["Dimensiones (largo × ancho × alto)", `${metros(i.medidas.largo)} m × ${metros(i.medidas.ancho)} m × ${metros(i.medidas.alto)} m`],
+  ["Área de seguridad", `${metros(i.seguridad)} metro alrededor del juego`],
+  ["Superficie total requerida", `${metros(e.largo)} m × ${metros(e.ancho)} m`],
+  ["Capacidad máxima", `${i.capacidad} niños a la vez`],
+  ["Edad recomendada", `Desde ${i.edad.desde} hasta ${i.edad.hasta} años`],
+  ["Arriendo", `Bloque de ${DESDE_HORAS}, hora adicional ${HORA_EXTRA}`],
+  ["Incluye", "Despacho, montaje en 30 minutos y retiro"],
+];
+const tarjeta = "border-noche bg-blanco rounded-[5mm] border-[0.6mm]";
+---
+
+<div class="ficha-pdf text-noche font-sans">
+  <!-- ── Página 1 ── -->
+  <section class="hoja bg-crema relative flex flex-col overflow-hidden">
+    <header class="bg-noche text-crema flex items-center justify-between gap-[6mm] px-[12mm] py-[7mm]">
+      <Wordmark negativo class="text-[13mm]" />
+      <div class="text-right">
+        <p class="text-sol text-[3.2mm] font-extrabold tracking-[0.4mm] uppercase">Ficha técnica</p>
+        <p class="font-display text-[5mm] leading-[6mm] font-semibold">{SITE.url.replace("https://", "")}</p>
+      </div>
+    </header>
+
+    <div class="flex flex-1 flex-col gap-[6mm] px-[12mm] py-[8mm]">
+      <div class="flex items-end justify-between gap-[6mm]">
+        <div>
+          <p class="text-azul-texto text-[3.4mm] font-extrabold tracking-[0.4mm] uppercase">{i.categoria}</p>
+          <h1 class="font-display mt-[1mm] text-[13mm] leading-[14mm] font-semibold">{i.nombre}</h1>
+          <p class="text-noche-suave mt-[2mm] max-w-[120mm] text-[4.2mm] leading-[6mm]">{i.resumen}</p>
+        </div>
+        <span class:list={["border-noche shrink-0 rounded-full border-[0.6mm] px-[4mm] py-[1.5mm] text-[3.4mm] font-extrabold uppercase", i.precioNormal ? "bg-sol" : "bg-celeste"]}>
+          {i.precioNormal ? "Promoción" : "Nuevo"}
+        </span>
+      </div>
+
+      <img src={fotos[0].src} alt={fotos[0].alt} class="border-noche h-[98mm] w-full rounded-[6mm] border-[0.7mm] object-cover" style={fotos[0].pos ? `object-position:${fotos[0].pos}` : undefined} />
+
+      <ul class="grid grid-cols-4 gap-[3mm]">
+        {
+          CLAVES.map((c) => (
+            <li class={`${tarjeta} flex flex-col items-center gap-[1.5mm] px-[2mm] py-[3.5mm] text-center`}>
+              <span class:list={["border-noche flex size-[10mm] items-center justify-center rounded-full border-[0.6mm]", c.color]}>
+                <Icon name={c.icon} size={20} />
+              </span>
+              <span class="text-noche-suave text-[2.8mm] font-extrabold tracking-[0.3mm] uppercase">{c.t}</span>
+              <strong class="font-display text-[4.6mm] leading-[5mm] font-semibold">{c.v}</strong>
+            </li>
+          ))
+        }
+      </ul>
+
+      <div class="grid grid-cols-[1.1fr_1fr] gap-[4mm]">
+        <div class="border-noche bg-sol flex flex-col justify-center gap-[1.5mm] rounded-[5mm] border-[0.6mm] px-[6mm] py-[5mm]">
+          {
+            i.precioNormal ? (
+              <>
+                <p class="flex items-center gap-[2mm]">
+                  <span class="bg-rojo-texto text-crema rounded-full px-[2.5mm] py-[0.8mm] text-[3mm] font-extrabold uppercase">
+                    Oferta −{Math.round(((i.precioNormal - i.precio) / i.precioNormal) * 100)}%
+                  </span>
+                  <span class="text-[3.2mm] font-extrabold uppercase">Antes</span>
+                  <s class="text-rojo-texto font-display text-[6mm] font-bold decoration-[0.6mm]">{pesos(i.precioNormal)}</s>
+                </p>
+                <p class="font-display text-[15mm] leading-[15mm] font-bold">{pesos(i.precio)}</p>
+                <p class="text-[3.6mm] font-bold">por {DESDE_HORAS} · Ahorras {pesos(ahorro)}</p>
+              </>
+            ) : (
+              <>
+                <p class="text-[3.2mm] font-extrabold uppercase">Arriendo por {DESDE_HORAS}</p>
+                <p class="font-display text-[15mm] leading-[15mm] font-bold">{pesos(i.precio)}</p>
+                <p class="text-[3.6mm] font-bold">Hora adicional {HORA_EXTRA}</p>
+              </>
+            )
+          }
+        </div>
+        <div class={`${tarjeta} px-[5mm] py-[4mm]`}>
+          <p class="font-display text-[5mm] font-semibold">Qué trae el juego</p>
+          <ul class="mt-[2mm] flex flex-col gap-[1.5mm] text-[3.8mm] font-semibold">
+            {
+              i.caracteristicas.map((c) => (
+                <li class="flex items-center gap-[2mm]">
+                  <Icon name="check" size={16} strokeWidth={3} class="text-exito shrink-0" />
+                  {c}
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <footer class="bg-noche text-crema flex items-center justify-between px-[12mm] py-[4mm] text-[3.4mm] font-bold">
+      <span>Despacho gratis en Valparaíso y Viña del Mar</span>
+      <span>Página 1 de 2</span>
+    </footer>
+  </section>
+
+  <!-- ── Página 2 ── -->
+  <section class="hoja bg-crema relative flex flex-col overflow-hidden">
+    <header class="bg-noche text-crema flex items-center justify-between px-[12mm] py-[5mm]">
+      <p class="font-display text-[7mm] font-semibold">{i.nombre}</p>
+      <p class="text-sol text-[3.2mm] font-extrabold tracking-[0.4mm] uppercase">Ficha técnica</p>
+    </header>
+
+    <div class="flex min-h-0 flex-1 flex-col gap-[4mm] px-[12mm] py-[6mm]">
+      <div class="grid grid-cols-[1.15fr_1fr] gap-[4mm]">
+        <div class={`${tarjeta} overflow-hidden`}>
+          <p class="bg-noche text-crema font-display px-[5mm] py-[2.5mm] text-[4.6mm] font-semibold">Especificaciones técnicas</p>
+          <dl class="px-[5mm] py-[1mm]">
+            {
+              FILAS.map(([t, v], n) => (
+                <div class:list={["py-[1.6mm]", n < FILAS.length - 1 && "border-arena border-b-[0.5mm]"]}>
+                  <dt class="text-noche-suave text-[2.9mm] font-bold">{t}</dt>
+                  <dd class="text-[3.8mm] leading-[4.8mm] font-bold">{v}</dd>
+                </div>
+              ))
+            }
+          </dl>
+        </div>
+
+        <div class={`${tarjeta} flex flex-col overflow-hidden`}>
+          <p class="bg-verde border-noche font-display border-b-[0.6mm] px-[5mm] py-[2.5mm] text-[4.6mm] font-semibold">Plano con zona de seguridad</p>
+          <div class="flex flex-1 flex-col justify-center gap-[3mm] p-[5mm]">
+            <div class="grid grid-cols-[1fr_auto] grid-rows-[1fr_auto] gap-[1.5mm]">
+              <div class="border-exito bg-verde-burbuja relative rounded-[3mm] border-[0.5mm] border-dashed" style={`aspect-ratio:${e.largo}/${e.ancho}`}>
+                <div
+                  class="border-noche bg-sol font-display absolute flex items-center justify-center rounded-[2mm] border-[0.5mm] text-[4.4mm] font-semibold"
+                  style={`left:${plano.izq}%;top:${plano.arriba}%;width:${plano.ancho}%;height:${plano.alto}%`}
+                >
+                  {base(i)}
+                </div>
+                <span class="text-exito absolute top-0 left-1/2 flex -translate-x-1/2 items-center text-[3mm] font-extrabold" style={`height:${plano.arriba}%`}>{metros(i.seguridad)} m</span>
+                <span class="text-exito absolute top-1/2 left-0 -translate-y-1/2 text-center text-[3mm] font-extrabold" style={`width:${plano.izq}%`}>{metros(i.seguridad)} m</span>
+              </div>
+              <span class="border-noche flex items-center border-l-[0.5mm] pl-[1.5mm] text-[3.4mm] font-extrabold">{metros(e.ancho)} m</span>
+              <span class="border-noche border-t-[0.5mm] text-center text-[3.4mm] font-extrabold">{metros(e.largo)} m</span>
+            </div>
+            <p class="text-noche-suave text-center text-[3.2mm] leading-[4.4mm]">
+              Necesitas un espacio plano de <strong class="text-noche">{espacioTexto(i)}</strong>, sin ramas ni cables encima
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-[4mm]">
+        <div class={`${tarjeta} px-[5mm] py-[4mm]`}>
+          <p class="font-display text-[4.8mm] font-semibold">Dónde se puede instalar</p>
+          <ul class="mt-[2mm] flex flex-col gap-[1.5mm]">
+            {
+              i.superficies.map((s) => (
+                <li class="bg-verde-burbuja flex items-center justify-between rounded-[2.5mm] px-[3mm] py-[1.8mm] text-[3.8mm] font-bold">
+                  {s}
+                  <span class="text-exito flex items-center gap-[1mm]"><Icon name="check" size={14} strokeWidth={3} />Sí</span>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+        <div class={`${tarjeta} px-[5mm] py-[4mm]`}>
+          <p class="font-display text-[4.8mm] font-semibold">Normas de uso</p>
+          <ul class="mt-[2mm] flex list-disc flex-col gap-[1mm] pl-[4.5mm] text-[3.3mm] leading-[4.4mm]">
+            {NORMAS.map((n) => <li>{n}</li>)}
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-[3mm]">
+        {fotos.slice(1, 4).map((f) => <img src={f.src} alt={f.alt} class="border-noche h-[30mm] w-full rounded-[4mm] border-[0.6mm] object-cover" style={f.pos ? `object-position:${f.pos}` : undefined} />)}
+      </div>
+
+      <div class="border-noche bg-noche text-crema mt-auto grid grid-cols-[1fr_auto] items-center gap-[5mm] rounded-[5mm] border-[0.6mm] px-[6mm] py-[4mm]">
+        <div>
+          <p class="text-sol text-[3mm] font-extrabold tracking-[0.4mm] uppercase">Reserva tu fecha</p>
+          <p class="font-display mt-[1mm] text-[6.5mm] leading-[7.5mm] font-semibold">Escríbenos y te respondemos a la brevedad</p>
+          <ul class="mt-[2.5mm] grid grid-cols-2 gap-x-[5mm] gap-y-[1.5mm] text-[3.6mm] font-bold">
+            <li class="flex items-center gap-[2mm]"><Icon name="whatsapp" size={16} class="text-sol" />WhatsApp {SITE.telefono}</li>
+            <li class="flex items-center gap-[2mm]"><Icon name="correo" size={16} class="text-sol" />{SITE.email}</li>
+            <li class="flex items-center gap-[2mm]"><Icon name="instagram" size={16} class="text-sol" />@saltabum</li>
+            <li class="flex items-center gap-[2mm]"><Icon name="ubicacion" size={16} class="text-sol" />{SITE.url.replace("https://", "")}</li>
+          </ul>
+        </div>
+        <Wordmark negativo class="text-[10mm]" />
+      </div>
+    </div>
+
+    <footer class="bg-noche text-crema flex items-center justify-between px-[12mm] py-[4mm] text-[3.4mm] font-bold">
+      <span>Saltabum y Entretenciones · Valparaíso, Chile</span>
+      <span>Página 2 de 2</span>
+    </footer>
+  </section>
+</div>
+
+<style is:global>
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  html,
+  body {
+    margin: 0;
+    background: #d9cfc2;
+  }
+  .ficha-pdf {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .hoja {
+    width: 210mm;
+    height: 297mm;
+    margin: 8mm auto;
+    box-shadow: 0 2mm 6mm rgb(31 42 92 / 0.25);
+    break-after: page;
+  }
+  .hoja:last-child {
+    break-after: auto;
+  }
+  @media print {
+    html,
+    body {
+      background: none;
+    }
+    .hoja {
+      margin: 0;
+      box-shadow: none;
+    }
+  }
+</style>

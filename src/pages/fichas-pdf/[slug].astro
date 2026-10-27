@@ -1,0 +1,29 @@
+---
+// Ficha técnica imprimible de cada inflable (A4 vertical). Es la fuente de los PDF de public/fichas/
+// (node scripts/generar-fichas-pdf.mjs): noindex, fuera del sitemap y sin header, chat ni banner de cookies.
+import type { GetStaticPaths } from "astro";
+import "@/styles/global.css";
+import FichaPdf from "@design/pages/FichaPdf.astro";
+import { INFLABLES, type Inflable } from "@design/inflables";
+
+export const getStaticPaths = (() =>
+  INFLABLES.map((inflable) => ({
+    params: { slug: inflable.ruta.split("/").filter(Boolean).pop()! },
+    props: { inflable },
+  }))) satisfies GetStaticPaths;
+
+const { inflable } = Astro.props as { inflable: Inflable };
+---
+
+<!doctype html>
+<html lang="es-CL">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Ficha técnica · {inflable.nombre} · Saltabum</title>
+  </head>
+  <body>
+    <FichaPdf inflable={inflable} />
+  </body>
+</html>

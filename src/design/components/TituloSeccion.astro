@@ -8,8 +8,11 @@ interface Props {
   eyebrow?: string;
   bajada?: string;
   class?: string;
+  /** h1 cuando es el título principal de la página (p. ej. /contacto/). */
+  nivel?: "h1" | "h2";
 }
-const { titulo, id, eyebrow, bajada, class: className } = Astro.props;
+const { titulo, id, eyebrow, bajada, class: className, nivel = "h2" } = Astro.props;
+const Titulo = nivel;
 const conSlot = Astro.slots.has("default");
 ---
 
@@ -22,7 +25,7 @@ const conSlot = Astro.slots.has("default");
 >
   <div class="max-w-[760px]">
     {eyebrow && <p class="text-sol text-xs font-extrabold tracking-[1.2px] uppercase">{eyebrow}</p>}
-    <h2 id={id} class:list={["font-display text-[28px] leading-[32px] font-semibold lg:text-[40px] lg:leading-[44px]", eyebrow && "mt-1"]}>{titulo}</h2>
+    <Titulo id={id} class:list={["font-display text-[28px] leading-[32px] font-semibold lg:text-[40px] lg:leading-[44px]", eyebrow && "mt-1"]}>{titulo}</Titulo>
     {bajada && <p class="text-crema/85 mt-1.5 text-[15px] leading-[21px] lg:mt-2 lg:text-lg lg:leading-7">{bajada}</p>}
   </div>
   <slot />
