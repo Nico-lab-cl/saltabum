@@ -34,8 +34,8 @@ const otros = INFLABLES.filter((o) => o.id !== i.id);
   />
   <Ficha inflable={i} enPagina />
   <FichaTecnica inflable={i} />
-  <Videos solo={[i.id]} titulo={`El ${i.nombre} en video`} fondo="blanco" />
-  {i.id === "megatobogan" && <Patio />}
+  <Videos solo={[i.id]} titulo={`El ${i.nombre} en video`} />
+  <Patio inicial={i.id} />
   <Agenda juego={i.id} />
   <Seccion titulo={`Preguntas sobre el ${i.nombre}`} fondo="crema">
     <ListaPreguntas preguntas={i.preguntas} grupo={`faq-${i.id}`} />

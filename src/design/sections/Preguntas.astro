@@ -3,13 +3,14 @@ import { FAQS } from "../data";
 import Burbujas from "../components/Burbujas.astro";
 import Icon from "../components/Icon.astro";
 import WaButton from "../components/WaButton.astro";
+import TituloSeccion from "../components/TituloSeccion.astro";
 ---
 
 <section id="preguntas" aria-labelledby="faq-titulo" class="border-noche bg-rojo-suave text-noche relative isolate overflow-hidden border-b-2">
   <Burbujas />
   <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-11 lg:flex-row lg:items-start lg:gap-14 lg:px-10 lg:py-20">
     <div class="lg:flex-1">
-      <h2 id="faq-titulo" class="font-display text-[32px] leading-9 font-semibold lg:text-5xl lg:leading-[52px]">Preguntas frecuentes</h2>
+      <TituloSeccion id="faq-titulo" eyebrow="Resolvemos tus dudas" titulo="Preguntas frecuentes" />
       <p class="text-noche-suave mt-3.5 mb-5.5 hidden lg:block">¿No está tu pregunta? Escríbenos y te respondemos en minutos</p>
       <WaButton placement="faq" size="m" class="max-lg:hidden">Preguntar por WhatsApp</WaButton>
       <a href="/preguntas-frecuentes/" class="text-noche mt-3 flex min-h-11 items-center font-extrabold underline">Ver todas las preguntas frecuentes</a>

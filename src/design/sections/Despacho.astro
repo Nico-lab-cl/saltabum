@@ -9,6 +9,7 @@ import Mapa from "../components/Mapa.astro";
 import MapaDespacho from "../components/MapaDespacho.astro";
 import WaButton from "../components/WaButton.astro";
 import { COMUNAS_SEO } from "../seo";
+import TituloSeccion from "../components/TituloSeccion.astro";
 
 const cantidad = COMUNAS.flatMap((c) => c.mapa ?? [c.nombre]).length;
 const valorDespacho = (d: number) => (d ? `+${pesos(d)}` : "Gratis");
@@ -24,15 +25,12 @@ const ORDENADAS = [...COMUNAS].sort((a, b) => a.despacho - b.despacho);
 >
   <Mapa />
   <div class="mx-auto max-w-[1320px] px-4 py-10 lg:px-10 lg:py-20">
-    <div class="max-w-[780px]">
-      <p class="text-rojo-texto text-xs font-extrabold tracking-[1.2px] uppercase">Zona de despacho</p>
-      <h2 id="despacho-titulo" class="font-display mt-1.5 text-[32px] leading-9 font-semibold lg:text-5xl lg:leading-[52px]">
-        Llegamos a {cantidad} comunas de la V&nbsp;Región
-      </h2>
-      <p class="text-noche-suave mt-2 lg:mt-3 lg:text-lg">
-        Llevamos, montamos y retiramos el juego en Gran Valparaíso, Marga Marga, Casablanca y Quintay. Toca tu comuna en el mapa para ver el valor del despacho
-      </p>
-    </div>
+    <TituloSeccion
+      id="despacho-titulo"
+      eyebrow="Zona de despacho"
+      titulo={`Llegamos a ${cantidad} comunas de la V Región`}
+      bajada="Llevamos, montamos y retiramos el juego en Gran Valparaíso, Marga Marga, Casablanca y Quintay. Toca tu comuna en el mapa para ver el valor del despacho"
+    />
 
     <div class="mt-6 grid gap-5 lg:mt-10 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:gap-x-10 lg:gap-y-5">
       <!-- Mapa y leyenda -->

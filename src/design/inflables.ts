@@ -13,7 +13,7 @@ import f1Frente from "./assets/castillo-formula-1-frente.jpg";
 import f1Interior from "./assets/castillo-formula-1-interior.jpg";
 import f1Tobogan from "./assets/castillo-formula-1-tobogan.jpg";
 import f1Volante from "./assets/castillo-formula-1-volante.jpg";
-import { DESDE_HORAS, HORA_EXTRA, PRECIO_NORMAL, PRODUCTO } from "./data";
+import { DESDE_HORAS, HORA_EXTRA, MODELO_3D, PRECIO_NORMAL, PRODUCTO } from "./data";
 import { METAS, PREGUNTAS_PAGINA, RUTAS, type Pregunta } from "./seo";
 
 /** Solo fotos reales del juego (fotos y capturas de nuestros videos). `pos` elige qué parte se ve en un marco horizontal. */
@@ -48,6 +48,8 @@ export type Inflable = {
   precioNormal?: number;
   /** Ficha técnica original para descargar. */
   pdf?: string;
+  /** Modelo 3D a escala real (scripts/generar-modelo-3d.mjs y generar-modelo-castillos.mjs). /modelos se guarda 7 días en caché: al cambiarlo, súbele la versión. */
+  modelo: string;
   fotos: Foto[];
   meta: { title: string; description: string };
   preguntas: Pregunta[];
@@ -91,6 +93,7 @@ const pirata: Omit<Inflable, "preguntas"> = {
   id: "castillo-pirata",
   ruta: RUTAS.castilloPirata,
   icono: "pirata",
+  modelo: "/modelos/castillo-pirata-v1.glb",
   nombre: "Castillo Pirata",
   corto: "Pirata",
   tipo: "Castillo temático",
@@ -121,6 +124,7 @@ const formula1: Omit<Inflable, "preguntas"> = {
   id: "castillo-formula-1",
   ruta: RUTAS.castilloFormula1,
   icono: "carrera",
+  modelo: "/modelos/castillo-formula-1-v1.glb",
   nombre: "Castillo Fórmula 1",
   corto: "Fórmula 1",
   tipo: "Castillo temático",
@@ -153,6 +157,7 @@ export const INFLABLES: Inflable[] = [
     id: "megatobogan",
     ruta: RUTAS.megatobogan,
     icono: "tobogan",
+    modelo: MODELO_3D,
     nombre: PRODUCTO.nombre,
     corto: "Megatobogán",
     tipo: "Tobogán inflable",

@@ -4,6 +4,7 @@
 import { DESDE_HORAS } from "../data";
 import { NORMAS, espacio, espacioTexto, edadTexto, metros, type Inflable } from "../inflables";
 import Icon from "../components/Icon.astro";
+import TituloSeccion from "../components/TituloSeccion.astro";
 
 interface Props {
   inflable: Inflable;
@@ -38,11 +39,12 @@ const burbuja = "border-noche flex size-9 shrink-0 items-center justify-center r
   <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(rgb(255_255_255/0.45)_1.5px,transparent_1.5px),linear-gradient(90deg,rgb(255_255_255/0.45)_1.5px,transparent_1.5px)] bg-[length:32px_32px]"></div>
   <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:gap-8 lg:px-10 lg:py-16">
     <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-      <div class="border-noche bg-blanco shadow-pop max-w-[760px] rounded-[24px] border-2 px-5 py-4 lg:px-7 lg:py-5">
-        <p class="text-azul-texto text-xs font-extrabold tracking-[1.2px] uppercase">Medidas y seguridad</p>
-        <h2 id="ficha-tecnica-titulo" class="font-display mt-1.5 text-[30px] leading-[36px] font-semibold lg:text-[42px] lg:leading-[48px]">Ficha técnica del {i.nombre}</h2>
-        <p class="text-noche-suave mt-2 lg:mt-3 lg:text-lg">Mide tu patio o salón y revisa que quepa con su metro de seguridad por lado</p>
-      </div>
+      <TituloSeccion
+        id="ficha-tecnica-titulo"
+        eyebrow="Medidas y seguridad"
+        titulo={`Ficha técnica del ${i.nombre}`}
+        bajada="Mide tu patio o salón y revisa que quepa con su metro de seguridad por lado"
+      />
       {
         i.pdf && (
           <a

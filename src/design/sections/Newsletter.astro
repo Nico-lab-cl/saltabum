@@ -3,6 +3,7 @@
 // Usa el contrato de formularios (<form data-lead-form="newsletter">): queda en /admin › Consultas como «newsletter»,
 // no cambia de página ni cuenta como conversión de anuncios.
 import Icon from "../components/Icon.astro";
+import TituloSeccion from "../components/TituloSeccion.astro";
 
 const campo =
   "border-noche bg-blanco text-noche placeholder:text-noche-suave/70 min-h-13 w-full min-w-0 rounded-full border-2 px-5 group-data-[state=sending]:bg-arena";
@@ -13,12 +14,7 @@ const BENEFICIOS = ["Promociones antes que nadie", "Inflables nuevos", "Fechas l
   <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(rgb(31_42_92/0.14)_1.8px,transparent_2px)] bg-[length:24px_24px]"></div>
   <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:py-16">
     <div class="flex flex-col gap-3 lg:flex-1">
-      <span class="border-noche bg-sol shadow-pop flex size-14 items-center justify-center rounded-full border-2">
-        <Icon name="correo" size={28} strokeWidth={2.2} />
-      </span>
-      <h2 id="newsletter-titulo" class="font-display text-[30px] leading-[34px] font-semibold lg:text-[44px] lg:leading-[48px]">
-        Entérate primero de nuestras promociones
-      </h2>
+      <TituloSeccion id="newsletter-titulo" eyebrow="Newsletter" titulo="Entérate primero de nuestras promociones" />
       <ul class="flex flex-wrap gap-2 text-sm font-extrabold">
         {
           BENEFICIOS.map((b) => (

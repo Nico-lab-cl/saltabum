@@ -1,0 +1,29 @@
+---
+// Título de sección en su placa azul noche (la de «Elige tu juego»): antetítulo en amarillo, H2 en crema y bajada
+// opcional. Se ajusta al ancho del texto; con contenido en el slot (botones, filtros) ocupa todo el ancho y los
+// pone al lado en escritorio. Es el mismo encabezado en todas las secciones del sitio.
+interface Props {
+  titulo: string;
+  id?: string;
+  eyebrow?: string;
+  bajada?: string;
+  class?: string;
+}
+const { titulo, id, eyebrow, bajada, class: className } = Astro.props;
+const conSlot = Astro.slots.has("default");
+---
+
+<div
+  class:list={[
+    "border-noche bg-noche text-crema shadow-pop pointer-events-auto rounded-[28px] border-2 px-4 py-3.5 lg:px-7 lg:py-5",
+    conSlot ? "flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6" : "w-fit max-w-full",
+    className,
+  ]}
+>
+  <div class="max-w-[760px]">
+    {eyebrow && <p class="text-sol text-xs font-extrabold tracking-[1.2px] uppercase">{eyebrow}</p>}
+    <h2 id={id} class:list={["font-display text-[28px] leading-[32px] font-semibold lg:text-[40px] lg:leading-[44px]", eyebrow && "mt-1"]}>{titulo}</h2>
+    {bajada && <p class="text-crema/85 mt-1.5 text-[15px] leading-[21px] lg:mt-2 lg:text-lg lg:leading-7">{bajada}</p>}
+  </div>
+  <slot />
+</div>

@@ -13,7 +13,7 @@ interface Props {
   /** Muestra solo estos videos (por id). Sin esto, van todos. */
   solo?: Inflable["id"][];
   titulo?: string;
-  fondo?: "crema" | "blanco" | "arena" | "celeste" | "verde";
+  fondo?: "crema" | "blanco" | "arena" | "celeste" | "verde" | "cielo";
 }
 
 const ARCHIVOS: Record<Inflable["id"], string> = {
@@ -22,7 +22,7 @@ const ARCHIVOS: Record<Inflable["id"], string> = {
   "castillo-formula-1": "castillo-naranjo-v1",
 };
 
-const { solo, titulo = "Galería", fondo = "blanco" } = Astro.props;
+const { solo, titulo = "Galería", fondo = "cielo" } = Astro.props;
 const lista = INFLABLES.filter((i) => !solo || solo.includes(i.id));
 const carrusel = lista.length > 1;
 const flecha =

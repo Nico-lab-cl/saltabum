@@ -1,19 +1,33 @@
 ---
-// «¿Cabe en tu espacio?»: medidas reales y modelo 3D del Megatobogán a escala 1:1 (armado por código en
-// scripts/generar-modelo-3d.mjs a partir del video real, hasta que exista un escaneo).
-// En el celular, «Verlo en tu espacio» lo pone en el terreno con la cámara (realidad aumentada:
-// WebXR / Scene Viewer en Android y Quick Look en iPhone). El visor (model-viewer) se descarga
+// «¿Cabe en tu espacio?»: medidas reales y modelo 3D a escala 1:1 de cada inflable (armados por código en
+// scripts/generar-modelo-3d.mjs y scripts/generar-modelo-castillos.mjs, hasta que existan escaneos). Los botones del
+// título cambian el modelo y sus medidas. En el celular, «Verlo en tu espacio» lo pone en el terreno con la cámara
+// (realidad aumentada: WebXR / Scene Viewer en Android y Quick Look en iPhone). El visor (model-viewer) se descarga
 // recién cuando la sección se acerca a la pantalla.
 import { getImage } from "astro:assets";
 import QRCode from "qrcode";
-import portada from "../assets/megatobogan-real-frente.jpg";
-import { MODELO_3D, PRODUCTO } from "../data";
+import { INFLABLES, base, espacioTexto, metros, type Inflable } from "../inflables";
 import { RUTAS } from "../seo";
 import Cielo from "../components/Cielo.astro";
 import Icon from "../components/Icon.astro";
+import TituloSeccion from "../components/TituloSeccion.astro";
 import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
 
-const poster = await getImage({ src: portada, width: 1200, height: 800, fit: "cover", position: "center", format: "webp", quality: 80 });
+interface Props {
+  /** Inflable que aparece primero (en la página de cada juego, el suyo). */
+  inicial?: Inflable["id"];
+}
+const { inicial = "megatobogan" } = Astro.props;
+
+// Póster de cada modelo (su foto real) mientras carga el visor.
+const MODELOS = await Promise.all(
+  INFLABLES.map(async (i) => ({
+    ...i,
+    poster: (await getImage({ src: i.fotos[0].src, width: 1200, height: 800, fit: "cover", position: "center", format: "webp", quality: 80 })).src,
+    alt: `Modelo 3D del ${i.nombre} a tamaño real: ${base(i)} de base y ${metros(i.medidas.alto)} m de alto`,
+  })),
+);
+const primero = MODELOS.find((m) => m.id === inicial) ?? MODELOS[0];
 
 // QR (SVG generado en el build) que abre en el celular la página «ver en tu espacio»: el modelo 3D con el botón
 // para ponerlo en el suelo con la cámara.
@@ -25,115 +39,130 @@ const qr = await QRCode.toString(enlace, {
   color: { dark: "#1f2a5cff", light: "#ffffffff" },
 });
 
-const MENSAJE = `Hola, quiero saber si el ${PRODUCTO.nombre} cabe en el lugar de mi evento. Les mando una foto. Vengo de saltabum.cl`;
-const MEDIDAS = [
-  { icon: "despacho", label: "Base", valor: PRODUCTO.base },
-  { icon: "alto", label: "Alto", valor: PRODUCTO.alto },
-  { icon: "capacidad", label: "Espacio libre", valor: PRODUCTO.espacioLibre },
-  { icon: "electricidad", label: "Enchufe", valor: "A menos de 15 m" },
-] as const;
+const medidas = (i: Inflable) =>
+  [
+    { icon: "despacho", label: "Base", valor: base(i) },
+    { icon: "alto", label: "Alto", valor: `${metros(i.medidas.alto)} m` },
+    { icon: "capacidad", label: "Espacio libre", valor: espacioTexto(i) },
+    { icon: "electricidad", label: "Enchufe", valor: "A menos de 15 m" },
+  ] as const;
 const REQUISITOS = [
-  `Pasto o piso firme y parejo, sin ramas ni techos bajo los ${PRODUCTO.alto}`,
+  "Pasto o piso firme y parejo, sin ramas ni techos bajos encima",
   "Un enchufe a menos de 15 m, consume menos de $2.000 por evento",
   "Un acceso por donde entrar con el juego enrollado",
 ];
 ---
 
-<section id="patio" aria-labelledby="patio-titulo" class="border-noche bg-celeste text-noche relative isolate overflow-hidden border-b-2" data-cielo>
+<section id="patio" aria-labelledby="patio-titulo" class="border-noche bg-celeste text-noche relative isolate overflow-hidden border-b-2" data-cielo data-patio>
   <Cielo />
-  <div data-cielo-contenido class="pointer-events-none mx-auto flex max-w-[1320px] flex-col gap-6 px-4 py-10 md:max-w-[680px] lg:max-w-[1320px] lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:py-20">
-    <div class="pointer-events-auto flex flex-col gap-5 lg:min-w-0 lg:flex-1 lg:gap-6">
-      <div>
-        <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Medidas</p>
-        <h2 id="patio-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
-          ¿Cabe en tu espacio?
-        </h2>
-        <p class="mt-2 lg:mt-3 lg:text-lg">Gíralo en 3D o míralo en tu patio a tamaño real</p>
+  <div data-cielo-contenido class="pointer-events-none mx-auto flex max-w-[680px] flex-col gap-6 px-4 py-10 lg:max-w-[1320px] lg:gap-8 lg:px-10 lg:py-16">
+    <TituloSeccion id="patio-titulo" eyebrow="Medidas" titulo="¿Cabe en tu espacio?" bajada="Elige el juego, gíralo en 3D o míralo en tu patio a tamaño real">
+      <div role="group" aria-label="Ver el modelo 3D de" class="flex gap-1.5">
+        {
+          MODELOS.map((m) => (
+            <button
+              type="button"
+              data-patio-juego={m.id}
+              data-src={m.modelo}
+              data-poster={m.poster}
+              data-alt={m.alt}
+              data-nombre={m.nombre}
+              aria-pressed={m.id === primero.id ? "true" : "false"}
+              class="border-crema text-crema aria-pressed:bg-sol aria-pressed:text-noche aria-pressed:border-noche flex min-h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border-2 px-2 text-sm font-extrabold lg:flex-none lg:px-4 lg:text-[15px]"
+            >
+              <Icon name={m.icono} size={22} strokeWidth={2.2} class="shrink-0" />
+              <span class="truncate">{m.corto}</span>
+            </button>
+          ))
+        }
       </div>
+    </TituloSeccion>
 
-      <dl class="hidden grid-cols-2 gap-2.5 lg:grid">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-14">
+      <div class="pointer-events-auto flex flex-col gap-5 lg:min-w-0 lg:flex-1 lg:gap-6">
         {
-          MEDIDAS.map((m) => (
-            <div class="border-noche bg-blanco flex items-center gap-3 rounded-2xl border-2 px-3.5 py-3">
-              <Icon name={m.icon} size={26} class="shrink-0" />
-              <div>
-                <dt class="text-noche-suave text-xs font-extrabold tracking-[1px] uppercase">{m.label}</dt>
-                <dd class="font-display text-xl leading-6 font-semibold">{m.valor}</dd>
-              </div>
-            </div>
+          MODELOS.map((m) => (
+            <dl data-patio-medidas={m.id} hidden={m.id !== primero.id} class="grid grid-cols-2 gap-2.5">
+              {medidas(m).map((d) => (
+                <div class="border-noche bg-blanco flex items-center gap-3 rounded-2xl border-2 px-3.5 py-3">
+                  <Icon name={d.icon} size={26} class="shrink-0" />
+                  <div class="min-w-0">
+                    <dt class="text-noche-suave text-xs font-extrabold tracking-[1px] uppercase">{d.label}</dt>
+                    <dd class="font-display text-xl leading-6 font-semibold">{d.valor}</dd>
+                  </div>
+                </div>
+              ))}
+            </dl>
           ))
         }
-      </dl>
 
-      <ul class="hidden flex-col gap-2.5 font-semibold lg:flex">
-        {
-          REQUISITOS.map((texto) => (
-            <li class="flex items-start gap-2.5">
-              <span class="border-noche bg-blanco flex size-7 shrink-0 items-center justify-center rounded-full border-2">
-                <Icon name="check" size={16} strokeWidth={3.2} />
-              </span>
-              {texto}
-            </li>
-          ))
-        }
-      </ul>
+        <ul class="hidden flex-col gap-2.5 font-semibold lg:flex">
+          {
+            REQUISITOS.map((texto) => (
+              <li class="flex items-start gap-2.5">
+                <span class="border-noche bg-blanco flex size-7 shrink-0 items-center justify-center rounded-full border-2">
+                  <Icon name="check" size={16} strokeWidth={3.2} />
+                </span>
+                {texto}
+              </li>
+            ))
+          }
+        </ul>
 
-      <WhatsAppLink
-        placement="patio"
-        message={MENSAJE}
-        class="bounce border-noche bg-blanco text-noche shadow-pop inline-flex min-h-13 items-center justify-center rounded-full border-2 px-5 text-center leading-[21px] font-extrabold no-underline lg:self-start"
-      >
-        ¿Dudas? Mándanos una foto del lugar
-      </WhatsAppLink>
-    </div>
-
-    <div class="pointer-events-auto lg:min-w-0 lg:flex-1">
-      <div class="border-noche bg-blanco shadow-pop-l relative overflow-hidden rounded-[28px] border-2">
-        <model-viewer
-          data-modelo-3d
-          src={MODELO_3D}
-          poster={poster.src}
-          alt={`Modelo 3D del ${PRODUCTO.nombre} a tamaño real: ${PRODUCTO.base} de base y ${PRODUCTO.alto} de alto`}
-          loading="lazy"
-          camera-controls
-          touch-action="pan-y"
-          auto-rotate
-          auto-rotate-delay="1500"
-          rotation-per-second="18deg"
-          interaction-prompt="auto"
-          shadow-intensity="1"
-          exposure="1.05"
-          camera-orbit="30deg 74deg 100%"
-          ar
-          ar-modes="webxr scene-viewer quick-look"
-          ar-scale="fixed"
-          ar-placement="floor"
-          class="block h-[380px] w-full bg-[radial-gradient(circle_at_50%_40%,#fff6ea_0%,#f3e6d3_100%)] sm:h-[460px] lg:h-[540px]"
+        <WhatsAppLink
+          placement="patio"
+          message="Hola, quiero saber qué inflable cabe en el lugar de mi evento. Les mando una foto. Vengo de saltabum.cl"
+          class="bounce border-noche bg-blanco text-noche shadow-pop inline-flex min-h-13 items-center justify-center rounded-full border-2 px-5 text-center leading-[21px] font-extrabold no-underline lg:self-start"
         >
-          <button
-            slot="ar-button"
-            type="button"
-            class="bounce bg-verde border-noche shadow-pop absolute bottom-4 left-1/2 inline-flex min-h-13 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full border-2 px-6 font-extrabold whitespace-nowrap"
-          >
-            <Icon name="despacho" size={22} />
-            Verlo en tu espacio
-          </button>
-        </model-viewer>
-        <p class="bg-crema/90 text-noche-suave pointer-events-none absolute top-3 left-3 rounded-full px-3 py-1 text-xs font-bold">
-          Arrastra para girar · tamaño real
-        </p>
+          ¿Dudas? Mándanos una foto del lugar
+        </WhatsAppLink>
       </div>
-      <p class="mt-3 hidden text-sm">
-        En el celular, toca «Verlo en tu espacio», apunta al suelo y retrocede unos 10 metros. El Megatobogán aparece a tamaño real, con el espacio libre marcado en el suelo, para que veas si cabe
-      </p>
-      <!-- En computador no hay realidad aumentada: un QR abre esta misma sección en el celular. -->
-      <div class="border-noche bg-blanco mt-4 hidden items-center gap-5 rounded-[20px] border-2 p-4 lg:flex">
-        <div class="border-noche size-[120px] shrink-0 overflow-hidden rounded-xl border-2 p-1 [&_svg]:size-full" data-qr={enlace} set:html={qr} />
-        <div class="flex flex-col gap-1.5">
-          <p class="font-display text-[21px] leading-[26px] font-semibold">Míralo en tu espacio con el celular</p>
-          <p class="text-noche-suave text-[15px] leading-[21px]">
-            Escanea el código con la cámara, toca «Verlo en tu espacio», apunta al suelo y retrocede unos 10 metros. El Megatobogán aparece a tamaño real, con el espacio libre marcado
+
+      <div class="pointer-events-auto lg:min-w-0 lg:flex-1">
+        <div class="border-noche bg-blanco shadow-pop-l relative overflow-hidden rounded-[28px] border-2">
+          <model-viewer
+            data-modelo-3d
+            src={primero.modelo}
+            poster={primero.poster}
+            alt={primero.alt}
+            loading="lazy"
+            camera-controls
+            touch-action="pan-y"
+            auto-rotate
+            auto-rotate-delay="1500"
+            rotation-per-second="18deg"
+            interaction-prompt="auto"
+            shadow-intensity="1"
+            exposure="1.05"
+            camera-orbit="30deg 74deg 100%"
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+            ar-scale="fixed"
+            ar-placement="floor"
+            class="block h-[380px] w-full bg-[radial-gradient(circle_at_50%_40%,#fff6ea_0%,#f3e6d3_100%)] sm:h-[460px] lg:h-[540px]"
+          >
+            <button
+              slot="ar-button"
+              type="button"
+              class="bounce bg-verde border-noche shadow-pop absolute bottom-4 left-1/2 inline-flex min-h-13 -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full border-2 px-6 font-extrabold whitespace-nowrap"
+            >
+              <Icon name="despacho" size={22} />
+              Verlo en tu espacio
+            </button>
+          </model-viewer>
+          <p class="bg-crema/90 pointer-events-none absolute top-3 left-3 rounded-full px-3 py-1 text-xs font-bold">
+            <span data-patio-nombre>{primero.nombre}</span> · tamaño real
           </p>
+        </div>
+        <!-- En computador no hay realidad aumentada: un QR abre el modelo en el celular. -->
+        <div class="border-noche bg-blanco mt-4 hidden items-center gap-5 rounded-[20px] border-2 p-4 lg:flex">
+          <div class="border-noche size-[120px] shrink-0 overflow-hidden rounded-xl border-2 p-1 [&_svg]:size-full" data-qr={enlace} set:html={qr} />
+          <div class="flex flex-col gap-1.5">
+            <p class="font-display text-[21px] leading-[26px] font-semibold">Míralo en tu espacio con el celular</p>
+            <p class="text-noche-suave text-[15px] leading-[21px]">
+              Escanea el código con la cámara, toca «Verlo en tu espacio», apunta al suelo y retrocede unos 10 metros. El juego aparece a tamaño real, con el espacio libre marcado
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -142,7 +171,7 @@ const REQUISITOS = [
 
 <script>
   // Carga el visor 3D solo cuando la sección está por aparecer en pantalla.
-  const visor = document.querySelector("[data-modelo-3d]");
+  const visor = document.querySelector<HTMLElement>("[data-modelo-3d]");
   if (visor) {
     let cargado = false;
     const cargar = () => {
@@ -168,5 +197,22 @@ const REQUISITOS = [
       );
       io.observe(visor);
     } else cargar();
+
+    // Botones del título: cambian el modelo, su póster, el texto alternativo y las medidas.
+    const raiz = visor.closest<HTMLElement>("[data-patio]");
+    const botones = [...(raiz?.querySelectorAll<HTMLButtonElement>("[data-patio-juego]") ?? [])];
+    for (const b of botones) {
+      b.addEventListener("click", () => {
+        const id = b.dataset.patioJuego;
+        botones.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        raiz?.querySelectorAll<HTMLElement>("[data-patio-medidas]").forEach((dl) => (dl.hidden = dl.dataset.patioMedidas !== id));
+        const nombre = raiz?.querySelector<HTMLElement>("[data-patio-nombre]");
+        if (nombre) nombre.textContent = b.dataset.nombre ?? "";
+        visor.setAttribute("poster", b.dataset.poster ?? "");
+        visor.setAttribute("alt", b.dataset.alt ?? "");
+        visor.setAttribute("src", b.dataset.src ?? "");
+        cargar();
+      });
+    }
   }
 </script>

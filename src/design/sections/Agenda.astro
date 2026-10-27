@@ -12,6 +12,7 @@ import { INFLABLES } from "../inflables";
 import Icon from "../components/Icon.astro";
 import Rayos from "../components/Rayos.astro";
 import WaButton from "../components/WaButton.astro";
+import TituloSeccion from "../components/TituloSeccion.astro";
 
 const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
 const PASOS = [
@@ -47,16 +48,7 @@ const botonRedondo =
 <section id="reservar" aria-labelledby="agenda-titulo" class="border-noche bg-sol text-noche relative isolate overflow-clip border-b-2" data-agenda>
   <Rayos x="78%" y="8%" />
   <div class="mx-auto flex max-w-[1320px] flex-col gap-4 px-4 py-8 lg:gap-9 lg:px-10 lg:py-20">
-    <!-- Placa translúcida: le da peso al título sin tapar los rayos del sol -->
-    <div class="border-noche bg-crema/75 shadow-pop w-fit max-w-full rounded-[24px] border-2 px-4 py-3 backdrop-blur-sm lg:rounded-[28px] lg:px-7 lg:py-5">
-      <p class="text-rojo-texto text-xs font-extrabold tracking-[1.2px] uppercase">Reserva en línea</p>
-      <h2 id="agenda-titulo" class="font-display mt-1 text-[28px] leading-[32px] font-semibold lg:mt-1.5 lg:text-5xl lg:leading-[52px]">
-        Elige tu fecha y horario
-      </h2>
-      <p class="mt-1.5 max-w-[640px] text-[15px] leading-[21px] lg:mt-3 lg:text-lg lg:leading-7">
-        Reserva en 4 pasos<span class="hidden sm:inline">, con la hora que quieras desde las {aHora(APERTURA)}</span> y el total siempre a la vista
-      </p>
-    </div>
+    <TituloSeccion id="agenda-titulo" eyebrow="Reserva en línea" titulo="Elige tu fecha y horario" bajada="Reserva en 4 pasos y con el total siempre a la vista" />
 
     <form
       data-reserva

@@ -41,6 +41,9 @@ const tiempoEscribiendo = (texto: string) => Math.min(7_000, Math.max(1_200, 500
 const ESCRIBIENDO_MINIMO = 900;
 /** Pausa entre un mensaje y el siguiente de la misma respuesta, antes de volver a «escribir». */
 const PAUSA_ENTRE_MENSAJES = 450;
+/** La bienvenida va rápido: el cliente no debe esperar para dejar sus datos (el formulario ya está a la vista). */
+const ESCRIBIENDO_BIENVENIDA = 600;
+const PAUSA_BIENVENIDA = 200;
 /** Una respuesta con líneas en blanco se muestra como varios mensajes seguidos. */
 const partes = (texto: string) => texto.split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean);
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -95,7 +98,7 @@ export function bindChat(): void {
   const pintar = (m: Mensaje) => (m.rol === "ia" || m.rol === "equipo" ? partes(m.texto).forEach((t) => burbuja(m.rol, t)) : burbuja(m.rol, m.texto));
 
   /** Muestra un mensaje nuevo con «escribiendo…» antes de cada parte. `yaEspero` descuenta lo que tardó el servidor. */
-  async function mostrar(m: Mensaje, yaEspero = 0) {
+  async function mostrar(m: Mensaje, yaEspero = 0, rapido = false) {
     if (m.id !== undefined) {
       if (vistos.has(m.id)) return;
       vistos.add(m.id);
@@ -104,10 +107,10 @@ export function bindChat(): void {
     guardar(estado);
     if (m.rol !== "ia" && m.rol !== "equipo") return burbuja(m.rol, m.texto);
     for (const [i, t] of partes(m.texto).entries()) {
-      if (i > 0) await esperar(PAUSA_ENTRE_MENSAJES);
+      if (i > 0) await esperar(rapido ? PAUSA_BIENVENIDA : PAUSA_ENTRE_MENSAJES);
       escribiendo.hidden = false;
       lista.scrollTop = lista.scrollHeight;
-      await esperar(Math.max(ESCRIBIENDO_MINIMO, tiempoEscribiendo(t) - (i === 0 ? yaEspero : 0)));
+      await esperar(rapido ? ESCRIBIENDO_BIENVENIDA : Math.max(ESCRIBIENDO_MINIMO, tiempoEscribiendo(t) - (i === 0 ? yaEspero : 0)));
       escribiendo.hidden = true;
       burbuja(m.rol, t);
     }
@@ -120,16 +123,14 @@ export function bindChat(): void {
       .filter(Boolean)
       .join("\n\n");
   let bienvenidaEnCurso = false;
-  /** Al abrir por primera vez, Eduardo «escribe» la bienvenida y después aparece el formulario. */
+  /** Al abrir por primera vez el formulario ya está a la vista y Eduardo «escribe» la bienvenida rápido encima. */
   async function darBienvenida() {
     if (estado.mensajes.length || bienvenidaEnCurso) return;
     bienvenidaEnCurso = true;
-    contacto.hidden = true;
-    await esperar(500);
-    const texto = plantilla("data-chat-bienvenida");
-    if (texto) await mostrar({ rol: "ia", texto });
     actualizarFormularios();
     if (window.matchMedia("(min-width: 640px)").matches) contacto.querySelector("input")?.focus();
+    const texto = plantilla("data-chat-bienvenida");
+    if (texto) await mostrar({ rol: "ia", texto }, 0, true);
   }
 
   const mostrarWhatsapp = (mensaje?: string) => {
@@ -210,7 +211,7 @@ export function bindChat(): void {
     actualizarFormularios();
     campo.focus();
     const saludo = plantilla("data-chat-saludo") || "¡Hola, [nombre]! ¿Para qué fecha y en qué comuna es tu evento?";
-    await mostrar({ rol: "ia", texto: saludo.replaceAll("[nombre]", estado.contacto) });
+    await mostrar({ rol: "ia", texto: saludo.replaceAll("[nombre]", estado.contacto) }, 0, true);
   });
 
   // ── Mensajes ───────────────────────────────────────────────────────────

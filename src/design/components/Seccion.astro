@@ -1,11 +1,15 @@
 ---
-// Sección de contenido con un H2. `fondo` cambia el color (un color dominante por sección).
+// Sección de contenido con su título en la placa azul (TituloSeccion). `fondo` cambia el color (un color dominante por
+// sección); «cielo» es el celeste con nubes y globos que se revientan (Cielo), como en «Nuestros inflables».
+import Cielo from "./Cielo.astro";
+import TituloSeccion from "./TituloSeccion.astro";
+
 interface Props {
   titulo: string;
   eyebrow?: string;
   bajada?: string;
   id?: string;
-  fondo?: "crema" | "blanco" | "arena" | "celeste" | "verde";
+  fondo?: "crema" | "blanco" | "arena" | "celeste" | "verde" | "cielo";
 }
 const { titulo, eyebrow, bajada, id, fondo = "crema" } = Astro.props;
 const FONDOS = {
@@ -14,16 +18,15 @@ const FONDOS = {
   arena: "bg-arena",
   celeste: "bg-celeste",
   verde: "bg-verde-burbuja",
+  cielo: "bg-celeste relative isolate overflow-hidden",
 };
+const cielo = fondo === "cielo";
 ---
 
-<section id={id} class:list={["border-noche border-b-2", FONDOS[fondo]]}>
-  <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:gap-8 lg:px-10 lg:py-16">
-    <div class="max-w-[760px]">
-      {eyebrow && <p class="text-azul-texto text-xs font-extrabold tracking-[1.2px] uppercase">{eyebrow}</p>}
-      <h2 class="font-display mt-1.5 text-[30px] leading-[36px] font-semibold lg:text-[42px] lg:leading-[48px]">{titulo}</h2>
-      {bajada && <p class="text-noche-suave mt-2 lg:mt-3 lg:text-lg">{bajada}</p>}
-    </div>
+<section id={id} class:list={["border-noche border-b-2", FONDOS[fondo]]} data-cielo={cielo ? "" : undefined}>
+  {cielo && <Cielo />}
+  <div data-cielo-contenido={cielo ? "" : undefined} class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:gap-8 lg:px-10 lg:py-16">
+    <TituloSeccion titulo={titulo} eyebrow={eyebrow} bajada={bajada} />
     <slot />
   </div>
 </section>
