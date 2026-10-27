@@ -1,0 +1,55 @@
+---
+// /inflables/<slug>/ — página de un inflable: hero, galería y precio, ficha técnica completa, video, agenda y preguntas.
+import { DESDE_HORAS, mensajeWhatsapp } from "../data";
+import { INFLABLES, edadTexto, medidas, pesos, type Inflable } from "../inflables";
+import CtaFinal from "../components/CtaFinal.astro";
+import HeroInterior from "../components/HeroInterior.astro";
+import ListaPreguntas from "../components/ListaPreguntas.astro";
+import Seccion from "../components/Seccion.astro";
+import TarjetaInflable from "../components/TarjetaInflable.astro";
+import PaginaSeo, { type Miga } from "../layouts/PaginaSeo.astro";
+import Agenda from "../sections/Agenda.astro";
+import Ficha from "../sections/Ficha.astro";
+import FichaTecnica from "../sections/FichaTecnica.astro";
+import Patio from "../sections/Patio.astro";
+import Videos from "../sections/Videos.astro";
+
+interface Props {
+  inflable: Inflable;
+  migas: Miga[];
+}
+const { inflable: i, migas } = Astro.props;
+const otros = INFLABLES.filter((o) => o.id !== i.id);
+---
+
+<PaginaSeo migas={migas}>
+  <HeroInterior
+    eyebrow={i.tipo}
+    titulo={i.titulo}
+    bajada={`${i.resumen}, para niños de ${edadTexto(i)}, mide ${medidas(i)} y cuesta ${pesos(i.precio)} por ${DESDE_HORAS}`}
+    destacado={i.destacado}
+    placement={`${i.id}-hero`}
+    mensaje={mensajeWhatsapp(i.nombre)}
+    precio={pesos(i.precio)}
+  />
+  <Ficha inflable={i} enPagina />
+  <FichaTecnica inflable={i} />
+  <Videos solo={[i.id]} titulo={`El ${i.nombre} en video`} fondo="blanco" />
+  {i.id === "megatobogan" && <Patio />}
+  <Agenda juego={i.id} />
+  <Seccion titulo={`Preguntas sobre el ${i.nombre}`} fondo="crema">
+    <ListaPreguntas preguntas={i.preguntas} grupo={`faq-${i.id}`} />
+  </Seccion>
+  <Seccion titulo="Otros inflables que te pueden servir" fondo="arena">
+    <ul class="grid gap-5 md:grid-cols-2 lg:max-w-[880px]">
+      {
+        otros.map((o) => (
+          <li>
+            <TarjetaInflable inflable={o} placement={`${i.id}-otros`} />
+          </li>
+        ))
+      }
+    </ul>
+  </Seccion>
+  <CtaFinal placement={`${i.id}-cta`} />
+</PaginaSeo>

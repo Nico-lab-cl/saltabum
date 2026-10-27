@@ -13,14 +13,14 @@ interface Props {
 }
 const { alt = `${PRODUCTO.nombre} instalado sobre pasto, con niños bajando por el tobogán, saliendo del túnel y saltando` } = Astro.props;
 
-// Calidad alta: la foto es la protagonista del primer pantallazo.
+// Calidad alta pero liviana: la foto es la protagonista del primer pantallazo y define cuánto tarda en verse (LCP).
 const ANCHOS = [1280, 1920, 2560, 3200, 3840];
 const ANCHOS_MOVIL = [640, 960, 1500];
 const [avif, webp, avifMovil, webpMovil] = await Promise.all([
-  getImage({ src: fondo, widths: ANCHOS, format: "avif", quality: 85 }),
-  getImage({ src: fondo, widths: ANCHOS, format: "webp", quality: 90 }),
-  getImage({ src: fondoMovil, widths: ANCHOS_MOVIL, format: "avif", quality: 85 }),
-  getImage({ src: fondoMovil, widths: ANCHOS_MOVIL, format: "webp", quality: 90 }),
+  getImage({ src: fondo, widths: ANCHOS, format: "avif", quality: 72 }),
+  getImage({ src: fondo, widths: ANCHOS, format: "webp", quality: 80 }),
+  getImage({ src: fondoMovil, widths: ANCHOS_MOVIL, format: "avif", quality: 68 }),
+  getImage({ src: fondoMovil, widths: ANCHOS_MOVIL, format: "webp", quality: 78 }),
 ]);
 ---
 

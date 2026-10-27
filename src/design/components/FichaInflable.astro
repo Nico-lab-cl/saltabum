@@ -1,0 +1,158 @@
+---
+// Contenido de la ficha de un inflable (va sobre el cielo celeste): nombre en su placa, galería de fotos reales,
+// datos clave y el bloque de precio. Lo usan la sección Ficha (página de cada inflable) y el carrusel del inicio.
+// Precio en oferta: el normal va tachado en rojo y el de oferta enorme en noche, con el ahorro en un sello rojo.
+import { getImage } from "astro:assets";
+import { DESDE_HORAS, HORA_EXTRA, mensajeWhatsapp } from "../data";
+import { base, edadTexto, espacioTexto, metros, pesos, type Inflable } from "../inflables";
+import Icon from "./Icon.astro";
+import WaButton from "./WaButton.astro";
+
+interface Props {
+  inflable: Inflable;
+  /** En su propia página el enlace baja a la ficha técnica en vez de abrir la página. */
+  enPagina?: boolean;
+  /** Nivel del nombre: h2 en la página del inflable, h3 dentro del carrusel. */
+  nivel?: "h2" | "h3";
+  /** Solo la primera ficha visible carga sus fotos de inmediato. */
+  prioridad?: boolean;
+}
+const { inflable: i, enPagina = false, nivel = "h2", prioridad = false } = Astro.props;
+const Nombre = nivel;
+
+const GALERIA = await Promise.all(
+  i.fotos.map(async (f) => ({
+    ...f,
+    grande: await getImage({ src: f.src, widths: [480, 800, 1200], format: "webp", quality: 82 }),
+    mini: await getImage({ src: f.src, width: 240, format: "webp", quality: 70 }),
+  })),
+);
+const principal = GALERIA[0];
+const DATOS = [
+  { label: "Edad", valor: edadTexto(i) },
+  { label: "Base", valor: base(i) },
+  { label: "Alto", valor: `${metros(i.medidas.alto)} m` },
+  { label: "Espacio libre", valor: espacioTexto(i) },
+  { label: "Capacidad", valor: `${i.capacidad} niños` },
+  { label: "Montaje", valor: "30 minutos" },
+];
+const INCLUYE = ["Despacho gratis en Valparaíso y Viña del Mar", `Hora adicional ${HORA_EXTRA}`, "Reserva con $20.000 de abono, que se descuenta del total"];
+// El ahorro se muestra redondeado hacia abajo a miles ($100.000 − $69.990 → «Ahorras $30.000»).
+const ahorro = i.precioNormal ? Math.floor((i.precioNormal - i.precio) / 1000) * 1000 : 0;
+const descuento = i.precioNormal ? Math.round(((i.precioNormal - i.precio) / i.precioNormal) * 100) : 0;
+---
+
+<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-14">
+  <div class="flex min-w-0 flex-col gap-4 lg:flex-1 lg:gap-3">
+    <!-- Placa con el nombre: le da peso al título sobre el cielo -->
+    <div class="border-noche bg-blanco shadow-pop pointer-events-auto rounded-[24px] border-2 px-5 py-4 lg:hidden">
+      <p class="text-azul-texto text-xs font-extrabold tracking-[1.2px] uppercase">{i.tipo}</p>
+      <p class="font-display mt-1 text-[30px] leading-[34px] font-semibold">{i.nombre}</p>
+      <p class="text-noche-suave mt-1.5 leading-[22px]">{i.resumen}</p>
+    </div>
+
+    <div class="pointer-events-auto flex flex-col gap-2.5 lg:gap-3">
+      <div class="border-noche bg-blanco shadow-pop relative aspect-[3/2] overflow-hidden rounded-[28px] border-2 lg:rounded-[36px]" data-galeria>
+        <button type="button" data-galeria-ampliar aria-label={`Ver la foto del ${i.nombre} en grande`} class="group/foto block size-full cursor-zoom-in">
+        <img
+          data-galeria-principal
+          src={principal.grande.src}
+          srcset={principal.grande.srcSet.attribute}
+          sizes="(min-width: 1024px) 600px, (min-width: 768px) 640px, 92vw"
+          width="1200"
+          height="800"
+          alt={principal.alt}
+          loading={prioridad ? "eager" : "lazy"}
+          decoding="async"
+          class="size-full object-cover"
+          style={principal.pos ? `object-position:${principal.pos}` : undefined}
+        />
+        <span aria-hidden="true" class="border-noche bg-blanco text-noche absolute right-3 bottom-3 flex size-11 items-center justify-center rounded-full border-2 transition-transform group-hover/foto:scale-110 motion-reduce:transition-none lg:right-4 lg:bottom-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" /></svg>
+        </span>
+        </button>
+      </div>
+      <ul class="grid grid-cols-4 gap-2 lg:gap-3" aria-label={`Fotos del ${i.nombre}`}>
+        {
+          GALERIA.map((g, n) => (
+            <li>
+              <button
+                type="button"
+                data-galeria-mini
+                data-src={g.grande.src}
+                data-srcset={g.grande.srcSet.attribute}
+                data-alt={g.alt}
+                data-pos={g.pos}
+                aria-label={`Ver foto ${n + 1} del ${i.nombre}`}
+                aria-pressed={n === 0 ? "true" : "false"}
+                class="border-noche bg-blanco aria-pressed:shadow-sol aria-pressed:border-[3px] block aspect-square w-full cursor-pointer overflow-hidden rounded-xl border-2 lg:rounded-2xl"
+              >
+                <img src={g.mini.src} alt="" width="240" height="160" loading="lazy" decoding="async" class="size-full object-cover" style={g.pos ? `object-position:${g.pos}` : undefined} />
+              </button>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+
+  <div class="flex min-w-0 flex-col gap-4 lg:flex-1 lg:gap-5">
+    <div class="border-noche bg-blanco shadow-pop pointer-events-auto hidden rounded-[28px] border-2 px-7 py-6 lg:block">
+      <p class="text-azul-texto text-xs font-extrabold tracking-[1.2px] uppercase">{i.tipo}</p>
+      <Nombre class="font-display mt-1.5 text-[44px] leading-[48px] font-semibold">{i.nombre}</Nombre>
+      <p class="text-noche-suave mt-2 text-lg leading-[26px]">{i.resumen}, para niños de {edadTexto(i)}</p>
+    </div>
+
+    <dl class="pointer-events-auto grid grid-cols-2 gap-2 lg:grid-cols-3 lg:gap-3">
+      {
+        DATOS.map((d, n) => (
+          <div class:list={["border-noche bg-crema text-noche rounded-xl border-2 px-3 py-2.5 lg:rounded-2xl lg:px-4 lg:py-3", n >= 4 && "hidden lg:block"]}>
+            <dt class="text-noche-suave text-xs font-extrabold tracking-[1px] uppercase">{d.label}</dt>
+            <dd class="font-display mt-0.5 text-xl leading-[26px] font-semibold">{d.valor}</dd>
+          </div>
+        ))
+      }
+    </dl>
+
+    <div class="border-noche bg-sol text-noche shadow-pop-l pointer-events-auto flex flex-col gap-3.5 rounded-[28px] border-2 px-4 py-5 lg:gap-4 lg:p-7">
+      {
+        i.precioNormal ? (
+          <div class="flex flex-col gap-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="bg-rojo-texto text-crema rounded-full px-3 py-1 text-[13px] leading-4 font-extrabold tracking-[1px] uppercase">Oferta −{descuento}%</span>
+              <span class="text-[13px] leading-[18px] font-extrabold tracking-[1px] uppercase">Arriendo por {DESDE_HORAS}</span>
+            </div>
+            <p class="mt-1 flex items-baseline gap-2">
+              <span class="text-sm font-extrabold uppercase">Antes</span>
+              <s class="text-rojo-texto font-display text-[26px] leading-8 font-bold decoration-[3px] lg:text-[30px]">{pesos(i.precioNormal)}</s>
+            </p>
+            <p class="flex flex-wrap items-end gap-x-3 gap-y-1">
+              <span class="font-display text-[60px] leading-[60px] font-bold lg:text-[72px] lg:leading-[72px]">{pesos(i.precio)}</span>
+              <span class="border-noche bg-blanco text-rojo-texto mb-2 rounded-full border-2 px-3 py-1 text-[15px] font-extrabold">Ahorras {pesos(ahorro)}</span>
+            </p>
+          </div>
+        ) : (
+          <div>
+            <p class="text-[13px] leading-[18px] font-extrabold tracking-[1px] uppercase">Arriendo por {DESDE_HORAS}</p>
+            <p class="font-display mt-0.5 text-[60px] leading-[60px] font-bold lg:text-[72px] lg:leading-[72px]">{pesos(i.precio)}</p>
+          </div>
+        )
+      }
+      <ul class="flex flex-col gap-2 font-semibold">
+        {
+          INCLUYE.map((texto) => (
+            <li class="flex items-start gap-2">
+              <Icon name="check" size={22} strokeWidth={3} class="mt-px shrink-0" />
+              {texto}
+            </li>
+          ))
+        }
+      </ul>
+      <WaButton placement="ficha" size="l" message={mensajeWhatsapp(i.nombre)} class="text-center leading-[22px]"><span class="lg:hidden">Consultar por WhatsApp</span><span class="hidden lg:inline">Consultar disponibilidad por WhatsApp</span></WaButton>
+      <a href={enPagina ? "#ficha-tecnica" : i.ruta} class="text-noche inline-flex min-h-11 items-center gap-1 font-extrabold underline">
+        {enPagina ? "Ver ficha técnica completa" : `Ver ficha técnica del ${i.nombre}`}
+        <Icon name="flecha" size={18} strokeWidth={2.6} />
+      </a>
+    </div>
+  </div>
+</div>

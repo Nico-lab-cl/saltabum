@@ -1,9 +1,10 @@
 ---
 import Inflables from "@design/pages/Inflables.astro";
 import { DESDE } from "@design/data";
+import { INFLABLES } from "@design/inflables";
 import { METAS, RUTAS } from "@design/seo";
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { migasJsonLd, servicioJsonLd } from "@/lib/seo";
+import { listaJsonLd, migasJsonLd, servicioJsonLd } from "@/lib/seo";
 
 const migas = [
   { nombre: "Inicio", href: RUTAS.inicio },
@@ -11,6 +12,7 @@ const migas = [
 ];
 const jsonLd = [
   migasJsonLd(migas),
+  listaJsonLd(RUTAS.inflables, INFLABLES),
   servicioJsonLd({
     ruta: RUTAS.inflables,
     nombre: "Arriendo de juegos inflables en la V Región",

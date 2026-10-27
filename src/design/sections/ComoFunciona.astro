@@ -5,7 +5,7 @@ import ImagenPendiente from "../components/ImagenPendiente.astro";
 // Imagen que acompaña a cada paso (los pasos 1 y 2 se cuentan solo con el chat).
 const IMAGENES: Record<number, { n: number; texto: string }> = {
   3: { n: 6, texto: "Dos personas del equipo montando y anclando el juego" },
-  4: { n: 7, texto: "Una persona limpiando y sanitizando la superficie del juego" },
+  4: { n: 7, texto: "Una persona limpiando y revisando la superficie del juego" },
 };
 ---
 
@@ -44,7 +44,7 @@ const IMAGENES: Record<number, { n: number; texto: string }> = {
               <span class="text-noche-suave mt-1 block text-right text-[11px] leading-[14px]">{m.hora}</span>
             </div>
             {m.paso === 4 && (
-              <p class="text-noche-suave text-sm leading-5">De vuelta en la bodega lo limpiamos y sanitizamos para el próximo evento.</p>
+              <p class="text-noche-suave text-sm leading-5">De vuelta en la bodega lo limpiamos y revisamos para el próximo evento.</p>
             )}
           </li>
         ))

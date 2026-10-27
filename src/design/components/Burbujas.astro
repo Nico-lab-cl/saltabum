@@ -3,12 +3,12 @@
 // bordes de la sección y flotan lento, sin pasar por detrás del texto.
 // Va en una sección `relative isolate overflow-hidden bg-rojo-suave`.
 const GLOBOS = [
-  { pos: "left: 3%; top: -34px", s: 96, c: "#ffc23a", r: -10, d: "0s" },
-  { pos: "left: -58px; top: 42%", s: 116, c: "#7fd3f7", r: 8, d: "-2s" },
-  { pos: "left: 26%; bottom: -40px", s: 84, c: "#2db866", r: -6, d: "-4s" },
-  { pos: "right: 9%; top: -40px", s: 104, c: "#ff6fae", r: 12, d: "-1s" },
-  { pos: "right: -50px; top: 48%", s: 100, c: "#ff8a1f", r: -14, d: "-3s" },
-  { pos: "right: 30%; bottom: -44px", s: 80, c: "#8e5be8", r: 6, d: "-5s" },
+  { pos: "left: 2%; top: -8px", s: 96, c: "#ffc23a", r: -10, d: "0s" },
+  { pos: "left: -26px; top: 42%", s: 116, c: "#7fd3f7", r: 8, d: "-2s" },
+  { pos: "left: 22%; bottom: -14px", s: 84, c: "#2db866", r: -6, d: "-4s" },
+  { pos: "right: 4%; top: 6px", s: 104, c: "#ff6fae", r: 12, d: "-1s" },
+  { pos: "right: -22px; top: 50%", s: 100, c: "#ff8a1f", r: -14, d: "-3s" },
+  { pos: "right: 26%; bottom: -12px", s: 80, c: "#8e5be8", r: 6, d: "-5s" },
 ];
 ---
 
@@ -33,11 +33,11 @@ const GLOBOS = [
 
 <style>
   .burbujas-puntos {
-    background-image: radial-gradient(rgb(240 70 45 / 0.16) 1.6px, transparent 1.8px);
+    background-image: radial-gradient(rgb(240 70 45 / 0.24) 1.8px, transparent 2px);
     background-size: 26px 26px;
   }
   .burbuja {
-    width: calc(var(--s) * 0.55);
+    width: calc(var(--s) * 0.72);
     rotate: var(--r);
     animation: burbuja-flotar 7s ease-in-out infinite;
     animation-delay: var(--d);

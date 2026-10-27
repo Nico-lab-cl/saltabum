@@ -1,6 +1,7 @@
 ---
 import { COMUNAS } from "../data";
 import Icon from "../components/Icon.astro";
+import Redes from "../components/Redes.astro";
 import WaButton from "../components/WaButton.astro";
 
 const comunas = COMUNAS.flatMap((c) => c.mapa ?? [c.nombre]).length;
@@ -11,14 +12,18 @@ const input =
 <section id="contacto" aria-labelledby="contacto-titulo" class="border-noche bg-arena border-t-2">
   <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-11 lg:flex-row lg:items-start lg:gap-14 lg:px-10 lg:py-20">
     <div class="flex flex-col gap-4 lg:flex-1 lg:gap-4.5">
-      <h2 id="contacto-titulo" class="font-display text-[32px] leading-9 font-semibold lg:text-5xl lg:leading-[52px]">¿Lo reservamos?</h2>
-      <p class="text-noche-suave">Lo más rápido es WhatsApp, o déjanos tus datos y te escribimos hoy mismo</p>
+      <h2 id="contacto-titulo" class="font-display text-[32px] leading-9 font-semibold lg:text-5xl lg:leading-[52px]">Contáctanos</h2>
+      <p class="text-noche-suave lg:text-lg">Nuestros asesores te responderán a la brevedad</p>
       <WaButton placement="contacto" size="l" class="lg:self-start">Escribir por WhatsApp</WaButton>
       <ul class="mt-2 hidden flex-col gap-2.5 lg:flex">
         <li class="flex items-center gap-2.5"><Icon name="puntual" size={22} />Respondemos de [09:00 a 21:00], todos los días</li>
         <li class="flex items-center gap-2.5"><Icon name="despacho" size={22} />Base en Valparaíso, despacho a {comunas} comunas</li>
         <li class="flex items-center gap-2.5"><Icon name="lluvia" size={22} />Si llueve, reprogramamos sin costo</li>
       </ul>
+      <div class="flex items-center gap-3">
+        <p class="text-noche-suave text-sm font-extrabold tracking-[1px] uppercase">Síguenos</p>
+        <Redes />
+      </div>
       <p aria-hidden="true" class="text-noche-suave flex items-center gap-3 text-sm font-bold lg:hidden">
         <span class="border-noche/30 flex-1 border-t-2 border-dashed"></span>o con el formulario<span class="border-noche/30 flex-1 border-t-2 border-dashed"></span>
       </p>

@@ -1,0 +1,51 @@
+---
+import type { GetStaticPaths } from "astro";
+import { getImage } from "astro:assets";
+import Inflable from "@design/pages/Inflable.astro";
+import { INFLABLES, edadTexto, espacioTexto, type Inflable as Datos } from "@design/inflables";
+import { RUTAS } from "@design/seo";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { migasJsonLd, preguntasJsonLd, productoJsonLd } from "@/lib/seo";
+
+export const getStaticPaths = (() =>
+  INFLABLES.map((inflable) => ({
+    params: { slug: inflable.ruta.split("/").filter(Boolean).pop()! },
+    props: { inflable },
+  }))) satisfies GetStaticPaths;
+
+const { inflable } = Astro.props as { inflable: Datos };
+const migas = [
+  { nombre: "Inicio", href: RUTAS.inicio },
+  { nombre: "Inflables", href: RUTAS.inflables },
+  { nombre: inflable.nombre, href: inflable.ruta },
+];
+const imagenes = await Promise.all(
+  // Solo fotos reales del juego (Google las muestra en resultados de producto).
+  inflable.fotos.slice(0, 3).map(async (f) => (await getImage({ src: f.src, width: 1200, format: "jpg" })).src),
+);
+const jsonLd = [
+  migasJsonLd(migas),
+  productoJsonLd({
+    ruta: inflable.ruta,
+    nombre: inflable.nombre,
+    descripcion: inflable.meta.description,
+    imagenes,
+    precio: inflable.precio,
+    medidas: inflable.medidas,
+    edad: inflable.edad,
+    propiedades: [
+      { nombre: "Categoría", valor: inflable.categoria },
+      { nombre: "Superficie total requerida", valor: espacioTexto(inflable) },
+      { nombre: "Área de seguridad", valor: `${inflable.seguridad} metro alrededor del juego` },
+      { nombre: "Capacidad máxima", valor: `${inflable.capacidad} niños a la vez` },
+      { nombre: "Edad recomendada", valor: edadTexto(inflable) },
+      { nombre: "Superficies compatibles", valor: inflable.superficies.join(", ") },
+    ],
+  }),
+  preguntasJsonLd(inflable.ruta, inflable.preguntas),
+];
+---
+
+<BaseLayout {...inflable.meta} jsonLd={jsonLd}>
+  <Inflable inflable={inflable} migas={migas} />
+</BaseLayout>

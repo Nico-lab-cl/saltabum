@@ -13,8 +13,10 @@ interface Props {
   bajada: string;
   placement: string;
   mensaje?: string;
+  /** Precio del sello redondo. En la página de un inflable va su precio y no «desde». */
+  precio?: string;
 }
-const { eyebrow, titulo, destacado, bajada, placement, mensaje } = Astro.props;
+const { eyebrow, titulo, destacado, bajada, placement, mensaje, precio } = Astro.props;
 
 // Parte el título en tres para pintar la palabra clave sin tocar el texto del H1.
 const i = destacado ? titulo.indexOf(destacado) : -1;
@@ -31,13 +33,13 @@ const partes = i < 0 ? null : [titulo.slice(0, i), destacado!, titulo.slice(i + 
         {partes ? (<>{partes[0]}<span class="text-sol">{partes[1]}</span>{partes[2]}</>) : titulo}
       </h1>
       <p class="max-w-[620px] text-lg leading-[27px] lg:text-xl lg:leading-[30px]">{bajada}</p>
-      <div class="flex flex-col gap-3 sm:flex-row lg:mt-1 lg:gap-3.5">
-        <WaButton placement={placement} size="l" message={mensaje} class="text-center leading-[22px]">
-          Consultar disponibilidad por WhatsApp
+      <div class="grid w-fit gap-3 sm:flex sm:w-auto lg:mt-1 lg:gap-3.5">
+        <WaButton placement={placement} size="l" message={mensaje} class="text-center leading-[22px] whitespace-nowrap">
+          <span class="lg:hidden">Consultar por WhatsApp</span><span class="hidden lg:inline">Consultar disponibilidad por WhatsApp</span>
         </WaButton>
         <a
           href={RUTAS.reservar}
-          class="bounce border-crema text-crema hover:bg-crema hover:text-noche inline-flex min-h-12 items-center justify-center rounded-full border-2 px-7 font-extrabold whitespace-nowrap no-underline lg:min-h-15 lg:text-lg"
+          class="bounce border-crema text-crema hover:bg-crema hover:text-noche inline-flex min-h-14 items-center justify-center rounded-full border-2 px-7 font-extrabold whitespace-nowrap no-underline lg:min-h-15 lg:text-lg"
         >
           Ver fechas disponibles
         </a>
@@ -50,8 +52,8 @@ const partes = i < 0 ? null : [titulo.slice(0, i), destacado!, titulo.slice(i + 
     aria-hidden="true"
     class="border-noche bg-celeste text-noche shadow-pop absolute right-6 bottom-8 hidden size-33 -rotate-12 flex-col items-center justify-center rounded-full border-2 text-center lg:flex xl:right-16"
   >
-    <span class="text-sm leading-[15px] font-extrabold">desde</span>
-    <span class="font-display text-[28px] leading-8 font-bold">{DESDE}</span>
+    {!precio && <span class="text-sm leading-[15px] font-extrabold">desde</span>}
+    <span class="font-display text-[28px] leading-8 font-bold">{precio ?? DESDE}</span>
     <span class="text-sm leading-[15px] font-extrabold">{DESDE_HORAS}</span>
   </div>
 </section>

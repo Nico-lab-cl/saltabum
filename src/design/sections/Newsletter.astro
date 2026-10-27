@@ -1,0 +1,65 @@
+---
+// Newsletter casi al final del inicio: nombre y correo para recibir promociones, inflables nuevos y fechas libres.
+// Usa el contrato de formularios (<form data-lead-form="newsletter">): queda en /admin › Consultas como «newsletter»,
+// no cambia de página ni cuenta como conversión de anuncios.
+import Icon from "../components/Icon.astro";
+
+const campo =
+  "border-noche bg-blanco text-noche placeholder:text-noche-suave/70 min-h-13 w-full min-w-0 rounded-full border-2 px-5 group-data-[state=sending]:bg-arena";
+const BENEFICIOS = ["Promociones antes que nadie", "Inflables nuevos", "Fechas libres del mes"];
+---
+
+<section id="newsletter" aria-labelledby="newsletter-titulo" class="border-noche bg-rosa text-noche relative isolate overflow-hidden border-t-2">
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(rgb(31_42_92/0.14)_1.8px,transparent_2px)] bg-[length:24px_24px]"></div>
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:flex-row lg:items-center lg:gap-14 lg:px-10 lg:py-16">
+    <div class="flex flex-col gap-3 lg:flex-1">
+      <span class="border-noche bg-sol shadow-pop flex size-14 items-center justify-center rounded-full border-2">
+        <Icon name="correo" size={28} strokeWidth={2.2} />
+      </span>
+      <h2 id="newsletter-titulo" class="font-display text-[30px] leading-[34px] font-semibold lg:text-[44px] lg:leading-[48px]">
+        Entérate primero de nuestras promociones
+      </h2>
+      <ul class="flex flex-wrap gap-2 text-sm font-extrabold">
+        {
+          BENEFICIOS.map((b) => (
+            <li class="border-noche bg-crema flex items-center gap-1.5 rounded-full border-2 px-3 py-1">
+              <Icon name="check" size={16} strokeWidth={3} />
+              {b}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <form
+      data-lead-form="newsletter"
+      data-lead-exito="¡Listo! Te avisaremos de las próximas promociones."
+      class="group border-noche bg-crema shadow-pop-l flex flex-col gap-3 rounded-[28px] border-2 p-4 lg:flex-1 lg:p-7"
+    >
+      <label class="flex flex-col gap-1.5 font-bold">
+        Nombre
+        <input name="nombre" required minlength="2" autocomplete="given-name" placeholder="Camila" class={campo} />
+      </label>
+      <label class="flex flex-col gap-1.5 font-bold">
+        Correo
+        <input name="email" type="email" required autocomplete="email" inputmode="email" placeholder="tu@correo.cl" class={campo} />
+      </label>
+      <input type="hidden" name="extra.interes" value="Promociones y novedades" />
+      <input name="website" hidden tabindex="-1" autocomplete="off" />
+      <button
+        type="submit"
+        class="bounce bg-rojo-texto border-noche shadow-pop min-h-13 cursor-pointer rounded-full border-2 px-8 text-[17px] font-extrabold text-white group-data-[state=sending]:pointer-events-none group-data-[state=sending]:opacity-75"
+      >
+        <span class="group-data-[state=sending]:hidden">Suscribirme</span>
+        <span class="hidden group-data-[state=sending]:inline">Enviando…</span>
+      </button>
+      <p
+        data-lead-message
+        aria-live="polite"
+        class="text-noche-suave text-xs leading-5 group-data-[state=error]:font-bold group-data-[state=error]:text-rojo-texto group-data-[state=success]:border-noche group-data-[state=success]:bg-verde-burbuja group-data-[state=success]:rounded-xl group-data-[state=success]:border-2 group-data-[state=success]:px-3.5 group-data-[state=success]:py-3 group-data-[state=success]:text-sm group-data-[state=success]:font-bold group-data-[state=success]:text-noche"
+      >
+        Sin spam, te das de baja cuando quieras. Más en la <a href="/politica-de-privacidad" class="text-azul-texto underline">política de privacidad</a>
+      </p>
+    </form>
+  </div>
+</section>

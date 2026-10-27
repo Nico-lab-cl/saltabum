@@ -1,8 +1,10 @@
 ---
-// Barra fija inferior (solo mobile). Se esconde mientras el formulario de contacto o la reserva están en pantalla.
+// Barra fija inferior (celular y tablet): WhatsApp, Contacto y Llamar, del mismo ancho. Se esconde mientras el formulario
+// de contacto o la reserva están en pantalla.
 import { PUBLIC_WHATSAPP_NUMBER } from "astro:env/client";
 import Icon from "../components/Icon.astro";
 import WaButton from "../components/WaButton.astro";
+import { RUTAS } from "../seo";
 
 const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
 ---
@@ -10,16 +12,23 @@ const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
 <nav
   aria-label="Contacto rápido"
   data-sticky-bar
-  class="border-noche bg-crema fixed inset-x-0 bottom-0 z-30 flex gap-2.5 border-t-2 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] transition-transform duration-200 data-[oculta]:translate-y-full motion-reduce:transition-none lg:hidden"
+  class="border-noche bg-blanco shadow-[0_-8px_24px_rgb(31_42_92/0.12)] fixed inset-x-0 bottom-0 z-30 grid auto-cols-fr grid-flow-col gap-2 border-t-2 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] transition-transform duration-200 data-[oculta]:translate-y-full motion-reduce:transition-none lg:hidden"
 >
-  <WaButton placement="sticky" size="m" class="flex-1">WhatsApp</WaButton>
+  <WaButton placement="sticky" size="m" icon={false} class="min-w-0 gap-1.5 !px-2 text-[15px] max-[419px]:min-h-14 max-[419px]:flex-col max-[419px]:gap-0.5 max-[419px]:text-[13px] max-[419px]:leading-4"><Icon name="whatsapp" size={20} class="shrink-0" />WhatsApp</WaButton>
+  <a
+    href={RUTAS.contacto}
+    class="bounce border-noche bg-sol text-noche inline-flex min-h-13 min-w-0 items-center justify-center gap-1.5 rounded-full border-2 px-2 text-[15px] font-extrabold max-[419px]:min-h-14 max-[419px]:flex-col max-[419px]:gap-0.5 max-[419px]:text-[13px] max-[419px]:leading-4 no-underline shadow-[0_3px_0_var(--color-noche)]"
+  >
+    <Icon name="correo" size={20} class="shrink-0" />
+    Contacto
+  </a>
   {
     telefono && (
       <a
         href={`tel:+${telefono}`}
-        class="bounce border-noche bg-blanco text-noche inline-flex min-h-13 items-center gap-1.5 rounded-full border-2 px-4.5 font-extrabold no-underline"
+        class="bounce border-noche bg-blanco text-noche inline-flex min-h-13 min-w-0 items-center justify-center gap-1.5 rounded-full border-2 px-2 text-[15px] font-extrabold max-[419px]:min-h-14 max-[419px]:flex-col max-[419px]:gap-0.5 max-[419px]:text-[13px] max-[419px]:leading-4 no-underline shadow-[0_3px_0_var(--color-noche)]"
       >
-        <Icon name="telefono" size={20} />
+        <Icon name="telefono" size={20} class="shrink-0" />
         Llamar
       </a>
     )

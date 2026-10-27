@@ -51,7 +51,13 @@ export function productoJsonLd(opts: {
   descripcion: string;
   imagenes: string[];
   precio: number;
+  /** Medidas en metros. */
+  medidas?: { largo: number; ancho: number; alto: number };
+  edad?: { desde: number; hasta: number };
+  /** Datos de la ficha técnica (capacidad, superficie requerida, etc.). */
+  propiedades?: { nombre: string; valor: string }[];
 }) {
+  const metros = (value: number) => ({ "@type": "QuantitativeValue", value, unitCode: "MTR" });
   return {
     "@type": "Product",
     "@id": `${abs(opts.ruta)}#producto`,
@@ -60,6 +66,11 @@ export function productoJsonLd(opts: {
     image: opts.imagenes.map(abs),
     brand: { "@type": "Brand", name: SITE.name },
     category: "Arriendo de juegos inflables",
+    ...(opts.medidas && { depth: metros(opts.medidas.largo), width: metros(opts.medidas.ancho), height: metros(opts.medidas.alto) }),
+    ...(opts.edad && { audience: { "@type": "PeopleAudience", suggestedMinAge: opts.edad.desde, suggestedMaxAge: opts.edad.hasta } }),
+    ...(opts.propiedades && {
+      additionalProperty: opts.propiedades.map((p) => ({ "@type": "PropertyValue", name: p.nombre, value: p.valor })),
+    }),
     offers: {
       "@type": "Offer",
       url: abs(opts.ruta),
@@ -69,5 +80,14 @@ export function productoJsonLd(opts: {
       businessFunction: "http://purl.org/goodrelations/v1#LeaseOut",
       seller: { "@id": `${SITE.url}/#negocio` },
     },
+  };
+}
+
+/** Lista de productos de una página de catálogo, en el mismo orden en que se ven. */
+export function listaJsonLd(ruta: string, items: { nombre: string; ruta: string }[]) {
+  return {
+    "@type": "ItemList",
+    "@id": `${abs(ruta)}#lista`,
+    itemListElement: items.map((it, i) => ({ "@type": "ListItem", position: i + 1, name: it.nombre, url: abs(it.ruta) })),
   };
 }

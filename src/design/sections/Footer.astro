@@ -10,7 +10,7 @@ import { COMUNAS_SEO, NAV, RUTAS } from "../seo";
     <div class="flex flex-col items-start lg:flex-[1.4]">
       <Wordmark negativo class="text-[44px] lg:text-[60px]" />
       <p class="mt-3.5 max-w-[320px] text-sm leading-5 lg:text-[15px] lg:leading-[22px]">
-        Arriendo del Megatobogán Arcoíris para cumpleaños, empresas, colegios, municipios y eventos deportivos, desde Valparaíso
+        Arriendo del Megatobogán Arcoíris, el Castillo Pirata y el Castillo Fórmula 1 para cumpleaños, empresas, colegios, municipios y eventos deportivos, desde Valparaíso
       </p>
     </div>
     <div class="lg:flex-1">
@@ -31,7 +31,12 @@ import { COMUNAS_SEO, NAV, RUTAS } from "../seo";
       <p class="text-sol mb-2.5 text-xs font-extrabold tracking-[1.2px] uppercase">Saltabum</p>
       <ul class="text-[15px]">
         {
-          [{ href: RUTAS.megatobogan, label: "Megatobogán Arcoíris" }, ...NAV].map((n) => (
+          [
+            { href: RUTAS.megatobogan, label: "Megatobogán Arcoíris" },
+            { href: RUTAS.castilloPirata, label: "Castillo Pirata" },
+            { href: RUTAS.castilloFormula1, label: "Castillo Fórmula 1" },
+            ...NAV,
+          ].map((n) => (
             <li>
               <a href={n.href} class="text-crema inline-flex min-h-11 items-center underline">
                 {n.label}

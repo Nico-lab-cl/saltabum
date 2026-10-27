@@ -12,6 +12,8 @@ import { COMUNAS_SEO } from "../seo";
 
 const cantidad = COMUNAS.flatMap((c) => c.mapa ?? [c.nombre]).length;
 const valorDespacho = (d: number) => (d ? `+${pesos(d)}` : "Gratis");
+// Tarjetas ordenadas por valor del despacho (los colores del mapa quedan agrupados).
+const ORDENADAS = [...COMUNAS].sort((a, b) => a.despacho - b.despacho);
 ---
 
 <section
@@ -50,9 +52,9 @@ const valorDespacho = (d: number) => (d ? `+${pesos(d)}` : "Gratis");
       </div>
 
       <!-- Lista de comunas (también es el control accesible del mapa) -->
-      <div role="radiogroup" aria-label="Tu comuna" class="order-3 grid grid-cols-2 gap-2 lg:order-none">
+      <div role="radiogroup" aria-label="Tu comuna" class="order-3 grid auto-rows-fr grid-cols-2 gap-2 lg:order-none lg:gap-2.5">
         {
-          COMUNAS.map((c, i) => (
+          ORDENADAS.map((c, i) => (
             <button
               type="button"
               role="radio"
@@ -62,11 +64,13 @@ const valorDespacho = (d: number) => (d ? `+${pesos(d)}` : "Gratis");
               data-zonas={c.zonas}
               data-despacho={c.despacho}
               data-color={colorTramo(c.despacho)}
-              class="bounce border-noche bg-blanco aria-checked:bg-noche aria-checked:text-crema aria-checked:shadow-sol flex min-h-14 cursor-pointer items-center gap-2.5 rounded-2xl border-2 px-3 py-2 text-left"
+              class:list={["bounce border-noche bg-blanco aria-checked:bg-noche aria-checked:text-crema aria-checked:shadow-sol flex h-full min-h-16 cursor-pointer flex-col items-start justify-center gap-1 rounded-2xl border-2 px-3.5 py-2.5 text-left", ORDENADAS.length % 2 === 1 && i === ORDENADAS.length - 1 && "col-span-2"]}
             >
-              <span class:list={["border-noche size-4 shrink-0 rounded-full border-2", BG_TRAMO[colorTramo(c.despacho)]]} />
-              <span class="min-w-0 flex-1 leading-5 font-extrabold">{c.nombre}</span>
-              <span class="shrink-0 text-sm font-bold">{valorDespacho(c.despacho)}</span>
+              <span class="flex w-full min-w-0 items-center gap-2">
+                <span class:list={["border-noche size-3.5 shrink-0 rounded-full border-2", BG_TRAMO[colorTramo(c.despacho)]]} />
+                <span class="min-w-0 leading-5 font-extrabold">{c.nombre}</span>
+              </span>
+              <span class="pl-5.5 text-sm leading-4 font-bold opacity-80">{c.despacho ? valorDespacho(c.despacho) : "Despacho gratis"}</span>
             </button>
           ))
         }

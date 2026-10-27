@@ -14,7 +14,7 @@ const jsonLd = [
     "@id": `${SITE.url}/#arriendo-inflables`,
     name: "Arriendo de juegos inflables",
     serviceType: "Arriendo de juegos inflables para eventos",
-    description: `Arriendo del ${PRODUCTO.nombre} (${PRODUCTO.base}, ${PRODUCTO.alto} de alto, para niños de ${PRODUCTO.edad}) con despacho, montaje, anclaje y retiro incluidos.`,
+    description: `Arriendo del ${PRODUCTO.nombre} (${PRODUCTO.base}, ${PRODUCTO.alto} de alto, para niños de ${PRODUCTO.edad}) con despacho, montaje y retiro incluidos.`,
     provider: { "@id": `${SITE.url}/#negocio` },
     areaServed: SITE.comunas.map((name) => ({ "@type": "City", name })),
     offers: {

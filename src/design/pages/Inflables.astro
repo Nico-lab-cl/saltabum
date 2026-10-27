@@ -1,13 +1,13 @@
 ---
-// /inflables/ — catálogo de juegos inflables. Hoy hay uno; cada inflable nuevo es una tarjeta más.
-import { Image } from "astro:assets";
-import fotoFrenteIzq from "../assets/megatobogan-frente-izq.jpg";
-import { DESDE, DESDE_HORAS, HORA_EXTRA, PRODUCTO } from "../data";
-import { COMUNAS_SEO, RUTAS } from "../seo";
+// /inflables/ — catálogo de juegos inflables: una tarjeta por inflable (src/design/inflables.ts) y la tabla para compararlos.
+import { DESDE, DESDE_HORAS, HORA_EXTRA } from "../data";
+import { INFLABLES, edadTexto, espacioTexto, medidas, pesos, type Inflable } from "../inflables";
+import { COMUNAS_SEO } from "../seo";
 import CtaFinal from "../components/CtaFinal.astro";
 import HeroInterior from "../components/HeroInterior.astro";
 import Icon from "../components/Icon.astro";
 import Seccion from "../components/Seccion.astro";
+import TarjetaInflable from "../components/TarjetaInflable.astro";
 import Videos from "../sections/Videos.astro";
 import WaButton from "../components/WaButton.astro";
 import PaginaSeo, { type Miga } from "../layouts/PaginaSeo.astro";
@@ -17,10 +17,21 @@ interface Props {
 }
 const { migas } = Astro.props;
 
+/** Filas de la tabla comparativa. La última es el precio. */
+const COMPARAR: { t: string; v: (i: Inflable) => string; destacar?: boolean }[] = [
+  { t: "Medidas (largo × ancho × alto)", v: medidas },
+  { t: "Espacio libre que necesita", v: espacioTexto, destacar: true },
+  { t: "Capacidad máxima", v: (i) => `${i.capacidad} niños` },
+  { t: "Edad recomendada", v: edadTexto },
+  { t: "Zonas de juego", v: (i) => i.caracteristicas.join(", ") },
+  { t: "Pasto, cemento o interior", v: () => "Sí, los tres" },
+  { t: `Precio por ${DESDE_HORAS}`, v: (i) => pesos(i.precio) },
+];
+
 const INCLUYE = [
   { icon: "despacho", t: "Despacho a la V Región", d: "Gratis en Valparaíso y Viña del Mar, $5.000 a Concón, Quilpué y Villa Alemana" },
-  { icon: "anclaje", t: "Montaje y anclaje", d: "Lo dejamos listo en 30 minutos, fijado al piso con estacas o sacos de lastre" },
-  { icon: "sanitizado", t: "Inflable sanitizado", d: "Lo limpiamos y desinfectamos antes de cada arriendo" },
+  { icon: "estrella", t: "Calidad en nuestros juegos", d: "Inflables en buen estado, revisados antes de cada evento" },
+  { icon: "calendario", t: "+15 eventos en la V Región", d: "Cumpleaños, colegios y empresas que ya saltaron con nosotros" },
   { icon: "puntual", t: `${DESDE_HORAS} de juego`, d: `Y cada hora adicional por ${HORA_EXTRA}` },
 ] as const;
 ---
@@ -29,43 +40,64 @@ const INCLUYE = [
   <HeroInterior
     eyebrow="Catálogo de inflables"
     titulo="Arriendo de juegos inflables en la V Región"
-    bajada={`Juegos inflables para cumpleaños, colegios, empresas y eventos desde ${DESDE} por ${DESDE_HORAS}, con despacho, montaje, anclaje y retiro incluidos`}
+    bajada={`Juegos inflables para cumpleaños, colegios, empresas y eventos desde ${DESDE} por ${DESDE_HORAS}, con despacho, montaje y retiro incluidos`}
     destacado="V Región"
     placement="inflables-hero"
   />
 
-  <Seccion titulo="Nuestros juegos inflables" eyebrow="Elige tu inflable" fondo="blanco">
-    <ul class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-      <li class="border-noche bg-crema shadow-pop flex flex-col overflow-hidden rounded-[28px] border-2">
-        <Image
-          src={fotoFrenteIzq}
-          alt={`${PRODUCTO.nombre} instalado sobre pasto`}
-          widths={[400, 700]}
-          sizes="(min-width: 1024px) 400px, 92vw"
-          class="border-noche aspect-[3/2] w-full border-b-2 object-cover"
-        />
-        <div class="flex flex-1 flex-col gap-3 p-5">
-          <h3 class="font-display text-2xl leading-7 font-semibold">{PRODUCTO.nombre}</h3>
-          <p class="text-noche-suave">Tobogán doble, túneles y arcos para niños de {PRODUCTO.edad}</p>
-          <p class="text-sm font-bold">{PRODUCTO.base} · {PRODUCTO.alto} de alto</p>
-          <p class="font-display text-[28px] leading-8 font-bold">Desde {DESDE} <span class="text-base font-semibold">· {DESDE_HORAS}</span></p>
-          <div class="mt-auto flex flex-wrap gap-2.5">
-            <a
-              href={RUTAS.megatobogan}
-              class="bounce border-noche bg-sol text-noche inline-flex min-h-12 flex-1 items-center justify-center rounded-full border-2 px-5 font-extrabold no-underline"
-            >
-              Ver ficha y medidas
-            </a>
-            <WaButton placement="catalogo" size="m" message={`Hola, quiero consultar el ${PRODUCTO.nombre}. Vengo de saltabum.cl`}>Consultar</WaButton>
-          </div>
-        </div>
-      </li>
-      <li class="border-noche/40 text-noche-suave flex flex-col items-start justify-center gap-3 rounded-[28px] border-2 border-dashed p-6">
-        <Icon name="check" size={28} />
-        <p class="font-display text-noche text-2xl leading-7 font-semibold">Pronto más inflables</p>
-        <p>Estamos sumando nuevos juegos. Si buscas algo especial para tu evento, escríbenos y te contamos</p>
-      </li>
+  <Seccion titulo="Nuestros juegos inflables" eyebrow="Elige tu inflable" bajada="Cada juego tiene su ficha técnica con medidas, espacio que necesita, capacidad y edad" fondo="blanco">
+    <ul class="grid gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-7">
+      {
+        INFLABLES.map((i) => (
+          <li>
+            <TarjetaInflable inflable={i} placement="catalogo" />
+          </li>
+        ))
+      }
     </ul>
+  </Seccion>
+
+  <Seccion titulo="Compara y elige según tu espacio" eyebrow="Ficha técnica" bajada="Mide tu patio o salón y revisa que quepa el juego con 1 metro de seguridad por lado" fondo="arena">
+    <div class="border-noche bg-blanco shadow-pop-l overflow-x-auto rounded-[28px] border-2" role="region" aria-label="Tabla comparativa de inflables" tabindex="0">
+      <table class="w-full min-w-[640px] text-left">
+        <caption class="sr-only">Medidas, espacio, capacidad, edad y precio de cada inflable</caption>
+        <thead>
+          <tr class="border-noche border-b-2">
+            <td class="w-[26%] p-4 lg:px-6"></td>
+            {INFLABLES.map((i) => <th scope="col" class="font-display p-4 text-lg leading-6 font-semibold lg:px-6 lg:text-xl">{i.nombre}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {
+            COMPARAR.map((fila, n) => (
+              <tr class:list={["border-arena border-b-2 last:border-b-0", fila.destacar && "bg-crema"]}>
+                <th scope="row" class="p-4 font-bold lg:px-6">{fila.t}</th>
+                {INFLABLES.map((i) => <td class:list={["p-4 lg:px-6", fila.destacar && "font-extrabold", n === COMPARAR.length - 1 && "font-display text-xl font-bold"]}>{fila.v(i)}</td>)}
+              </tr>
+            ))
+          }
+          <tr>
+            <td class="p-4 lg:px-6"><span class="sr-only">Ficha</span></td>
+            {
+              INFLABLES.map((i) => (
+                <td class="p-4 lg:px-6">
+                  <a href={i.ruta} class="text-azul-texto inline-flex min-h-11 items-center font-extrabold underline">Ver ficha técnica</a>
+                </td>
+              ))
+            }
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="border-noche bg-azul shadow-pop-l flex flex-col gap-4 rounded-[28px] border-2 p-5 md:flex-row md:items-center md:justify-between lg:p-8">
+      <div>
+        <p class="font-display text-[26px] leading-8 font-semibold lg:text-3xl">¿No sabes si cabe en tu patio?</p>
+        <p class="mt-1 font-semibold">Mándanos una foto con las medidas y te decimos cuál conviene</p>
+      </div>
+      <WaButton placement="catalogo-comparar" size="l" message="Hola, quiero saber qué inflable cabe en mi patio, te mando una foto. Vengo de saltabum.cl" class="shrink-0">
+        Enviar foto por WhatsApp
+      </WaButton>
+    </div>
   </Seccion>
 
   <Videos fondo="crema" />

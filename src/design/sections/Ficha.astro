@@ -1,166 +1,25 @@
 ---
-// Ficha del Megatobogán: galería (las miniaturas cambian la foto grande), datos, precio y botón de WhatsApp.
-import { getImage } from "astro:assets";
-import type { ImageMetadata } from "astro";
-import realFrente from "../assets/megatobogan-real-frente.jpg";
-import realTobogan from "../assets/megatobogan-real-tobogan.jpg";
-import realTrasera from "../assets/megatobogan-real-trasera.jpg";
-import realCostado from "../assets/megatobogan-real-costado.jpg";
-import { DESDE_HORAS, HORA_EXTRA, PRECIO_NORMAL, PRODUCTO } from "../data";
+// Ficha de un inflable sobre el cielo celeste, en la página de cada inflable. En el inicio van los 3 en un carrusel
+// (NuestrosInflables). El contenido está en components/FichaInflable.astro.
+import { inflable as buscar, type Inflable } from "../inflables";
 import Cielo from "../components/Cielo.astro";
-import Icon from "../components/Icon.astro";
-import WaButton from "../components/WaButton.astro";
-import { RUTAS } from "../seo";
+import FichaInflable from "../components/FichaInflable.astro";
 
-// Solo fotos reales del juego. Son verticales, así que `pos` elige qué parte se ve en el marco 3:2.
-type Foto = { src: ImageMetadata; alt: string; real?: boolean; pos?: string };
-const FOTOS: Foto[] = [
-  { src: realFrente, alt: `Foto real del ${PRODUCTO.nombre} de frente, con la pista del tobogán, el arco verde y los túneles`, real: true, pos: "50% 30%" },
-  { src: realTobogan, alt: `Foto real del costado del ${PRODUCTO.nombre} con las dos pistas de tobogán y el túnel redondo`, real: true, pos: "50% 40%" },
-  { src: realTrasera, alt: `Foto real de la parte trasera del ${PRODUCTO.nombre} con la entrada para trepar`, real: true, pos: "50% 48%" },
-  { src: realCostado, alt: `Foto real del ${PRODUCTO.nombre} armado en la calle, visto de lado con su soplador`, real: true, pos: "50% 47%" },
-];
-const GALERIA = await Promise.all(
-  FOTOS.map(async (f) => ({
-    ...f,
-    grande: await getImage({ src: f.src, widths: [480, 800, 1200], format: "webp", quality: 82 }),
-    mini: await getImage({ src: f.src, width: 240, format: "webp", quality: 70 }),
-  })),
-);
-const principal = GALERIA[0];
-const DATOS = [
-  { label: "Edad", valor: PRODUCTO.edad },
-  { label: "Base", valor: PRODUCTO.base },
-  { label: "Alto", valor: PRODUCTO.alto },
-  { label: "Espacio libre", valor: PRODUCTO.espacioLibre },
-  { label: "Enchufe", valor: "A menos de 15 m" },
-  { label: "Montaje", valor: "30 minutos" },
-];
-const INCLUYE = [
-  "Despacho gratis en Valparaíso y Viña del Mar",
-  "Montaje incluido",
-  "Retiro al terminar el arriendo",
-  `Hora adicional ${HORA_EXTRA}`,
-  "Reservas con $20.000 de abono, que se descuentan del total",
-];
+interface Props {
+  inflable?: Inflable;
+  enPagina?: boolean;
+}
+const { inflable = buscar("megatobogan"), enPagina = false } = Astro.props;
 ---
 
-<section id="megatobogan" aria-labelledby="ficha-titulo" class="border-noche bg-celeste text-noche relative isolate overflow-hidden border-b-2" data-cielo>
+<section id={inflable.id} aria-label={`Ficha del ${inflable.nombre}`} class="border-noche bg-celeste text-noche relative isolate overflow-hidden border-b-2" data-cielo>
   <Cielo />
-  <div data-cielo-contenido class="pointer-events-none mx-auto flex max-w-[1320px] flex-col md:max-w-[680px] lg:max-w-[1320px] gap-5 px-4 py-10 lg:flex-row lg:items-start lg:gap-14 lg:px-10 lg:py-20">
-    <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-3">
-      <div class="pointer-events-auto lg:hidden">
-        <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Nuestro inflable</p>
-        <p class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold">{PRODUCTO.nombre}</p>
-        <p class="mt-2">Tobogán doble y túneles, de {PRODUCTO.edad}</p>
-      </div>
-
-      <div class="pointer-events-auto flex flex-col gap-2.5 lg:gap-3">
-        <div class="border-noche bg-blanco shadow-pop relative aspect-[3/2] overflow-hidden rounded-[28px] border-2 lg:rounded-[36px]" data-galeria>
-          <img
-            data-galeria-principal
-            src={principal.grande.src}
-            srcset={principal.grande.srcSet.attribute}
-            sizes="(min-width: 1024px) 600px, 92vw"
-            width="1200"
-            height="800"
-            alt={principal.alt}
-            loading="lazy"
-            decoding="async"
-            class="size-full object-cover"
-            style={principal.pos ? `object-position:${principal.pos}` : undefined}
-          />
-          <span data-galeria-real hidden={!principal.real} class="bg-noche text-crema absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-[11px] leading-[18px] font-extrabold tracking-[1px] uppercase lg:top-4 lg:left-4 lg:text-xs">
-            Foto real · nuestro juego
-          </span>
-        </div>
-        <ul class="grid grid-cols-4 gap-2 lg:gap-3" aria-label="Fotos del Megatobogán">
-          {
-            GALERIA.map((g, i) => (
-              <li>
-                <button
-                  type="button"
-                  data-galeria-mini
-                  data-src={g.grande.src}
-                  data-srcset={g.grande.srcSet.attribute}
-                  data-alt={g.alt}
-                  data-real={g.real ? "1" : undefined}
-                  data-pos={g.pos}
-                  aria-label={`Ver foto ${i + 1}: ${g.alt}`}
-                  aria-pressed={i === 0 ? "true" : "false"}
-                  class="border-noche bg-blanco aria-pressed:shadow-sol aria-pressed:border-[3px] block aspect-square w-full cursor-pointer overflow-hidden rounded-xl border-2 lg:rounded-2xl"
-                >
-                  <img src={g.mini.src} alt="" width="240" height="160" loading="lazy" decoding="async" class="size-full object-cover" style={g.pos ? `object-position:${g.pos}` : undefined} />
-                </button>
-              </li>
-            ))
-          }
-        </ul>
-      </div>
-    </div>
-
-    <div class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-6">
-      <div class="pointer-events-auto hidden lg:block">
-        <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Nuestro inflable</p>
-        <h2 id="ficha-titulo" class="font-display mt-1.5 text-5xl leading-[52px] font-semibold">{PRODUCTO.nombre}</h2>
-        <p class="mt-3 max-w-[520px] text-lg">
-          Rojo, amarillo, azul y verde, con tobogán, túneles y arcos, para niños de {PRODUCTO.edad}
-        </p>
-      </div>
-
-      <dl class="pointer-events-auto grid grid-cols-2 gap-2 lg:grid-cols-3 lg:gap-3">
-        {
-          DATOS.map((d, i) => (
-            <div class:list={["border-noche bg-crema text-noche rounded-xl border-2 px-3 py-2.5 lg:rounded-2xl lg:px-4 lg:py-3", i >= 4 && "hidden lg:block"]}>
-              <dt class="text-noche-suave text-xs font-extrabold tracking-[1px] uppercase">{d.label}</dt>
-              <dd class="font-display mt-0.5 text-xl leading-[26px] font-semibold">{d.valor}</dd>
-            </div>
-          ))
-        }
-      </dl>
-
-      <div class="border-noche bg-sol text-noche shadow-pop-l pointer-events-auto flex flex-col gap-3.5 rounded-[28px] border-2 px-4 py-5 lg:gap-4 lg:p-7">
-        <div>
-          <p class="text-[13px] leading-[18px] font-extrabold tracking-[1px] uppercase">Promoción · arriendo por {DESDE_HORAS}</p>
-          <p class="font-display mt-0.5 text-[56px] leading-[60px] font-bold lg:text-[68px] lg:leading-[72px]">{PRODUCTO.precio}</p>
-          <p class="mt-1 font-semibold">Precio normal <s class="font-extrabold">{PRECIO_NORMAL}</s></p>
-        </div>
-        <ul class="flex flex-col gap-2 font-semibold">
-          {
-            INCLUYE.map((texto, i) => (
-              <li class:list={["items-start gap-2", i >= 3 ? "hidden lg:flex" : "flex"]}>
-                <Icon name="check" size={22} strokeWidth={3} class="mt-px shrink-0" />
-                {texto}
-              </li>
-            ))
-          }
-        </ul>
-        <WaButton placement="ficha" size="l" class="text-center leading-[22px]"><span class="lg:hidden">Consultar por WhatsApp</span><span class="hidden lg:inline">Consultar disponibilidad por WhatsApp</span></WaButton>
-        <a href={RUTAS.megatobogan} class="text-noche inline-flex min-h-11 items-center font-extrabold underline">Ver ficha completa del Megatobogán</a>
-        <p class="hidden text-sm leading-5 lg:block">
-          Concón, Quilpué y Villa Alemana +$5.000 de despacho, Limache y Olmué +$7.000, Casablanca y Quintay +$10.000.
-          <a href="#despacho" class="text-noche font-extrabold underline">Ver tu comuna</a>
-        </p>
-      </div>
-    </div>
+  <div data-cielo-contenido class="pointer-events-none mx-auto max-w-[680px] px-4 py-10 lg:max-w-[1320px] lg:px-10 lg:py-20">
+    <FichaInflable inflable={inflable} enPagina={enPagina} prioridad />
   </div>
 </section>
 
 <script>
-  // Galería: la miniatura elegida pasa a la foto grande.
-  document.querySelectorAll<HTMLElement>("[data-galeria]").forEach((marco) => {
-    const grande = marco.querySelector<HTMLImageElement>("[data-galeria-principal]")!;
-    const etiqueta = marco.querySelector<HTMLElement>("[data-galeria-real]")!;
-    const minis = [...(marco.parentElement?.querySelectorAll<HTMLButtonElement>("[data-galeria-mini]") ?? [])];
-    for (const b of minis) {
-      b.addEventListener("click", () => {
-        grande.srcset = b.dataset.srcset ?? "";
-        grande.src = b.dataset.src ?? grande.src;
-        grande.alt = b.dataset.alt ?? "";
-        grande.style.objectPosition = b.dataset.pos ?? "";
-        etiqueta.hidden = !b.dataset.real;
-        minis.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-      });
-    }
-  });
+  import { activarGalerias } from "../components/galeria";
+  activarGalerias();
 </script>

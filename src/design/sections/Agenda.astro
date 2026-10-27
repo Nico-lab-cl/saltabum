@@ -1,12 +1,14 @@
 ---
-// Agenda de reservas por pasos: 1) día en el calendario, 2) duración y hora de inicio (cada 30 minutos entre 09:00
-// y 22:00), 3) comuna y dirección, 4) datos de contacto. Todos los pasos ocupan el mismo alto (se apilan en la misma
+// Agenda de reservas por pasos: 1) día en el calendario (se puede si al menos un inflable tiene horario), 2) juego,
+// duración y hora de inicio (cada 30 minutos entre 09:00 y 22:00; cada inflable tiene su propia disponibilidad),
+// 3) comuna y dirección, 4) datos de contacto. Todos los pasos ocupan el mismo alto (se apilan en la misma
 // celda de la grilla, así el bloque mide lo que el paso más alto y no salta al avanzar). El total queda siempre a la
 // vista: en el pie en celular y en el resumen lateral en escritorio.
 // Reglas y precios: src/lib/reservas.ts. Datos y envío: src/lib/client/reservas.ts.
 import WhatsAppLink from "@/components/core/WhatsAppLink.astro";
 import { APERTURA, CIERRE, HORAS_BASE, HORAS_EXTRA_MAX, REGION, aHora, pesos } from "@/lib/reservas";
 import { ABONO, COMUNAS, HORA_EXTRA, PRODUCTOS } from "../data";
+import { INFLABLES } from "../inflables";
 import Icon from "../components/Icon.astro";
 import Rayos from "../components/Rayos.astro";
 import WaButton from "../components/WaButton.astro";
@@ -19,6 +21,12 @@ const PASOS = [
   { id: "datos", nombre: "Tus datos" },
 ] as const;
 const variosJuegos = PRODUCTOS.length > 1;
+
+interface Props {
+  /** Juego que aparece elegido al abrir la agenda (en la página de cada inflable). */
+  juego?: string;
+}
+const { juego = PRODUCTOS[0].id } = Astro.props;
 
 /** Casilla de formulario con la etiqueta adentro, arriba y en chico (como un checkout). */
 const caja =
@@ -38,14 +46,15 @@ const botonRedondo =
 
 <section id="reservar" aria-labelledby="agenda-titulo" class="border-noche bg-sol text-noche relative isolate overflow-clip border-b-2" data-agenda>
   <Rayos x="78%" y="8%" />
-  <div class="mx-auto flex max-w-[1320px] flex-col gap-6 px-4 py-10 lg:gap-9 lg:px-10 lg:py-20">
-    <div>
-      <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Reserva en línea</p>
-      <h2 id="agenda-titulo" class="font-display mt-1.5 text-[34px] leading-[38px] font-semibold lg:text-5xl lg:leading-[52px]">
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-4 px-4 py-8 lg:gap-9 lg:px-10 lg:py-20">
+    <!-- Placa translúcida: le da peso al título sin tapar los rayos del sol -->
+    <div class="border-noche bg-crema/75 shadow-pop w-fit max-w-full rounded-[24px] border-2 px-4 py-3 backdrop-blur-sm lg:rounded-[28px] lg:px-7 lg:py-5">
+      <p class="text-rojo-texto text-xs font-extrabold tracking-[1.2px] uppercase">Reserva en línea</p>
+      <h2 id="agenda-titulo" class="font-display mt-1 text-[28px] leading-[32px] font-semibold lg:mt-1.5 lg:text-5xl lg:leading-[52px]">
         Elige tu fecha y horario
       </h2>
-      <p class="mt-2 max-w-[640px] lg:mt-3 lg:text-lg">
-        Reserva en 4 pasos, con la hora que quieras desde las {aHora(APERTURA)} y el total siempre a la vista
+      <p class="mt-1.5 max-w-[640px] text-[15px] leading-[21px] lg:mt-3 lg:text-lg lg:leading-7">
+        Reserva en 4 pasos<span class="hidden sm:inline">, con la hora que quieras desde las {aHora(APERTURA)}</span> y el total siempre a la vista
       </p>
     </div>
 
@@ -66,9 +75,9 @@ const botonRedondo =
                   data-ir={p.id}
                   disabled={i > 0}
                   aria-current={i === 0 ? "step" : undefined}
-                  class="group aria-[current=step]:bg-sol flex min-h-15 w-full cursor-pointer flex-col items-center justify-center gap-1 px-1 py-2 text-[12px] leading-4 font-extrabold disabled:cursor-default sm:flex-row sm:gap-2 sm:text-sm lg:min-h-16 lg:text-[15px]"
+                  class="group aria-[current=step]:bg-sol flex min-h-12 w-full cursor-pointer items-center justify-center gap-1.5 px-1 py-1.5 text-[12px] leading-4 font-extrabold disabled:cursor-default sm:gap-2 sm:text-sm lg:min-h-16 lg:text-[15px]"
                 >
-                  <span class="border-noche bg-blanco group-aria-[current=step]:bg-noche group-aria-[current=step]:text-crema group-data-hecho:bg-verde flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-[13px] group-disabled:opacity-50">
+                  <span class="border-noche bg-blanco group-aria-[current=step]:bg-noche group-aria-[current=step]:text-crema group-data-hecho:bg-verde flex size-6 shrink-0 items-center justify-center rounded-full border-2 text-[12px] group-disabled:opacity-50 sm:size-7 sm:text-[13px]">
                     <span class="group-data-hecho:hidden">{i + 1}</span>
                     <Icon name="check" size={15} strokeWidth={3.2} class="hidden group-data-hecho:block" />
                   </span>
@@ -80,27 +89,12 @@ const botonRedondo =
         </ol>
 
         <!-- Escenario: los pasos apilados -->
-        <div class="grid flex-1 p-4 sm:p-5 lg:p-7">
+        <div class="grid flex-1 p-3.5 sm:p-5 lg:p-7">
           <!-- 1 · Fecha -->
           <div data-paso="fecha" class={capa}>
             <h3 tabindex="-1" class={tituloPaso}>¿Qué día es tu evento?</h3>
-            {
-              variosJuegos ? (
-                <fieldset class="flex flex-wrap gap-2">
-                  <legend class="sr-only">Juego</legend>
-                  {PRODUCTOS.map((p, i) => (
-                    <label class="border-noche has-checked:bg-noche has-checked:text-crema bg-crema flex min-h-11 cursor-pointer items-center gap-2 rounded-full border-2 px-3.5 text-sm font-extrabold">
-                      <input type="radio" name="producto" value={p.id} checked={i === 0} class="accent-sol size-4" data-producto />
-                      {p.nombre} · {pesos(p.precio)}
-                    </label>
-                  ))}
-                </fieldset>
-              ) : (
-                <input type="hidden" name="producto" value={PRODUCTOS[0].id} data-producto />
-              )
-            }
-            <div class="grid flex-1 content-between gap-4 lg:grid-cols-[minmax(0,1fr)_200px] lg:content-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_230px]">
-              <div class="flex min-w-0 flex-col gap-3">
+            <div class="grid flex-1 content-between gap-3 lg:grid-cols-[minmax(0,1fr)_200px] lg:content-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_230px]">
+              <div class="flex min-w-0 flex-col gap-2 lg:gap-3">
                 <div class="flex items-center justify-between gap-3">
                   <button type="button" data-mes-anterior aria-label="Mes anterior" class={botonRedondo}>
                     <Icon name="flecha" size={20} strokeWidth={2.6} class="rotate-180" />
@@ -113,19 +107,18 @@ const botonRedondo =
                 <div class="grid grid-cols-7 gap-1.5 text-center" aria-hidden="true">
                   {DIAS_SEMANA.map((d) => <span class="text-noche-suave text-xs font-extrabold tracking-[1px]">{d}</span>)}
                 </div>
-                <div data-dias class="grid min-h-[282px] grid-cols-7 content-start gap-1.5 lg:min-h-[318px]"></div>
+                <div data-dias class="grid min-h-[260px] grid-cols-7 content-start gap-1 sm:min-h-[282px] sm:gap-1.5 lg:min-h-[318px]"></div>
                 <p data-agenda-estado class="text-noche-suave text-sm">Cargando disponibilidad…</p>
               </div>
               <div class="flex flex-col gap-3 lg:pt-14">
-                <ul class="flex flex-wrap gap-x-4 gap-y-2 text-sm lg:flex-col" aria-label="Simbología">
+                <ul class="flex flex-wrap gap-x-3 gap-y-1 text-[13px] lg:flex-col lg:gap-y-2 lg:text-sm" aria-label="Simbología">
                   <li class="flex items-center gap-2"><span class="border-noche bg-verde-burbuja size-4 rounded border-2"></span>Con horarios libres</li>
                   <li class="flex items-center gap-2"><span class="border-noche bg-sol size-4 rounded border-2"></span>Quedan pocos</li>
                   <li class="flex items-center gap-2"><span class="border-noche/30 bg-arena size-4 rounded border-2"></span>Sin horarios</li>
                 </ul>
-                <ul class="flex flex-col gap-1.5 text-[13px] leading-5 font-semibold lg:gap-2 lg:text-sm">
-                  <li class="bg-crema flex items-start gap-2 rounded-xl px-3 py-2 lg:py-2.5"><Icon name="puntual" size={18} class="shrink-0" />Inicio desde las {aHora(APERTURA)}, cada 30 minutos</li>
-                  <li class="bg-crema flex items-start gap-2 rounded-xl px-3 py-2 lg:py-2.5"><Icon name="check" size={18} class="shrink-0" />{HORAS_BASE} horas, más hasta {HORAS_EXTRA_MAX} adicionales de {HORA_EXTRA}</li>
-                  <li class="bg-crema flex items-start gap-2 rounded-xl px-3 py-2 lg:py-2.5"><Icon name="despacho" size={18} class="shrink-0" />Montaje y retiro incluidos</li>
+                <ul class="hidden flex-col gap-1.5 text-[13px] leading-5 font-semibold lg:flex lg:gap-2 lg:text-sm">
+                  <li class="bg-crema flex items-start gap-2 rounded-xl px-3 py-2 lg:py-2.5"><Icon name="check" size={18} class="shrink-0" />El día se marca libre si al menos un inflable tiene horario</li>
+                  <li class="bg-crema flex items-start gap-2 rounded-xl px-3 py-2 lg:py-2.5"><Icon name="despacho" size={18} class="shrink-0" />Despacho gratis en Viña y Valparaíso</li>
                 </ul>
               </div>
             </div>
@@ -134,7 +127,7 @@ const botonRedondo =
           <!-- 2 · Horario -->
           <div data-paso="horario" data-oculto inert class={capa}>
             <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-              <h3 tabindex="-1" class={tituloPaso}>¿A qué hora?</h3>
+              <h3 tabindex="-1" class={tituloPaso}>¿Qué juego y a qué hora?</h3>
               <button type="button" data-ir="fecha" class="border-noche bg-crema inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border-2 px-3 text-sm font-extrabold">
                 <Icon name="calendario" size={17} />
                 <span data-res="fecha-corta" class="first-letter:uppercase"></span>
@@ -142,7 +135,29 @@ const botonRedondo =
               </button>
             </div>
 
-            <div class="bg-crema flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-2xl px-3.5 py-2.5">
+            {
+              variosJuegos ? (
+                <fieldset class="min-w-0">
+                  <legend class={`${etiqueta} mb-1.5`}>Juego</legend>
+                  <div class="grid grid-cols-3 gap-2">
+                    {INFLABLES.map((i) => (
+                      <label class="border-noche has-checked:bg-noche has-checked:text-crema has-checked:shadow-sol bg-crema has-disabled:border-noche/25 has-disabled:bg-arena has-disabled:text-noche-suave flex min-h-[84px] min-w-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-1 py-1.5 text-center has-disabled:cursor-not-allowed has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-azul-texto lg:flex-row lg:justify-start lg:gap-2.5 lg:px-3 lg:text-left">
+                        <input type="radio" name="producto" value={i.id} checked={i.id === juego} class="sr-only" data-producto />
+                        <Icon name={i.icono} size={26} strokeWidth={2.2} class="shrink-0" />
+                        <span class="flex min-w-0 flex-col">
+                          <span class="truncate text-[13px] leading-4 font-extrabold lg:text-[15px] lg:leading-5">{i.corto}</span>
+                          <span class="text-xs leading-4 font-bold opacity-80 lg:text-[13px]">{pesos(i.precio)}</span>
+                          <span data-juego-estado={i.id} class="text-[11px] leading-4 font-extrabold lg:text-xs">Elige un día</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ) : (
+                <input type="hidden" name="producto" value={PRODUCTOS[0].id} data-producto />
+              )
+            }
+            <div class="bg-crema flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-2xl px-3.5 py-2">
               <div>
                 <p class={etiqueta}>Duración</p>
                 <p data-horas-extra class="text-noche-suave text-sm">Sin horas extra</p>
@@ -159,7 +174,7 @@ const botonRedondo =
 
             <div class="flex flex-col gap-2">
               <p class={etiqueta}>Hora de inicio</p>
-              <div data-inicios role="group" aria-label="Hora de inicio" class="grid grid-cols-4 gap-1.5 min-[360px]:grid-cols-5 sm:grid-cols-6 sm:gap-2 xl:grid-cols-7"></div>
+              <div data-inicios role="group" aria-label="Hora de inicio" class="grid grid-cols-5 gap-1.5 min-[360px]:grid-cols-6 sm:gap-2 xl:grid-cols-7"></div>
               <p data-inicio-resumen aria-live="polite" class="text-noche-suave text-sm">Elige a qué hora quieres que esté listo el juego</p>
             </div>
             <WhatsAppLink
@@ -176,17 +191,17 @@ const botonRedondo =
           <div data-paso="comuna" data-oculto inert class={capa}>
             <div>
               <h3 tabindex="-1" class={tituloPaso}>¿Dónde es el evento?</h3>
-              <p class="text-noche-suave mt-1 text-sm lg:text-base">El despacho depende de la comuna; el montaje y el retiro van siempre incluidos</p>
+              <p class="text-noche-suave mt-1 hidden text-sm sm:block lg:text-base">El despacho depende de la comuna</p>
             </div>
             <fieldset>
               <legend class="sr-only">Comuna del evento</legend>
               <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {
                   COMUNAS.map((c) => (
-                    <label class="border-noche has-checked:bg-noche has-checked:text-crema has-checked:shadow-sol bg-crema flex min-h-15 cursor-pointer flex-col justify-center gap-0.5 rounded-xl border-2 px-3 py-2 has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-azul-texto">
+                    <label class="border-noche has-checked:bg-noche has-checked:text-crema has-checked:shadow-sol bg-crema flex min-h-12 cursor-pointer flex-col justify-center rounded-xl border-2 px-3 py-1.5 has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-azul-texto sm:min-h-15 sm:gap-0.5 sm:py-2">
                       <input type="radio" name="comuna" value={c.nombre} class="sr-only" data-comuna data-ciudades={(c.ciudades ?? c.mapa ?? [c.nombre]).join("|")} />
-                      <span class="leading-5 font-extrabold">{c.nombre}</span>
-                      <span class="text-sm font-semibold opacity-80">{c.despacho ? `+${pesos(c.despacho)} despacho` : "Despacho gratis"}</span>
+                      <span class="text-[15px] leading-5 font-extrabold sm:text-base">{c.nombre}</span>
+                      <span class="text-[13px] leading-4 font-semibold opacity-80 sm:text-sm">{c.despacho ? `+${pesos(c.despacho)} despacho` : "Despacho gratis"}</span>
                     </label>
                   ))
                 }
@@ -198,15 +213,15 @@ const botonRedondo =
                 <span class={cajaEtiqueta}>Dirección</span>
                 <input name="direccion" required autocomplete="address-line1" placeholder="Calle y número" class={cajaInput} />
               </label>
-              <label class={`${caja} col-span-2 sm:col-span-1`}>
-                <span class={cajaEtiqueta}>Casa, depto, block <Fragment set:html={opcional} /></span>
+              <label class={caja}>
+                <span class={cajaEtiqueta}>Casa o depto <Fragment set:html={opcional} /></span>
                 <input name="depto" autocomplete="address-line2" placeholder="Ej.: casa 12 o depto 304" class={cajaInput} />
               </label>
               <label class={caja}>
                 <span class={cajaEtiqueta}>Ciudad</span>
                 <input name="ciudad" required autocomplete="address-level2" list="agenda-ciudades" data-ciudad class={cajaInput} />
               </label>
-              <label class={`${caja} bg-arena/60 cursor-default`}>
+              <label class={`${caja} bg-arena/60 cursor-default max-sm:hidden`}>
                 <span class={cajaEtiqueta}>Región</span>
                 <input name="region" value={REGION} readonly autocomplete="address-level1" class={`${cajaInput} text-noche-suave`} />
               </label>
@@ -247,7 +262,7 @@ const botonRedondo =
               </label>
               <label class={`${caja} col-span-2`}>
                 <span class={cajaEtiqueta}>Mensaje <Fragment set:html={opcional} /></span>
-                <textarea name="mensaje" rows="2" placeholder="Tipo de evento, cantidad de niños, pasto o cemento" class={`${cajaInput} resize-none`}></textarea>
+                <textarea name="mensaje" rows="1" placeholder="Tipo de evento, cantidad de niños, pasto o cemento" class={`${cajaInput} resize-none sm:min-h-12`}></textarea>
               </label>
             </div>
             <input name="website" hidden tabindex="-1" autocomplete="off" />
@@ -281,7 +296,7 @@ const botonRedondo =
           </button>
           <div class="min-w-0 flex-1 lg:hidden" aria-live="polite">
             <p data-mini-detalle class="text-noche-suave truncate text-xs leading-4 font-semibold"></p>
-            <p class="leading-7 whitespace-nowrap"><span class="hidden text-sm font-extrabold min-[360px]:inline">Total </span><span data-mini-total class="font-display text-[22px] font-bold"></span></p>
+            <p class="truncate leading-7 whitespace-nowrap"><span class="hidden text-sm font-extrabold min-[360px]:inline">Total </span><span data-mini-total class="font-display text-[22px] font-bold"></span></p>
           </div>
           <span class="hidden flex-1 lg:block"></span>
           <button
@@ -290,9 +305,9 @@ const botonRedondo =
             disabled
             class="bounce bg-rojo-texto border-noche shadow-pop flex min-h-13 shrink-0 cursor-pointer items-center gap-2 rounded-full border-2 px-4 text-base font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none min-[360px]:px-5 sm:px-6 lg:text-[17px]"
           >
-            <!-- En pantallas muy angostas basta con «Continuar»; el paso ya dice qué falta. -->
-            <span data-siguiente-texto class="hidden min-[360px]:inline">Elige un día</span>
-            <span class="min-[360px]:hidden">Continuar</span>
+            <!-- En celulares angostos basta con «Continuar»; el paso ya dice qué falta. -->
+            <span data-siguiente-texto class="hidden min-[400px]:inline">Elige un día</span>
+            <span class="min-[400px]:hidden">Continuar</span>
             <Icon name="flecha" size={18} strokeWidth={2.8} class="hidden min-[360px]:block" />
           </button>
           <button
@@ -442,9 +457,28 @@ const botonRedondo =
     /** Hasta qué paso se puede llegar: el primero que falta completar. */
     const alcanzable = () => ORDEN.findIndex((p) => !completo[p]());
 
-    /** Horas de inicio libres ese día para el juego y la duración elegidos. */
-    const libres = (fecha: string, h = horas) =>
-      iniciosPosibles(h).filter((m) => estaLibre(fecha, producto(), m, h, disp?.ocupados ?? []));
+    /** Horas de inicio libres ese día para un juego (por defecto el elegido) y la duración. */
+    const libres = (fecha: string, h = horas, juego = producto()) =>
+      iniciosPosibles(h).filter((m) => estaLibre(fecha, juego, m, h, disp?.ocupados ?? []));
+    /** Lo más libre que está el día entre todos los juegos: el día se puede elegir si al menos uno tiene horario. */
+    const libresDelDia = (fecha: string) => Math.max(...PRODUCTOS.map((p) => libres(fecha, HORAS_BASE, p.id).length));
+    const radiosJuego = $$<HTMLInputElement>("input[type=radio][data-producto]");
+
+    /** Marca en cada juego si ese día tiene horarios y deshabilita los que no. Si el elegido no tiene, elige otro. */
+    function pintarJuegos() {
+      if (!dia || !radiosJuego.length) return;
+      for (const r of radiosJuego) {
+        const n = libres(dia, horas, r.value).length;
+        r.disabled = n === 0;
+        const marca = root.querySelector<HTMLElement>(`[data-juego-estado="${r.value}"]`);
+        if (marca) marca.textContent = n === 0 ? "Ocupado" : n < 8 ? "Quedan pocos" : "Disponible";
+      }
+      const elegido = radiosJuego.find((r) => r.checked);
+      if (!elegido || elegido.disabled) {
+        const otro = radiosJuego.find((r) => !r.disabled);
+        if (otro) otro.checked = true;
+      }
+    }
 
     // ── Navegación entre pasos ────────────────────────────────────────────────
     function irA(destino: Paso, enfocar = true) {
@@ -513,15 +547,15 @@ const botonRedondo =
         boton.textContent = String(d);
         boton.dataset.fecha = fecha;
         const fuera = fecha < disp.desde || fecha > disp.hasta;
-        // El color del día se calcula con la duración base (3 horas).
-        const n = fuera ? 0 : libres(fecha, HORAS_BASE).length;
+        // El color del día se calcula con la duración base (3 horas) y el juego más libre ese día.
+        const n = fuera ? 0 : libresDelDia(fecha);
         const tipo = fuera ? "fuera" : n === 0 ? "lleno" : n < 8 ? "pocos" : "libre";
         boton.disabled = tipo === "fuera" || tipo === "lleno";
         boton.setAttribute("aria-pressed", String(fecha === dia));
         const textoEstado = { fuera: "no disponible", lleno: "sin horarios", pocos: "quedan pocos horarios", libre: "con horarios libres" }[tipo];
         boton.setAttribute("aria-label", `${fechaLarga.format(aFecha(fecha))}, ${textoEstado}`);
         boton.className =
-          "min-h-11 cursor-pointer rounded-xl border-2 text-[15px] font-extrabold aria-pressed:bg-noche aria-pressed:text-crema aria-pressed:border-noche aria-pressed:shadow-sol disabled:cursor-not-allowed lg:min-h-12 lg:text-base " +
+          "min-h-10 cursor-pointer rounded-xl border-2 text-[15px] font-extrabold sm:min-h-11 aria-pressed:bg-noche aria-pressed:text-crema aria-pressed:border-noche aria-pressed:shadow-sol disabled:cursor-not-allowed lg:min-h-12 lg:text-base " +
           {
             fuera: "border-transparent text-noche-suave/40",
             lleno: "border-noche/20 bg-arena text-noche-suave line-through",
@@ -536,6 +570,7 @@ const botonRedondo =
     function elegirDia(fecha: string) {
       dia = fecha;
       gridDias.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.fecha === fecha)));
+      pintarJuegos();
       pintarInicios();
       irA("horario");
     }
@@ -584,6 +619,7 @@ const botonRedondo =
 
     function cambiarHoras(delta: number) {
       horas = Math.min(HORAS_BASE + HORAS_EXTRA_MAX, Math.max(HORAS_BASE, horas + delta));
+      pintarJuegos();
       pintarInicios();
     }
 
@@ -669,7 +705,7 @@ const botonRedondo =
     camposDe("comuna").forEach((c) => c.addEventListener("input", actualizar));
     $$<HTMLInputElement>("[data-producto]").forEach((r) =>
       r.addEventListener("change", () => {
-        pintarMes();
+        inicio = undefined;
         pintarInicios();
         actualizar();
       }),
@@ -680,6 +716,7 @@ const botonRedondo =
       inicio = undefined;
       horas = HORAS_BASE;
       ciudadSugerida = "";
+      radiosJuego.forEach((r) => (r.disabled = false));
       pintarMes();
       irA("fecha");
     });
@@ -771,6 +808,7 @@ const botonRedondo =
         mensaje.textContent = "";
         await recargar();
         inicio = undefined;
+        pintarJuegos();
         pintarInicios();
         irA("horario");
         resumenInicio.textContent = "Ese horario se acaba de tomar, elige otro";
@@ -804,6 +842,7 @@ const botonRedondo =
       const elegido = inicio;
       await recargar();
       if (!dia) return;
+      pintarJuegos();
       pintarInicios();
       if (elegido !== undefined && inicio === undefined) {
         if (paso === "comuna" || paso === "datos") irA("horario");

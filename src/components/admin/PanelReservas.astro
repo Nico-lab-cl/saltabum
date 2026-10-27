@@ -68,6 +68,18 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     </ul>
   </div>
 
+  <!-- Inflables del día: cuál está tomado y cuál queda libre (el día elegido en el calendario, o mañana) -->
+  <div class={`${tarjeta} p-4 lg:p-5`} data-inflables-dia>
+    <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+      <div>
+        <p class="font-display text-xl font-semibold">Disponibilidad de inflables</p>
+        <p data-inflables-fecha class="text-noche-suave text-sm font-bold first-letter:uppercase"></p>
+      </div>
+      <p data-inflables-cuenta class="text-sm font-extrabold"></p>
+    </div>
+    <div data-inflables-lista class="mt-3 grid gap-2 md:grid-cols-3"></div>
+  </div>
+
   <!-- Lista -->
   <div class="flex flex-col gap-3">
     <div class="flex flex-wrap items-center gap-2">
@@ -279,7 +291,9 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
   const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const cliente = (f: Fila) => [f.nombre, f.apellido].filter(Boolean).join(" ") || "Sin nombre";
   const horario = (f: Fila) => (f.inicio === 0 && f.fin === 24 * 60 ? "Todo el día" : etiquetaHorario(f.inicio, f.fin));
-  const clp = (n: number) => `$${n.toLocaleString("es-CL")}`;
+  const clp = (n: number) => `${n.toLocaleString("es-CL")}`;
+  /** Nombre corto de cada inflable para las etiquetas del calendario. */
+  const corto = (id: string) => (PRODUCTOS.find((p) => p.id === id)?.nombre ?? id).replace("Castillo ", "").replace(" Arcoíris", "");
 
   let filas: Fila[] = [];
   let hoy = iso(new Date());
@@ -345,7 +359,43 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
   function pintar() {
     pintarResumen();
     pintarCalendario();
+    pintarInflablesDia();
     pintarLista();
+  }
+
+  /** Filas de un inflable ese día (sus reservas y los bloqueos de todos los juegos). */
+  const delInflable = (delDia: Fila[], id: string) => delDia.filter((f) => f.producto === id || f.producto === "todos");
+
+  function pintarInflablesDia() {
+    const manana = iso(new Date(aFecha(hoy).getTime() + 86_400_000));
+    const dia = diaElegido ?? manana;
+    const delDia = filas.filter((f) => f.fecha === dia).sort((a, b) => a.inicio - b.inicio);
+    $("[data-inflables-fecha]").textContent = `${fechaLarga.format(aFecha(dia))}${diaElegido ? "" : " (mañana) · toca un día del calendario para ver otro"}`;
+    const libres = PRODUCTOS.filter((p) => delInflable(delDia, p.id).length === 0).length;
+    $("[data-inflables-cuenta]").textContent = `${libres} de ${PRODUCTOS.length} libres todo el día`;
+    $("[data-inflables-lista]").replaceChildren(
+      ...PRODUCTOS.map((p) => {
+        const suyas = delInflable(delDia, p.id);
+        const caja = document.createElement("div");
+        caja.className = `rounded-2xl border-2 p-3 ${suyas.length ? "border-noche bg-crema" : "border-verde bg-verde-burbuja"}`;
+        const nombre = document.createElement("p");
+        nombre.className = "font-extrabold";
+        nombre.textContent = p.nombre;
+        const estadoTexto = document.createElement("p");
+        estadoTexto.className = "text-sm font-bold";
+        estadoTexto.textContent = suyas.length ? `${suyas.length} ${suyas.length === 1 ? "horario tomado" : "horarios tomados"}` : "Libre todo el día";
+        const lista = document.createElement("ul");
+        lista.className = "mt-1.5 flex flex-col gap-1 text-sm";
+        for (const f of suyas) {
+          const li = document.createElement("li");
+          li.className = f.estado === "bloqueado" ? "chip-bloqueo rounded-md px-1.5" : "bg-blanco rounded-md px-1.5";
+          li.textContent = f.estado === "bloqueado" ? `Bloqueado · ${horario(f)}` : `${horario(f)} · ${cliente(f)}`;
+          lista.append(li);
+        }
+        caja.append(nombre, estadoTexto, lista);
+        return caja;
+      }),
+    );
   }
 
   function pintarResumen() {
@@ -407,7 +457,7 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
         if (i < 3) {
           const c = document.createElement("span");
           c.className = `truncate rounded-md border px-1 text-[11px] leading-4 font-bold ${color}`;
-          c.textContent = f.estado === "bloqueado" ? `Bloq. ${f.inicio === 0 && f.fin === 1440 ? "día" : aHora(f.inicio)}` : `${aHora(f.inicio)} ${f.nombre ?? ""}`;
+          c.textContent = f.estado === "bloqueado" ? `Bloq. ${f.inicio === 0 && f.fin === 1440 ? "día" : aHora(f.inicio)}` : `${aHora(f.inicio)} ${corto(f.producto)} · ${f.nombre ?? ""}`;
           chips.append(c);
         }
       });
@@ -417,7 +467,11 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
         mas.textContent = `+${delDia.length - 3} más`;
         chips.append(mas);
       }
-      celda.append(puntos, chips);
+      const libresDia = PRODUCTOS.filter((p) => delInflable(delDia, p.id).length === 0).length;
+      const cuenta = document.createElement("span");
+      cuenta.className = `mt-auto hidden text-[11px] leading-4 font-extrabold md:block ${libresDia === 0 ? "text-rojo-texto" : "text-noche-suave"}`;
+      cuenta.textContent = delDia.length ? `${libresDia}/${PRODUCTOS.length} libres` : "";
+      celda.append(puntos, chips, cuenta);
       celda.addEventListener("click", () => elegirDia(fecha === diaElegido ? undefined : fecha));
       grilla.append(celda);
     }
@@ -429,6 +483,7 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     chip.hidden = !fecha;
     if (fecha) $("[data-dia-texto]").textContent = `Día: ${fechaCorta.format(aFecha(fecha))}`;
     pintarCalendario();
+    pintarInflablesDia();
     pintarLista();
   }
 

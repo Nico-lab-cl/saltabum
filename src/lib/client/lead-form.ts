@@ -14,6 +14,8 @@
 //
 // Estados para estilos: el form recibe data-state="idle|sending|success|error".
 // Eventos: "lead:success" y "lead:error" (detail con el detalle) en el <form>.
+// Suscripción (data-lead-form="newsletter"): se guarda igual, pero no cuenta como conversión de anuncios ni cambia de
+// página. El mensaje de éxito puede venir en data-lead-exito.
 import { getAttribution } from "./attribution";
 import { hasMarketingConsent } from "./consent";
 import { newEventId, trackConversion } from "./track";
@@ -72,16 +74,20 @@ async function submitLead(form: HTMLFormElement): Promise<void> {
     const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
     if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
 
-    trackConversion("lead", {
-      eventId,
-      params: { form: payload.form_name },
-      userData: consent
-        ? { email: payload.email, phone_number: normalizePhone(payload.telefono) }
-        : undefined,
-    });
-    setState(form, "success", MESSAGES.success);
+    const suscripcion = payload.form_name === "newsletter";
+    if (!suscripcion) {
+      trackConversion("lead", {
+        eventId,
+        params: { form: payload.form_name },
+        userData: consent
+          ? { email: payload.email, phone_number: normalizePhone(payload.telefono) }
+          : undefined,
+      });
+    }
+    setState(form, "success", form.dataset.leadExito ?? MESSAGES.success);
     form.reset();
     form.dispatchEvent(new CustomEvent("lead:success", { detail: { eventId } }));
+    if (suscripcion) return;
 
     // Página de gracias (modo «consulta»). El nombre viaja en sessionStorage, nunca en la URL; la breve espera
     // deja salir los avisos de conversión antes de cambiar de página.

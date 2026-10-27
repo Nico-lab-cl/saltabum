@@ -1,0 +1,132 @@
+---
+// Ficha técnica completa de un inflable, en texto (Google la lee y se ve bien en cualquier pantalla):
+// tabla de datos, plano con la zona de seguridad, qué trae, dónde se instala y normas de uso.
+import { DESDE_HORAS } from "../data";
+import { NORMAS, espacio, espacioTexto, edadTexto, metros, type Inflable } from "../inflables";
+import Icon from "../components/Icon.astro";
+
+interface Props {
+  inflable: Inflable;
+}
+const { inflable: i } = Astro.props;
+const e = espacio(i);
+
+const FILAS = [
+  { t: "Categoría", v: i.categoria },
+  { t: "Dimensiones (largo × ancho × alto)", v: `${metros(i.medidas.largo)} m × ${metros(i.medidas.ancho)} m × ${metros(i.medidas.alto)} m` },
+  { t: "Área de seguridad", v: `${metros(i.seguridad)} metro alrededor del juego` },
+  { t: "Superficie total requerida", v: `${metros(e.largo)} m × ${metros(e.ancho)} m`, fuerte: true },
+  { t: "Capacidad máxima", v: `${i.capacidad} niños a la vez` },
+  { t: "Edad recomendada", v: `Desde ${i.edad.desde} hasta ${i.edad.hasta} años` },
+  { t: "Arriendo", v: `Bloque de ${DESDE_HORAS} con despacho, montaje y retiro` },
+];
+
+// Plano a escala: el juego dentro de su zona de seguridad, en porcentajes del espacio total.
+const plano = {
+  izq: (i.seguridad / e.largo) * 100,
+  arriba: (i.seguridad / e.ancho) * 100,
+  ancho: (i.medidas.largo / e.largo) * 100,
+  alto: (i.medidas.ancho / e.ancho) * 100,
+};
+const tarjeta = "border-noche bg-blanco shadow-pop rounded-[28px] border-2 p-5 lg:p-6";
+const titulo = "font-display mb-4 flex items-center gap-2.5 text-[22px] leading-7 font-semibold";
+const burbuja = "border-noche flex size-9 shrink-0 items-center justify-center rounded-full border-2";
+---
+
+<section id="ficha-tecnica" aria-labelledby="ficha-tecnica-titulo" class="border-noche bg-celeste relative isolate scroll-mt-20 overflow-hidden border-b-2">
+  <!-- Fondo de plano: cuadrícula blanca sobre el celeste del sitio (habla de medidas sin competir con las tarjetas) -->
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(rgb(255_255_255/0.45)_1.5px,transparent_1.5px),linear-gradient(90deg,rgb(255_255_255/0.45)_1.5px,transparent_1.5px)] bg-[length:32px_32px]"></div>
+  <div class="mx-auto flex max-w-[1320px] flex-col gap-5 px-4 py-10 lg:gap-8 lg:px-10 lg:py-16">
+    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div class="border-noche bg-blanco shadow-pop max-w-[760px] rounded-[24px] border-2 px-5 py-4 lg:px-7 lg:py-5">
+        <p class="text-azul-texto text-xs font-extrabold tracking-[1.2px] uppercase">Medidas y seguridad</p>
+        <h2 id="ficha-tecnica-titulo" class="font-display mt-1.5 text-[30px] leading-[36px] font-semibold lg:text-[42px] lg:leading-[48px]">Ficha técnica del {i.nombre}</h2>
+        <p class="text-noche-suave mt-2 lg:mt-3 lg:text-lg">Mide tu patio o salón y revisa que quepa con su metro de seguridad por lado</p>
+      </div>
+      {
+        i.pdf && (
+          <a
+            href={i.pdf}
+            download
+            class="bounce border-noche bg-sol text-noche shadow-pop inline-flex min-h-12 shrink-0 items-center justify-center gap-2 self-start rounded-full border-2 px-5 font-extrabold no-underline md:self-auto"
+          >
+            <Icon name="chevron" size={20} />
+            Descargar ficha en PDF
+          </a>
+        )
+      }
+    </div>
+
+    <div class="grid gap-5 lg:grid-cols-2 lg:gap-8">
+      <div class="border-noche bg-blanco shadow-pop-l overflow-hidden rounded-[28px] border-2">
+        <p class="bg-noche text-crema font-display px-5 py-4 text-xl font-semibold lg:px-7">Especificaciones técnicas</p>
+        <dl class="px-5 pb-3 lg:px-7">
+          {
+            FILAS.map((f, n) => (
+              <div class:list={["flex flex-col gap-0.5 py-3 sm:grid sm:grid-cols-2 sm:gap-4", n < FILAS.length - 1 && "border-arena border-b-2"]}>
+                <dt class="text-noche-suave text-sm font-bold sm:text-noche sm:text-base">{f.t}</dt>
+                <dd class:list={["text-lg font-bold sm:text-base", f.fuerte ? "sm:font-extrabold" : "sm:font-medium"]}>{f.v}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+
+      <figure class="border-noche bg-blanco shadow-pop-l m-0 flex flex-col overflow-hidden rounded-[28px] border-2">
+        <p class="bg-verde border-noche font-display border-b-2 px-5 py-4 text-xl font-semibold lg:px-7">Plano con zona de seguridad</p>
+        <div class="flex flex-1 flex-col justify-center gap-3 p-5 lg:p-7">
+          <div
+            role="img"
+            aria-label={`Plano visto desde arriba. El juego mide ${metros(i.medidas.largo)} por ${metros(i.medidas.ancho)} metros y necesita ${metros(i.seguridad)} metro libre por cada lado, en total ${metros(e.largo)} por ${metros(e.ancho)} metros`}
+            class="mx-auto grid w-full max-w-[460px] grid-cols-[1fr_auto] grid-rows-[1fr_auto] gap-1.5"
+          >
+            <div class="border-exito bg-verde-burbuja relative rounded-2xl border-2 border-dashed" style={`aspect-ratio:${e.largo}/${e.ancho}`}>
+              <div
+                class="border-noche bg-sol font-display absolute flex items-center justify-center rounded-lg border-2 text-center text-lg leading-5 font-semibold lg:text-xl"
+                style={`left:${plano.izq}%;top:${plano.arriba}%;width:${plano.ancho}%;height:${plano.alto}%`}
+              >
+                {metros(i.medidas.largo)} × {metros(i.medidas.ancho)} m
+              </div>
+              <span class="text-exito absolute top-0 left-1/2 -translate-x-1/2 text-xs font-extrabold sm:text-sm" style={`height:${plano.arriba}%;display:flex;align-items:center`}>{metros(i.seguridad)} m</span>
+              <span class="text-exito absolute top-1/2 left-0 -translate-y-1/2 text-center text-xs font-extrabold sm:text-sm" style={`width:${plano.izq}%`}>{metros(i.seguridad)} m</span>
+            </div>
+            <span class="border-noche flex items-center border-l-2 pl-1.5 text-sm font-extrabold sm:text-base">{metros(e.ancho)} m</span>
+            <span class="border-noche border-t-2 pt-0.5 text-center text-sm font-extrabold sm:text-base">{metros(e.largo)} m</span>
+          </div>
+          <figcaption class="text-noche-suave text-center text-[15px]">
+            Necesitas un espacio plano de <strong class="text-noche">{espacioTexto(i)}</strong>, sin ramas ni cables encima
+          </figcaption>
+        </div>
+      </figure>
+    </div>
+
+    <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
+      <div class={tarjeta}>
+        <h3 class={titulo}><span class:list={[burbuja, "bg-rosa"]}><Icon name="check" size={18} strokeWidth={3} /></span>Qué trae el juego</h3>
+        <ul class="flex flex-col gap-2 font-semibold">
+          {i.caracteristicas.map((c) => <li class="bg-crema rounded-xl px-4 py-3">{c}</li>)}
+        </ul>
+      </div>
+      <div class={tarjeta}>
+        <h3 class={titulo}><span class:list={[burbuja, "bg-verde"]}><Icon name="ubicacion" size={18} /></span>Dónde se puede instalar</h3>
+        <ul class="flex flex-col gap-2 font-semibold">
+          {
+            i.superficies.map((s) => (
+              <li class="bg-verde-burbuja flex items-center justify-between rounded-xl px-4 py-3">
+                {s}
+                <span class="text-exito inline-flex items-center gap-1 font-extrabold"><Icon name="check" size={18} strokeWidth={3} />Sí</span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+      <div class:list={[tarjeta, "md:col-span-2 lg:col-span-1"]}>
+        <h3 class={titulo}><span class:list={[burbuja, "bg-rojo"]}><Icon name="check" size={18} strokeWidth={3} /></span>Normas de uso</h3>
+        <ul class="flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-6">
+          {NORMAS.map((n) => <li>{n}</li>)}
+        </ul>
+        <p class="text-noche-suave mt-3 text-sm">Para niños de {edadTexto(i)}, máximo {i.capacidad} a la vez</p>
+      </div>
+    </div>
+  </div>
+</section>

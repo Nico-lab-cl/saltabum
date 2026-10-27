@@ -1,16 +1,20 @@
 ---
-// Íconos de las redes sociales de Saltabum (perfiles en src/config/site.ts). Botones redondos de 44 px.
+// Íconos de las redes sociales de Saltabum (perfiles en src/config/site.ts). Botones redondos de 44 px, cada red con
+// un color de la paleta de la marca (ícono noche encima, como el resto de los botones de color).
 import { SITE } from "@/config/site";
 import Icon, { type IconName } from "./Icon.astro";
 
 interface Props {
   class?: string;
-  /** Clases de cada botón (color de fondo, borde). */
+  /** Clases de cada botón (borde, color del ícono). Sin `color`, cada red lleva su color de marca. */
   boton?: string;
+  /** false: todas con el fondo de `boton` en vez de su color. */
+  color?: boolean;
 }
-const { class: className, boton = "border-noche bg-blanco text-noche" } = Astro.props;
+const { class: className, boton = "border-noche text-noche", color = true } = Astro.props;
 
 const ICONOS: Record<string, IconName> = { Instagram: "instagram", Facebook: "facebook", TikTok: "tiktok" };
+const COLORES: Record<string, string> = { Instagram: "bg-rosa", Facebook: "bg-azul", TikTok: "bg-celeste" };
 ---
 
 <ul class:list={["flex items-center gap-2", className]} aria-label="Redes sociales">
@@ -23,7 +27,7 @@ const ICONOS: Record<string, IconName> = { Instagram: "instagram", Facebook: "fa
           rel="noopener"
           aria-label={`Saltabum en ${r.nombre}`}
           title={r.nombre}
-          class:list={["bounce flex size-11 items-center justify-center rounded-full border-2 no-underline", boton]}
+          class:list={["bounce shadow-pop-s flex size-11 items-center justify-center rounded-full border-2 no-underline", boton, color ? (COLORES[r.nombre] ?? "bg-blanco") : "bg-blanco"]}
         >
           <Icon name={ICONOS[r.nombre] ?? "flecha"} size={20} strokeWidth={2.2} />
         </a>

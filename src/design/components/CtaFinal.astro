@@ -16,7 +16,7 @@ const { titulo = "Reserva tu fecha hoy", placement, mensaje } = Astro.props;
   <div class="mx-auto flex max-w-[1320px] flex-col items-start gap-5 px-4 py-12 lg:flex-row lg:items-center lg:justify-between lg:px-10 lg:py-16">
     <div>
       <h2 class="font-display text-[30px] leading-[36px] font-semibold lg:text-[42px] lg:leading-[48px]">{titulo}</h2>
-      <p class="mt-2 lg:text-lg">Desde {DESDE} por {DESDE_HORAS}, con montaje, anclaje y retiro incluidos</p>
+      <p class="mt-2 lg:text-lg">Desde {DESDE} por {DESDE_HORAS}, con montaje y retiro incluidos</p>
     </div>
     <div class="flex flex-col gap-3 sm:flex-row">
       <WaButton placement={placement} size="l" message={mensaje}>WhatsApp</WaButton>

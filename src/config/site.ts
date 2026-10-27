@@ -3,7 +3,7 @@ export const SITE = {
   name: "Saltabum",
   legalName: "Saltabum y Entretenciones",
   businessDescription:
-    "Arriendo de juegos inflables para cumpleaños, empresas, colegios, municipios y eventos deportivos en la Región de Valparaíso, con despacho, montaje, anclaje y retiro incluidos.",
+    "Arriendo de juegos inflables para cumpleaños, empresas, colegios, municipios y eventos deportivos en la Región de Valparaíso, con despacho, montaje y retiro incluidos.",
   comunas: ["Valparaíso", "Viña del Mar", "Concón", "Quilpué", "Villa Alemana", "Limache", "Olmué"],
   url: "https://saltabum.cl",
   locale: "es_CL",
@@ -19,7 +19,7 @@ export const SITE = {
   lang: "es-CL",
   defaultTitle: "Saltabum · Arriendo de juegos inflables en Valparaíso",
   defaultDescription:
-    "Arriendo de juegos inflables en la Región de Valparaíso desde $69.990 por 3 horas, con montaje, anclaje y retiro. Cumpleaños, empresas, colegios y municipios.",
+    "Arriendo de juegos inflables en la Región de Valparaíso desde $49.990 por 3 horas, con despacho, montaje y retiro. Cumpleaños, empresas, colegios y municipios.",
   defaultOgImage: "/og-saltabum-v2.jpg",
   defaultOgImageAlt: "Saltabum y Entretenciones, arriendo de juegos inflables en la Región de Valparaíso desde $69.990",
   // Mensaje prellenado al abrir WhatsApp desde el sitio

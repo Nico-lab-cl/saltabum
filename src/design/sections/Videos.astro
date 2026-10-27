@@ -1,104 +1,151 @@
 ---
-// Videos reales de los inflables (public/videos). Se reproducen sin sonido solo mientras están en pantalla.
+// Galería de videos reales de los inflables (public/videos). Se reproducen sin sonido solo mientras están en pantalla.
+// Con varios videos es un carrusel con flechas y un filtro rápido por juego (ícono de cada inflable). Con uno solo
+// (página de cada inflable) el video va al lado de una tarjeta con sus datos y los botones para reservar.
 // Al cambiar un video, súbele la versión al nombre: /videos se guarda 7 días en caché.
-import { PRODUCTO } from "../data";
-import { RUTAS } from "../seo";
+import { DESDE_HORAS, mensajeWhatsapp } from "../data";
+import { INFLABLES, edadTexto, espacioTexto, medidas, pesos, type Inflable } from "../inflables";
+import Icon from "../components/Icon.astro";
 import Seccion from "../components/Seccion.astro";
 import WaButton from "../components/WaButton.astro";
 
 interface Props {
   /** Muestra solo estos videos (por id). Sin esto, van todos. */
-  solo?: string[];
+  solo?: Inflable["id"][];
   titulo?: string;
-  bajada?: string;
   fondo?: "crema" | "blanco" | "arena" | "celeste" | "verde";
 }
 
-const VIDEOS = [
-  {
-    id: "megatobogan",
-    nombre: PRODUCTO.nombre,
-    detalle: "Tobogán doble, túneles y muro para escalar",
-    archivo: "megatobogan-v1",
-    href: RUTAS.megatobogan,
-  },
-  {
-    id: "castillo-formula-1",
-    nombre: "Castillo Fórmula 1",
-    detalle: "Castillo con tobogán y obstáculos adentro",
-    archivo: "castillo-naranjo-v1",
-  },
-  {
-    id: "castillo-pirata",
-    nombre: "Castillo Pirata",
-    detalle: "Castillo con tobogán y circuito de obstáculos",
-    archivo: "castillo-rayas-v1",
-  },
-];
+const ARCHIVOS: Record<Inflable["id"], string> = {
+  megatobogan: "megatobogan-v1",
+  "castillo-pirata": "castillo-rayas-v1",
+  "castillo-formula-1": "castillo-naranjo-v1",
+};
 
-const {
-  solo,
-  titulo = "Así están nuestros inflables",
-  bajada = "Grabados por nosotros, así llegan a tu evento",
-  fondo = "blanco",
-} = Astro.props;
-const lista = solo ? VIDEOS.filter((v) => solo.includes(v.id)) : VIDEOS;
-// En celular, con más de un video, es un carrusel horizontal (se desliza con el dedo) para no alargar la página.
-const columnas =
-  lista.length === 1
-    ? "grid max-w-[420px]"
-    : [
-        "-mx-4 flex snap-x snap-mandatory overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0",
-        lista.length === 2 ? "sm:grid-cols-2 max-w-[860px]" : "sm:grid-cols-3",
-      ].join(" ");
-const tarjeta = lista.length === 1 ? "" : "w-[68vw] max-w-[280px] shrink-0 snap-center sm:w-auto sm:max-w-none";
+const { solo, titulo = "Galería", fondo = "blanco" } = Astro.props;
+const lista = INFLABLES.filter((i) => !solo || solo.includes(i.id));
+const carrusel = lista.length > 1;
+const flecha =
+  "bounce border-noche bg-blanco text-noche shadow-pop-s flex size-12 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 disabled:cursor-default disabled:opacity-40";
 ---
 
-<Seccion titulo={titulo} eyebrow="Videos reales" bajada={bajada} fondo={fondo}>
-  <ul class:list={["gap-4 sm:gap-5 lg:gap-7", columnas]} aria-label="Videos de los inflables">
+<Seccion titulo={titulo} fondo={fondo}>
+  <div class="flex flex-col gap-5" data-galeria-videos>
     {
-      lista.map((v) => (
-        <li class:list={["flex flex-col gap-3", tarjeta]}>
-          <div class="border-noche bg-noche shadow-pop relative aspect-[9/16] overflow-hidden rounded-[28px] border-2">
-            <video
-              data-video-inflable
-              class="size-full object-cover"
-              poster={`/videos/${v.archivo}.webp`}
-              muted
-              loop
-              playsinline
-              preload="none"
-              width="720"
-              height="1280"
-              aria-label={`Video real del ${v.nombre}`}
-            >
-              <source src={`/videos/${v.archivo}.mp4`} type="video/mp4" />
-            </video>
-            <span class="bg-noche text-crema absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-[11px] leading-[18px] font-extrabold tracking-[1px] uppercase">
-              Video real
-            </span>
-          </div>
-          <div>
-            <h3 class="font-display text-xl leading-6 font-semibold sm:text-2xl sm:leading-7">{v.nombre}</h3>
-            <p class="text-noche-suave mt-1 hidden sm:block">{v.detalle}</p>
-          </div>
-          <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-2.5">
-            {v.href && (
-              <a
-                href={v.href}
-                class="bounce border-noche bg-sol text-noche inline-flex min-h-12 flex-1 items-center justify-center rounded-full border-2 px-5 font-extrabold whitespace-nowrap no-underline"
+      carrusel && (
+        <div class="flex items-center gap-2">
+          <div role="group" aria-label="Ver el video de" class="flex min-w-0 flex-1 gap-2 sm:flex-none">
+            {lista.map((v, n) => (
+              <button
+                type="button"
+                data-galeria-ir={n}
+                aria-pressed={n === 0 ? "true" : "false"}
+                class="border-noche bg-blanco text-noche aria-pressed:bg-noche aria-pressed:text-crema aria-pressed:shadow-sol flex min-h-14 min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-2xl border-2 px-2 py-1.5 text-xs leading-4 font-extrabold sm:flex-none sm:flex-row sm:gap-2 sm:rounded-full sm:px-4 sm:text-[15px]"
               >
-                Ver ficha
-              </a>
-            )}
-            <WaButton placement={`videos-${v.id}`} size="m" class="flex-1" message={`Hola, quiero consultar el ${v.nombre}. Lo vi en saltabum.cl`}>
-              Consultar
-            </WaButton>
+                <Icon name={v.icono} size={24} strokeWidth={2.2} class="shrink-0" />
+                <span class="truncate">{v.corto}</span>
+              </button>
+            ))}
           </div>
-        </li>
-      ))
+          <div class="ml-auto hidden gap-2 sm:flex">
+            <button type="button" class={flecha} data-galeria-anterior aria-label="Video anterior">
+              <Icon name="flecha" size={22} strokeWidth={2.6} class="rotate-180" />
+            </button>
+            <button type="button" class={flecha} data-galeria-siguiente aria-label="Video siguiente">
+              <Icon name="flecha" size={22} strokeWidth={2.6} />
+            </button>
+          </div>
+        </div>
+      )
     }
-  </ul>
+
+    <div class:list={["relative", !carrusel && "grid items-center gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-12"]}>
+      <ul
+        data-galeria-pista
+        class:list={[
+          "gap-4 sm:gap-5 lg:gap-7",
+          carrusel
+            ? "-mx-4 flex snap-x snap-mandatory overflow-x-auto px-4 pb-2 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden"
+            : "mx-auto grid w-full max-w-[340px] lg:max-w-none",
+        ]}
+        aria-label="Videos de los inflables"
+      >
+        {
+          lista.map((v) => (
+            <li data-galeria-video class:list={["flex flex-col gap-3 rounded-[30px] transition-shadow duration-300 data-[resaltado]:ring-4 data-[resaltado]:ring-sol", carrusel && "w-[74vw] max-w-[300px] shrink-0 snap-center sm:w-[44%] sm:max-w-none lg:w-auto"]}>
+              <div class="border-noche bg-noche shadow-pop relative aspect-[9/16] overflow-hidden rounded-[28px] border-2">
+                <video
+                  data-video-inflable
+                  class="size-full object-cover"
+                  poster={`/videos/${ARCHIVOS[v.id]}.webp`}
+                  muted
+                  loop
+                  playsinline
+                  preload="none"
+                  width="720"
+                  height="1280"
+                  aria-label={`Video real del ${v.nombre}`}
+                >
+                  <source src={`/videos/${ARCHIVOS[v.id]}.mp4`} type="video/mp4" />
+                </video>
+                <span class="bg-noche text-crema absolute top-3 left-3 rounded-full px-2.5 py-0.5 text-[11px] leading-[18px] font-extrabold tracking-[1px] uppercase">
+                  Video real
+                </span>
+              </div>
+              {carrusel && (
+                <>
+                  <h3 class="font-display text-xl leading-6 font-semibold sm:text-2xl sm:leading-7">{v.nombre}</h3>
+                  <div class="flex gap-2">
+                    <a
+                      href={v.ruta}
+                      class="bounce border-noche bg-sol text-noche inline-flex min-h-12 flex-1 items-center justify-center rounded-full border-2 px-4 font-extrabold whitespace-nowrap no-underline"
+                    >
+                      Ver ficha
+                    </a>
+                    <WaButton placement={`videos-${v.id}`} size="m" class="flex-1 !px-4" message={`Hola, quiero consultar el ${v.nombre}. Lo vi en saltabum.cl`}>
+                      Consultar
+                    </WaButton>
+                  </div>
+                </>
+              )}
+            </li>
+          ))
+        }
+      </ul>
+      {
+        carrusel && (
+          <div class="mt-3 flex justify-center gap-2 sm:hidden">
+            <button type="button" class={flecha} data-galeria-anterior aria-label="Video anterior">
+              <Icon name="flecha" size={22} strokeWidth={2.6} class="rotate-180" />
+            </button>
+            <button type="button" class={flecha} data-galeria-siguiente aria-label="Video siguiente">
+              <Icon name="flecha" size={22} strokeWidth={2.6} />
+            </button>
+          </div>
+        )
+      }
+      {
+        !carrusel && (
+          <div class="border-noche bg-crema shadow-pop-l flex flex-col gap-4 rounded-[28px] border-2 p-5 lg:p-8">
+            <p class="text-azul-texto text-xs font-extrabold tracking-[1.2px] uppercase">Míralo en movimiento</p>
+            <p class="font-display -mt-2 text-[28px] leading-8 font-semibold lg:text-[40px] lg:leading-[44px]">{lista[0].nombre}</p>
+            <p class="text-noche-suave lg:text-lg">{lista[0].resumen}</p>
+            <ul class="flex flex-wrap gap-2 text-sm font-bold" aria-label="Datos clave">
+              <li class="bg-blanco border-noche rounded-full border-2 px-3 py-1">{medidas(lista[0])}</li>
+              <li class="bg-blanco border-noche rounded-full border-2 px-3 py-1">{lista[0].capacidad} niños</li>
+              <li class="bg-blanco border-noche rounded-full border-2 px-3 py-1">{edadTexto(lista[0])}</li>
+              <li class="bg-blanco border-noche rounded-full border-2 px-3 py-1">Necesita {espacioTexto(lista[0])}</li>
+            </ul>
+            <p class="font-display text-[34px] leading-10 font-bold">{pesos(lista[0].precio)} <span class="font-sans text-base font-semibold">por {DESDE_HORAS}</span></p>
+            <div class="flex flex-col gap-2.5 sm:flex-row">
+              <a href="#reservar" class="bounce border-noche bg-sol text-noche shadow-pop inline-flex min-h-13 items-center justify-center rounded-full border-2 px-6 font-extrabold no-underline">Reservar fecha</a>
+              <WaButton placement={`videos-${lista[0].id}-lado`} size="m" message={mensajeWhatsapp(lista[0].nombre)}>Consultar por WhatsApp</WaButton>
+            </div>
+          </div>
+        )
+      }
+    </div>
+  </div>
 </Seccion>
 
 <script>
@@ -119,4 +166,48 @@ const tarjeta = lista.length === 1 ? "" : "w-[68vw] max-w-[280px] shrink-0 snap-
     );
     videos.forEach((v) => io.observe(v));
   } else videos.forEach((v) => (v.controls = true));
+
+  // Carrusel: flechas y filtro rápido por juego. En escritorio se ven los 3 y el filtro resalta el elegido.
+  document.querySelectorAll<HTMLElement>("[data-galeria-videos]").forEach((raiz) => {
+    const pista = raiz.querySelector<HTMLElement>("[data-galeria-pista]");
+    const items = [...raiz.querySelectorAll<HTMLElement>("[data-galeria-video]")];
+    const filtros = [...raiz.querySelectorAll<HTMLButtonElement>("[data-galeria-ir]")];
+    const anteriores = raiz.querySelectorAll<HTMLButtonElement>("[data-galeria-anterior]");
+    const siguientes = raiz.querySelectorAll<HTMLButtonElement>("[data-galeria-siguiente]");
+    if (!pista || items.length < 2) return;
+    let actual = 0;
+    let quitarResalte = 0;
+
+    const marcar = (n: number) => {
+      actual = n;
+      filtros.forEach((b, i) => b.setAttribute("aria-pressed", String(i === n)));
+      anteriores.forEach((b) => (b.disabled = n === 0));
+      siguientes.forEach((b) => (b.disabled = n === items.length - 1));
+    };
+    const ir = (n: number, resaltar = false) => {
+      const i = Math.max(0, Math.min(items.length - 1, n));
+      const desliza = pista.scrollWidth > pista.clientWidth + 4;
+      if (desliza) pista.scrollTo({ left: items[i].offsetLeft - pista.offsetLeft - (pista.clientWidth - items[i].offsetWidth) / 2, behavior: quieto ? "auto" : "smooth" });
+      if (resaltar || !desliza) {
+        items.forEach((it, k) => it.toggleAttribute("data-resaltado", k === i));
+        clearTimeout(quitarResalte);
+        quitarResalte = window.setTimeout(() => items[i].removeAttribute("data-resaltado"), 1600);
+      }
+      marcar(i);
+    };
+
+    anteriores.forEach((b) => b.addEventListener("click", () => ir(actual - 1)));
+    siguientes.forEach((b) => b.addEventListener("click", () => ir(actual + 1)));
+    filtros.forEach((b) => b.addEventListener("click", () => ir(Number(b.dataset.galeriaIr), true)));
+
+    const visto = new IntersectionObserver(
+      (entradas) => {
+        if (pista.scrollWidth <= pista.clientWidth + 4) return;
+        for (const e of entradas) if (e.isIntersecting) marcar(items.indexOf(e.target as HTMLElement));
+      },
+      { root: pista, threshold: 0.6 },
+    );
+    items.forEach((it) => visto.observe(it));
+    marcar(0);
+  });
 </script>

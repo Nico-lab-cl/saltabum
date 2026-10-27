@@ -1,8 +1,8 @@
 ---
 // Barra superior fija. Escritorio (xl): logo, secciones, botón Contacto, WhatsApp, llamar y redes sociales
 // (llamar y redes se ven desde lg).
-// Celular y tablet: logo, Contacto (ícono en celular, botón desde sm), WhatsApp y menú; dentro del menú van las
-// secciones, Contacto, llamar y las redes.
+// Celular y tablet: logo, redes sociales y menú (WhatsApp y llamar van en la barra fija de abajo, StickyBar);
+// dentro del menú van las secciones, Contacto y llamar. Desde sm también se ve el botón Contacto.
 import { PUBLIC_WHATSAPP_NUMBER } from "astro:env/client";
 import Icon from "../components/Icon.astro";
 import Redes from "../components/Redes.astro";
@@ -35,28 +35,18 @@ const actual = Astro.url.pathname;
     </nav>
 
     <div class="ml-auto flex items-center gap-2 xl:ml-0">
-      <!-- Contacto: ícono en celular, botón desde sm -->
-      <a
-        href={RUTAS.contacto}
-        aria-label="Contacto"
-        class="bounce border-noche bg-blanco text-noche flex size-11 items-center justify-center rounded-full border-2 no-underline sm:hidden"
-      >
-        <Icon name="correo" size={20} strokeWidth={2.2} />
-      </a>
+      <!-- Celular y tablet: redes (WhatsApp y llamar van en la barra fija de abajo) -->
+      <Redes class="gap-1.5 lg:hidden" />
       <a
         href={RUTAS.contacto}
         aria-current={actual === RUTAS.contacto ? "page" : undefined}
-        class="bounce border-noche bg-blanco text-noche shadow-pop-s aria-[current=page]:bg-noche aria-[current=page]:text-crema hidden min-h-11 items-center gap-2 rounded-full border-2 px-4 font-extrabold whitespace-nowrap no-underline sm:inline-flex"
+        class="bounce border-noche bg-blanco text-noche shadow-pop-s aria-[current=page]:bg-noche aria-[current=page]:text-crema hidden min-h-11 items-center gap-2 rounded-full border-2 px-4 font-extrabold whitespace-nowrap no-underline md:inline-flex"
       >
         <Icon name="correo" size={19} strokeWidth={2.2} />
         Contacto
       </a>
 
       <WaButton placement="header" size="s" class="whitespace-nowrap max-lg:hidden">WhatsApp</WaButton>
-      <WaButton placement="header" size="s" icon={false} class="size-11 !px-0 lg:hidden">
-        <span class="sr-only">Escríbenos por WhatsApp</span>
-        <Icon name="whatsapp" size={22} />
-      </WaButton>
 
       <!-- Desde lg: llamar y redes -->
       <div class="hidden items-center gap-1.5 lg:flex">
@@ -110,10 +100,6 @@ const actual = Astro.url.pathname;
               </a>
             )
           }
-          <div class="border-noche/15 mt-1 border-t-2 px-2 pt-3 pb-1">
-            <p class="text-noche-suave mb-2 text-xs font-extrabold tracking-[1px] uppercase">Síguenos</p>
-            <Redes />
-          </div>
         </nav>
       </details>
     </div>

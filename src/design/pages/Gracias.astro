@@ -234,7 +234,8 @@ const PREPARA = [
       const el = document.querySelector<HTMLElement>(`[data-gracias="${clave}"]`);
       if (el && r[clave]) el.textContent = r[clave];
     }
-    if (r.fecha && r.horario) document.querySelector<HTMLElement>("[data-gracias-resumen]")!.hidden = false;
+    const resumen = document.querySelector<HTMLElement>("[data-gracias-resumen]");
+    if (resumen && r.fecha && r.horario) resumen.hidden = false;
     const wa = document.querySelector<HTMLAnchorElement>("main a[data-track]");
     if (wa && r.whatsapp) {
       const url = new URL(wa.href);

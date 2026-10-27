@@ -1,0 +1,126 @@
+---
+// Inicio: los 3 inflables sobre el cielo con globos, en un carrusel. Se avanza con las flechas, con los botones de
+// cada juego (filtro rápido) o deslizando con el dedo. Cada ficha es components/FichaInflable.astro.
+import { INFLABLES } from "../inflables";
+import Cielo from "../components/Cielo.astro";
+import FichaInflable from "../components/FichaInflable.astro";
+import Icon from "../components/Icon.astro";
+
+const flecha =
+  "bounce border-noche bg-blanco text-noche shadow-pop-s flex size-12 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 disabled:cursor-default disabled:opacity-40";
+---
+
+<section
+  id="nuestros-inflables"
+  aria-labelledby="nuestros-inflables-titulo"
+  aria-roledescription="carrusel"
+  class="border-noche bg-celeste text-noche relative isolate scroll-mt-16 overflow-hidden border-b-2"
+  data-cielo
+  data-carrusel
+>
+  <!-- Ancla antigua (enlaces y anuncios que apuntan a #megatobogan) -->
+  <span id="megatobogan" class="absolute top-0"></span>
+  <Cielo />
+  <div data-cielo-contenido class="pointer-events-none mx-auto flex max-w-[680px] flex-col gap-5 px-4 py-10 lg:max-w-[1320px] lg:gap-8 lg:px-10 lg:py-16">
+    <div class="border-noche bg-noche text-crema shadow-pop pointer-events-auto flex flex-col gap-4 rounded-[28px] border-2 p-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6 lg:px-7 lg:py-5">
+      <div>
+        <p class="text-sol text-xs font-extrabold tracking-[1.2px] uppercase">Nuestros inflables</p>
+        <h2 id="nuestros-inflables-titulo" class="font-display mt-1 text-[30px] leading-[34px] font-semibold lg:text-[40px] lg:leading-[44px]">Elige tu juego</h2>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" class={flecha} data-carrusel-anterior aria-label="Ver el inflable anterior">
+          <Icon name="flecha" size={22} strokeWidth={2.6} class="rotate-180" />
+        </button>
+        <div role="group" aria-label="Elegir inflable" class="flex min-w-0 flex-1 gap-1.5 lg:flex-none">
+          {
+            INFLABLES.map((i, n) => (
+              <button
+                type="button"
+                data-carrusel-ir={n}
+                aria-pressed={n === 0 ? "true" : "false"}
+                aria-label={i.nombre}
+                class="border-crema text-crema aria-pressed:bg-sol aria-pressed:text-noche aria-pressed:border-noche flex min-h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border-2 px-2 text-sm font-extrabold lg:flex-none lg:px-4 lg:text-[15px]"
+              >
+                <Icon name={i.icono} size={22} strokeWidth={2.2} class="shrink-0" />
+                <span class="hidden truncate sm:inline">{i.corto}</span>
+              </button>
+            ))
+          }
+        </div>
+        <button type="button" class={flecha} data-carrusel-siguiente aria-label="Ver el inflable siguiente">
+          <Icon name="flecha" size={22} strokeWidth={2.6} />
+        </button>
+      </div>
+    </div>
+
+    <div
+      data-carrusel-pista
+      tabindex="0"
+      aria-label="Inflables"
+      class="pointer-events-auto -mx-4 flex snap-x snap-mandatory items-start overflow-x-auto overscroll-x-contain px-4 pb-2 [scrollbar-width:none] lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden"
+    >
+      {
+        INFLABLES.map((i, n) => (
+          <div
+            data-carrusel-ficha
+            role="group"
+            aria-roledescription="ficha"
+            aria-label={`${n + 1} de ${INFLABLES.length}: ${i.nombre}`}
+            class="w-full shrink-0 snap-center px-0.5 pb-2"
+          >
+            <FichaInflable inflable={i} nivel="h3" prioridad={n === 0} />
+          </div>
+        ))
+      }
+    </div>
+    <p class="sr-only" aria-live="polite" data-carrusel-estado></p>
+  </div>
+</section>
+
+<script>
+  import { activarGalerias } from "../components/galeria";
+  activarGalerias();
+
+  // Carrusel: flechas, botones de cada juego y deslizar con el dedo. El juego visible se marca en los botones.
+  document.querySelectorAll<HTMLElement>("[data-carrusel]").forEach((raiz) => {
+    const pista = raiz.querySelector<HTMLElement>("[data-carrusel-pista]");
+    const fichas = [...raiz.querySelectorAll<HTMLElement>("[data-carrusel-ficha]")];
+    const botones = [...raiz.querySelectorAll<HTMLButtonElement>("[data-carrusel-ir]")];
+    const anterior = raiz.querySelector<HTMLButtonElement>("[data-carrusel-anterior]");
+    const siguiente = raiz.querySelector<HTMLButtonElement>("[data-carrusel-siguiente]");
+    const estado = raiz.querySelector<HTMLElement>("[data-carrusel-estado]");
+    if (!pista || !fichas.length) return;
+    let actual = 0;
+
+    const marcar = (n: number) => {
+      actual = n;
+      botones.forEach((b, i) => b.setAttribute("aria-pressed", String(i === n)));
+      if (anterior) anterior.disabled = n === 0;
+      if (siguiente) siguiente.disabled = n === fichas.length - 1;
+      if (estado) estado.textContent = fichas[n].getAttribute("aria-label") ?? "";
+    };
+    const ir = (n: number) => {
+      const i = Math.max(0, Math.min(fichas.length - 1, n));
+      pista.scrollTo({ left: fichas[i].offsetLeft - pista.offsetLeft, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      marcar(i);
+    };
+
+    anterior?.addEventListener("click", () => ir(actual - 1));
+    siguiente?.addEventListener("click", () => ir(actual + 1));
+    botones.forEach((b) => b.addEventListener("click", () => ir(Number(b.dataset.carruselIr))));
+    pista.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") ir(actual + 1);
+      if (e.key === "ArrowLeft") ir(actual - 1);
+    });
+
+    // Al deslizar con el dedo, el juego que ocupa más de la mitad de la pista pasa a ser el actual.
+    const visto = new IntersectionObserver(
+      (entradas) => {
+        for (const e of entradas) if (e.isIntersecting) marcar(fichas.indexOf(e.target as HTMLElement));
+      },
+      { root: pista, threshold: 0.55 },
+    );
+    fichas.forEach((f) => visto.observe(f));
+    marcar(0);
+  });
+</script>

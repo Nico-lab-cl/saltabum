@@ -1,0 +1,64 @@
+---
+// Tarjeta de un inflable para el catálogo y para «otros inflables»: foto real, datos clave, precio y botones.
+import { Image } from "astro:assets";
+import { DESDE_HORAS, mensajeWhatsapp } from "../data";
+import { edadTexto, espacioTexto, medidas, pesos, type Inflable } from "../inflables";
+import Icon from "./Icon.astro";
+import WaButton from "./WaButton.astro";
+
+interface Props {
+  inflable: Inflable;
+  placement: string;
+  /** Nivel del título según la página (h2 en el catálogo, h3 dentro de una sección). */
+  nivel?: "h2" | "h3";
+}
+const { inflable: i, placement, nivel = "h3" } = Astro.props;
+const Titulo = nivel;
+const foto = i.fotos[0];
+---
+
+<article class="border-noche bg-blanco shadow-pop-l flex h-full flex-col overflow-hidden rounded-[28px] border-2">
+  <div class="border-noche bg-arena relative aspect-[4/3] border-b-2">
+    <Image
+      src={foto.src}
+      alt={foto.alt}
+      widths={[400, 640, 800]}
+      sizes="(min-width: 1024px) 400px, (min-width: 768px) 46vw, 92vw"
+      class="size-full object-cover"
+      style={foto.pos ? `object-position:${foto.pos}` : undefined}
+    />
+    <span class:list={["border-noche absolute top-3 left-3 rounded-full border-2 px-2.5 py-0.5 text-xs leading-5 font-extrabold tracking-[1px] uppercase", i.precioNormal ? "bg-sol" : "bg-celeste"]}>
+      {i.precioNormal ? "Promoción" : "Nuevo"}
+    </span>
+  </div>
+  <div class="flex flex-1 flex-col gap-3 p-5">
+    <p class="text-noche-suave text-xs font-extrabold tracking-[1.2px] uppercase">{i.tipo}</p>
+    <Titulo class="font-display -mt-1.5 text-[26px] leading-[30px] font-semibold">{i.nombre}</Titulo>
+    <p class="text-noche-suave">{i.resumen}</p>
+    <ul class="flex flex-wrap gap-2 text-sm font-bold" aria-label="Datos clave">
+      <li class="bg-arena rounded-full px-3 py-1">{medidas(i)}</li>
+      <li class="bg-arena rounded-full px-3 py-1">{i.capacidad} niños</li>
+      <li class="bg-arena rounded-full px-3 py-1">{edadTexto(i)}</li>
+    </ul>
+    <p class="text-noche-suave flex items-center gap-2 text-[15px]">
+      <Icon name="ubicacion" size={18} class="shrink-0" />
+      Necesita {espacioTexto(i)} libres
+    </p>
+    <p class="mt-auto flex flex-wrap items-baseline gap-x-2 pt-1">
+      <strong class="font-display text-[32px] leading-9 font-bold">{pesos(i.precio)}</strong>
+      {i.precioNormal && <s class="text-morado-texto font-bold">{pesos(i.precioNormal)}</s>}
+      <span class="text-noche-suave text-sm">por {DESDE_HORAS}</span>
+    </p>
+    <div class="flex gap-2.5">
+      <a
+        href={i.ruta}
+        class="bounce border-noche bg-sol text-noche shadow-pop inline-flex min-h-13 flex-1 items-center justify-center rounded-full border-2 px-5 text-center font-extrabold no-underline"
+      >
+        Ver ficha técnica
+      </a>
+      <WaButton placement={placement} size="m" message={mensajeWhatsapp(i.nombre)} class="px-3.5">
+        <span class="sr-only">Consultar el {i.nombre} por WhatsApp</span>
+      </WaButton>
+    </div>
+  </div>
+</article>

@@ -5,13 +5,13 @@ export const PRODUCTO = {
   edad: "3 a 12 años",
   base: "7,5 × 7,5 m",
   alto: "3,5 m",
-  espacioLibre: "8,5 × 8,5 m",
+  espacioLibre: "9,5 × 9,5 m",
   precio: "$69.990",
 };
 
-// Precio base de los inflables y su bloque de horas. Hoy rige la promoción ($69.990) sobre el precio normal.
-export const DESDE = "$69.990";
-/** Precio normal por el mismo bloque, se muestra tachado junto a la promoción. */
+// Precio más bajo del catálogo (los castillos) y el bloque de horas. El Megatobogán va en promoción a PRODUCTO.precio.
+export const DESDE = "$49.990";
+/** Precio normal del Megatobogán por el mismo bloque, se muestra tachado junto a la promoción. */
 export const PRECIO_NORMAL = "$100.000";
 export const DESDE_HORAS = "3 horas";
 /** Valor de cada hora adicional sobre el bloque base. */
@@ -19,7 +19,7 @@ export const HORA_EXTRA = "$10.000";
 /** Modelo 3D a escala real (scripts/generar-modelo-3d.mjs). Al cambiarlo, súbele la versión al nombre: /modelos se guarda 7 días en caché. */
 /** Juegos que se pueden reservar en la agenda (precio del bloque base en pesos). Cada uno tiene su propia disponibilidad. */
 export const PRODUCTOS = [
-  { id: "megatobogan", nombre: PRODUCTO.nombre, precio: Number(DESDE.replace(/\D/g, "")) },
+  { id: "megatobogan", nombre: PRODUCTO.nombre, precio: Number(PRODUCTO.precio.replace(/\D/g, "")) },
   { id: "castillo-pirata", nombre: "Castillo Pirata", precio: 49990 },
   { id: "castillo-formula-1", nombre: "Castillo Fórmula 1", precio: 49990 },
 ] as const;
@@ -134,8 +134,8 @@ export const FAQS = [
     a: `El ${PRODUCTO.nombre} mide ${PRODUCTO.base} y ${PRODUCTO.alto} de alto; necesita ${PRODUCTO.espacioLibre} libres.`,
   },
   {
-    q: "¿Cómo se ancla?",
-    a: "[Estacas en pasto o sacos de lastre en piso duro]. Nunca dejamos el juego sin anclar.",
+    q: "¿Dónde se puede instalar?",
+    a: "En pasto, cemento o piso interior. Si el viento sube a un nivel peligroso, lo desinflamos.",
   },
   { q: "¿Cuánto demora el montaje?", a: "Unos 30 minutos. Llegamos antes de la hora de inicio." },
   { q: "¿Emiten factura?", a: "Sí, para municipalidades, juntas de vecinos, colegios, empresas y particulares." },

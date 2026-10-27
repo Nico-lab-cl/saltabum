@@ -42,6 +42,9 @@ export default defineConfig({
     plugins: [tailwindcss()],
     // Visor 3D de la sección «¿Cabe en mi patio?»: pre-empaquetado para que el dev server no lo re-optimice al vuelo.
     optimizeDeps: { include: ["@google/model-viewer"] },
+    // Leaflet (mapa del panel QR) en su versión ESM. La versión CommonJS hacía que el bundler dejara sus helpers dentro del
+    // chunk del panel, y el visor 3D del inicio lo importaba: se ejecutaba código del admin en el sitio público y fallaba.
+    resolve: { alias: [{ find: /^leaflet$/, replacement: "leaflet/dist/leaflet-src.esm.js" }] },
   },
   i18n: {
     defaultLocale: "es",
