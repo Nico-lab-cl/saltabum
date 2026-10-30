@@ -25,7 +25,7 @@ const OUT = path.join(ROOT, "docs", "qr", campana);
 const JUEGOS = { "megatobogan-arcoiris": "Megatobogán Arcoíris", "castillo-pirata": "Castillo Pirata", "castillo-formula-1": "Castillo Fórmula 1" };
 const juego = campana.startsWith("3d-") ? JUEGOS[campana.slice(3)] : null;
 if (campana.startsWith("3d-") && !juego) throw new Error(`Inflable desconocido. Usa uno de: ${Object.keys(JUEGOS).map((j) => `3d-${j}`).join(", ")}`);
-const TEXTO = juego ? { titulo: "Míralo en tu espacio", bajada: juego, tamano: 84 } : { titulo: "Escanea y reserva", bajada: "saltabum.cl", tamano: 92 };
+const TEXTO = juego ? { titulo: "Míralo en tu espacio", bajada: juego, tamano: 84 } : { titulo: "Arriendo de inflables", bajada: "Cumpleaños y eventos · saltabum.cl", tamano: 84 };
 fs.mkdirSync(OUT, { recursive: true });
 
 const C = {
