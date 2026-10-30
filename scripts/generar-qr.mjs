@@ -3,6 +3,8 @@
 // Uso (desde la raíz del proyecto):
 //   node scripts/generar-qr.mjs              → https://saltabum.cl/qr        (campaña «general»)
 //   node scripts/generar-qr.mjs volante      → https://saltabum.cl/qr/volante
+//   node scripts/generar-qr.mjs 3d-castillo-pirata → QR del juego: abre su modelo 3D para verlo en tu espacio
+//     (uno por inflable: 3d-megatobogan-arcoiris, 3d-castillo-pirata, 3d-castillo-formula-1)
 // Salida en docs/qr/<campaña>/: tarjeta (SVG, PNG, PDF) y QR suelto (SVG, PNG).
 import fs from "node:fs";
 import path from "node:path";
@@ -18,6 +20,12 @@ const campana = (process.argv[2] ?? "general").toLowerCase();
 if (!/^[a-z0-9-]{1,40}$/.test(campana)) throw new Error("La campaña solo puede tener minúsculas, números y guiones");
 const URL_QR = campana === "general" ? "https://saltabum.cl/qr" : `https://saltabum.cl/qr/${campana}`;
 const OUT = path.join(ROOT, "docs", "qr", campana);
+
+// Los QR «3d-<inflable>» llevan al modelo 3D de ese juego (ver src/pages/qr): la tarjeta lo dice y lleva su nombre.
+const JUEGOS = { "megatobogan-arcoiris": "Megatobogán Arcoíris", "castillo-pirata": "Castillo Pirata", "castillo-formula-1": "Castillo Fórmula 1" };
+const juego = campana.startsWith("3d-") ? JUEGOS[campana.slice(3)] : null;
+if (campana.startsWith("3d-") && !juego) throw new Error(`Inflable desconocido. Usa uno de: ${Object.keys(JUEGOS).map((j) => `3d-${j}`).join(", ")}`);
+const TEXTO = juego ? { titulo: "Míralo en tu espacio", bajada: juego, tamano: 84 } : { titulo: "Escanea y reserva", bajada: "saltabum.cl", tamano: 92 };
 fs.mkdirSync(OUT, { recursive: true });
 
 const C = {
@@ -87,7 +95,7 @@ const qrX = (W - qrLado) / 2;
 const qrY = 400;
 const franja = C.letras.map((color, i) => `<rect x="${(W / 8) * i}" y="${H - 56}" width="${W / 8 + 1}" height="56" fill="${color}"/>`).join("");
 
-const tarjeta = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Escanea y reserva tu inflable en saltabum.cl">
+const tarjeta = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${TEXTO.titulo}, ${TEXTO.bajada}">
   <defs><clipPath id="borde"><rect width="${W}" height="${H}" rx="64"/></clipPath></defs>
   <g clip-path="url(#borde)">
     <rect width="${W}" height="${H}" fill="${C.crema}"/>
@@ -96,8 +104,8 @@ const tarjeta = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}"
   ${anidar("saltabum-logotipo-color.svg", (W - 820) / 2, 70, 820, 296)}
   <rect x="${qrX - 6}" y="${qrY - 6}" width="${qrLado + 12}" height="${qrLado + 12}" rx="56" fill="${C.blanco}" stroke="${C.noche}" stroke-width="10"/>
   <svg x="${qrX + 20}" y="${qrY + 20}" width="${qrLado - 40}" height="${qrLado - 40}" viewBox="0 0 ${total} ${total}">${qrInterior.replace(`<rect width="${total}" height="${total}" fill="${C.blanco}"/>`, "")}</svg>
-  <text x="${W / 2}" y="${qrY + qrLado + 130}" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="600" font-size="92" fill="${C.noche}">Escanea y reserva</text>
-  <text x="${W / 2}" y="${qrY + qrLado + 210}" text-anchor="middle" font-family="Figtree, sans-serif" font-weight="800" font-size="54" fill="#C9361A">saltabum.cl</text>
+  <text x="${W / 2}" y="${qrY + qrLado + 130}" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="600" font-size="${TEXTO.tamano}" fill="${C.noche}">${TEXTO.titulo}</text>
+  <text x="${W / 2}" y="${qrY + qrLado + 210}" text-anchor="middle" font-family="Figtree, sans-serif" font-weight="800" font-size="54" fill="#C9361A">${TEXTO.bajada}</text>
   <rect x="5" y="5" width="${W - 10}" height="${H - 10}" rx="60" fill="none" stroke="${C.noche}" stroke-width="10"/>
 </svg>`;
 fs.writeFileSync(path.join(OUT, `tarjeta-qr-saltabum-${campana}.svg`), tarjeta);

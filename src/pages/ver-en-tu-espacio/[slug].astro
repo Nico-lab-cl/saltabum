@@ -1,0 +1,16 @@
+---
+// /ver-en-tu-espacio/<inflable>/ — a donde lleva el QR de cada inflable: su modelo 3D con el botón de realidad
+// aumentada. Es una herramienta, no una página para buscadores: noindex y fuera del sitemap.
+import type { GetStaticPaths } from "astro";
+import VerEnTuEspacio from "@design/pages/VerEnTuEspacio.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { INFLABLES, slug, type Inflable } from "@design/inflables";
+
+export const getStaticPaths = (() => INFLABLES.map((inflable) => ({ params: { slug: slug(inflable) }, props: { inflable } }))) satisfies GetStaticPaths;
+
+const { inflable: i } = Astro.props as { inflable: Inflable };
+---
+
+<BaseLayout title={`Ver el ${i.nombre} en tu espacio`} description={`Mira el ${i.nombre} a tamaño real en tu espacio con la cámara del celular.`} noindex>
+  <VerEnTuEspacio inflable={i} />
+</BaseLayout>

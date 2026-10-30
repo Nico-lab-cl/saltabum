@@ -6,8 +6,7 @@
 // recién cuando la sección se acerca a la pantalla.
 import { getImage } from "astro:assets";
 import QRCode from "qrcode";
-import { INFLABLES, base, espacioTexto, metros, type Inflable } from "../inflables";
-import { RUTAS } from "../seo";
+import { CAMARA, INFLABLES, base, espacioTexto, metros, verEnTuEspacio, type Inflable } from "../inflables";
 import Cielo from "../components/Cielo.astro";
 import Icon from "../components/Icon.astro";
 import TituloSeccion from "../components/TituloSeccion.astro";
@@ -19,25 +18,21 @@ interface Props {
 }
 const { inicial = "megatobogan" } = Astro.props;
 
-// Póster de cada modelo (su foto real) mientras carga el visor.
+// Póster de cada modelo (su foto real) mientras carga el visor, y su QR (SVG generado en el build), que abre en el
+// celular la página «ver en tu espacio» de ese juego: el modelo 3D con el botón para ponerlo en el suelo con la cámara.
 const MODELOS = await Promise.all(
-  INFLABLES.map(async (i) => ({
-    ...i,
-    poster: (await getImage({ src: i.fotos[0].src, width: 1200, height: 800, fit: "cover", position: "center", format: "webp", quality: 80 })).src,
-    alt: `Modelo 3D del ${i.nombre} a tamaño real: ${base(i)} de base y ${metros(i.medidas.alto)} m de alto`,
-  })),
+  INFLABLES.map(async (i) => {
+    const enlace = new URL(verEnTuEspacio(i), Astro.site).href;
+    return {
+      ...i,
+      poster: (await getImage({ src: i.fotos[0].src, width: 1200, height: 800, fit: "cover", position: "center", format: "webp", quality: 80 })).src,
+      alt: `Modelo 3D del ${i.nombre} a tamaño real: ${base(i)} de base y ${metros(i.medidas.alto)} m de alto`,
+      enlace,
+      qr: await QRCode.toString(enlace, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#1f2a5cff", light: "#ffffffff" } }),
+    };
+  }),
 );
 const primero = MODELOS.find((m) => m.id === inicial) ?? MODELOS[0];
-
-// QR (SVG generado en el build) que abre en el celular la página «ver en tu espacio»: el modelo 3D con el botón
-// para ponerlo en el suelo con la cámara.
-const enlace = new URL(RUTAS.verEnTuEspacio, Astro.site).href;
-const qr = await QRCode.toString(enlace, {
-  type: "svg",
-  margin: 1,
-  errorCorrectionLevel: "M",
-  color: { dark: "#1f2a5cff", light: "#ffffffff" },
-});
 
 const medidas = (i: Inflable) =>
   [
@@ -64,6 +59,7 @@ const REQUISITOS = [
               type="button"
               data-patio-juego={m.id}
               data-src={m.modelo}
+              data-camara={m.camara ?? CAMARA}
               data-poster={m.poster}
               data-alt={m.alt}
               data-nombre={m.nombre}
@@ -134,7 +130,7 @@ const REQUISITOS = [
             interaction-prompt="auto"
             shadow-intensity="1"
             exposure="1.05"
-            camera-orbit="30deg 74deg 100%"
+            camera-orbit={primero.camara ?? CAMARA}
             ar
             ar-modes="webxr scene-viewer quick-look"
             ar-scale="fixed"
@@ -156,7 +152,19 @@ const REQUISITOS = [
         </div>
         <!-- En computador no hay realidad aumentada: un QR abre el modelo en el celular. -->
         <div class="border-noche bg-blanco mt-4 hidden items-center gap-5 rounded-[20px] border-2 p-4 lg:flex">
-          <div class="border-noche size-[120px] shrink-0 overflow-hidden rounded-xl border-2 p-1 [&_svg]:size-full" data-qr={enlace} set:html={qr} />
+          {
+            MODELOS.map((m) => (
+              <div
+                class="border-noche size-[120px] shrink-0 overflow-hidden rounded-xl border-2 p-1 [&_svg]:size-full"
+                data-patio-qr={m.id}
+                data-qr={m.enlace}
+                hidden={m.id !== primero.id}
+                role="img"
+                aria-label={`Código QR para ver el ${m.nombre} en tu espacio`}
+                set:html={m.qr}
+              />
+            ))
+          }
           <div class="flex flex-col gap-1.5">
             <p class="font-display text-[21px] leading-[26px] font-semibold">Míralo en tu espacio con el celular</p>
             <p class="text-noche-suave text-[15px] leading-[21px]">
@@ -206,10 +214,12 @@ const REQUISITOS = [
         const id = b.dataset.patioJuego;
         botones.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
         raiz?.querySelectorAll<HTMLElement>("[data-patio-medidas]").forEach((dl) => (dl.hidden = dl.dataset.patioMedidas !== id));
+        raiz?.querySelectorAll<HTMLElement>("[data-patio-qr]").forEach((qr) => (qr.hidden = qr.dataset.patioQr !== id));
         const nombre = raiz?.querySelector<HTMLElement>("[data-patio-nombre]");
         if (nombre) nombre.textContent = b.dataset.nombre ?? "";
         visor.setAttribute("poster", b.dataset.poster ?? "");
         visor.setAttribute("alt", b.dataset.alt ?? "");
+        visor.setAttribute("camera-orbit", b.dataset.camara ?? "");
         visor.setAttribute("src", b.dataset.src ?? "");
         cargar();
       });

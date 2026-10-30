@@ -1,13 +1,18 @@
 // GET /qr y /qr/<campaña> — destino de los códigos QR impresos (volantes, el inflable, el auto, etc.).
 // Guarda el escaneo en D1 (ubicación aproximada, operador, celular y navegador) y redirige al inicio con UTM,
-// así GA4 también lo muestra en Adquisición de tráfico. Como el QR apunta aquí y no directo al inicio, el destino
-// se puede cambiar sin reimprimir.
+// así GA4 también lo muestra en Adquisición de tráfico. Los códigos «3d-<inflable>» (el QR de cada juego) llevan
+// a su modelo 3D para verlo en tu espacio. Como el QR apunta aquí y no directo al destino, este se puede cambiar
+// sin reimprimir.
 import type { APIRoute } from "astro";
 import { registrarEscaneo } from "@/lib/server/qr-db";
+import { RUTAS } from "@design/seo";
 
 export const prerender = false;
 
 const CODIGO = /^[a-z0-9-]{1,40}$/;
+
+/** Inflables con página «ver en tu espacio», por la parte final de su ruta («castillo-pirata»). */
+const JUEGOS_3D = [RUTAS.megatobogan, RUTAS.castilloPirata, RUTAS.castilloFormula1].map((r) => r.split("/").filter(Boolean).pop()!);
 
 // Lo que Cloudflare sabe de la conexión (por la IP, sin guardarla).
 interface DatosCf {
@@ -98,7 +103,8 @@ export const GET: APIRoute = async ({ params, request }) => {
     ).catch((err) => console.error("[qr] no se pudo registrar:", String(err), codigo));
   }
 
-  const destino = new URL("/", request.url);
+  const juego = codigo.startsWith("3d-") ? codigo.slice(3) : "";
+  const destino = new URL(JUEGOS_3D.includes(juego) ? `${RUTAS.verEnTuEspacio}${juego}/` : "/", request.url);
   destino.searchParams.set("utm_source", "qr");
   destino.searchParams.set("utm_medium", "impreso");
   destino.searchParams.set("utm_campaign", codigo);

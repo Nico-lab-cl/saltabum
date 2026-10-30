@@ -1,13 +1,14 @@
 ---
-// Página del QR de «¿Cabe en tu espacio?»: el Megatobogán en 3D con el botón de realidad aumentada.
-// Es una herramienta, no una página para buscadores: noindex y fuera del sitemap.
+// Primer QR de «¿Cabe en tu espacio?» (puede estar impreso): sigue mostrando el Megatobogán. Cada inflable tiene además
+// su propia página en /ver-en-tu-espacio/<inflable>/. Es una herramienta, no una página para buscadores: noindex y
+// fuera del sitemap.
 import VerEnTuEspacio from "@design/pages/VerEnTuEspacio.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { PRODUCTO } from "@design/data";
+import { inflable } from "@design/inflables";
 
-const titulo = `Ver el ${PRODUCTO.nombre} en tu espacio`;
+const i = inflable("megatobogan");
 ---
 
-<BaseLayout title={titulo} description={`Mira el ${PRODUCTO.nombre} a tamaño real en tu espacio con la cámara del celular.`} noindex>
-  <VerEnTuEspacio />
+<BaseLayout title={`Ver el ${i.nombre} en tu espacio`} description={`Mira el ${i.nombre} a tamaño real en tu espacio con la cámara del celular.`} noindex>
+  <VerEnTuEspacio inflable={i} />
 </BaseLayout>

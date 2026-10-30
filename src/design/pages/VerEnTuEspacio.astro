@@ -1,16 +1,21 @@
 ---
-// /ver-en-tu-espacio/ — a donde lleva el QR de «¿Cabe en tu espacio?». Pensada para el celular: el modelo 3D carga de
-// inmediato y el botón grande «Verlo en tu espacio» abre la cámara (WebXR o Scene Viewer en Android, Quick Look en
-// iPhone) para poner el Megatobogán en el suelo a tamaño real. Si el celular no lo permite, se avisa y queda el 3D.
+// /ver-en-tu-espacio/<inflable>/ — a donde lleva el QR de cada inflable (el de «¿Cabe en tu espacio?» y el impreso).
+// Pensada para el celular: el modelo 3D carga de inmediato y el botón grande «Verlo en tu espacio» abre la cámara
+// (WebXR o Scene Viewer en Android, Quick Look en iPhone) para poner el juego en el suelo a tamaño real. Si el celular
+// no lo permite, se avisa y queda el 3D. Abajo, enlaces a la misma página de los otros juegos.
 import { getImage } from "astro:assets";
-import portada from "../assets/megatobogan-real-frente.jpg";
-import { MODELO_3D, PRODUCTO } from "../data";
-import { RUTAS } from "../seo";
+import { CAMARA, INFLABLES, base, metros, verEnTuEspacio, type Inflable } from "../inflables";
 import Icon from "../components/Icon.astro";
 import WaButton from "../components/WaButton.astro";
 import Wordmark from "../components/Wordmark.astro";
 
-const poster = await getImage({ src: portada, width: 900, height: 900, fit: "cover", position: "center", format: "webp", quality: 78 });
+interface Props {
+  inflable: Inflable;
+}
+const { inflable: i } = Astro.props;
+const otros = INFLABLES.filter((o) => o.id !== i.id);
+
+const poster = await getImage({ src: i.fotos[0].src, width: 900, height: 900, fit: "cover", position: "center", format: "webp", quality: 78 });
 const PASOS = [
   "Ve al lugar del evento, toca «Verlo en tu espacio» y permite usar la cámara",
   "Apunta al suelo, mueve el celular despacio y retrocede unos 10 metros para ver el juego completo",
@@ -24,23 +29,23 @@ const PASOS = [
       <a href="/" class="no-underline" aria-label="Saltabum y Entretenciones, inicio">
         <Wordmark class="text-[26px]" />
       </a>
-      <a href={RUTAS.megatobogan} class="text-noche inline-flex min-h-11 items-center text-sm font-extrabold underline">Medidas y precio</a>
+      <a href={i.ruta} class="text-noche inline-flex min-h-11 items-center text-sm font-extrabold underline">Medidas y precio</a>
     </div>
   </header>
 
   <main class="mx-auto flex w-full max-w-[720px] flex-1 flex-col gap-4 px-4 pt-5 pb-8">
     <div>
       <p class="text-xs font-extrabold tracking-[1.2px] uppercase">Realidad aumentada</p>
-      <h1 class="font-display mt-1 text-[32px] leading-9 font-semibold">Mira el {PRODUCTO.nombre} en tu espacio</h1>
-      <p class="mt-1.5">A tamaño real, {PRODUCTO.base} de base y {PRODUCTO.alto} de alto, con la cámara de tu celular</p>
+      <h1 class="font-display mt-1 text-[32px] leading-9 font-semibold">Mira el {i.nombre} en tu espacio</h1>
+      <p class="mt-1.5">A tamaño real, {base(i)} de base y {metros(i.medidas.alto)} m de alto, con la cámara de tu celular</p>
     </div>
 
     <div class="border-noche bg-blanco shadow-pop-l relative overflow-hidden rounded-[28px] border-2">
       <model-viewer
         data-visor-espacio
-        src={MODELO_3D}
+        src={i.modelo}
         poster={poster.src}
-        alt={`Modelo 3D del ${PRODUCTO.nombre} a tamaño real`}
+        alt={`Modelo 3D del ${i.nombre} a tamaño real`}
         loading="eager"
         reveal="auto"
         camera-controls
@@ -50,7 +55,7 @@ const PASOS = [
         rotation-per-second="18deg"
         shadow-intensity="1"
         exposure="1.05"
-        camera-orbit="30deg 74deg 100%"
+        camera-orbit={i.camara ?? CAMARA}
         ar
         ar-modes="webxr scene-viewer quick-look"
         ar-scale="fixed"
@@ -93,11 +98,28 @@ const PASOS = [
     <WaButton
       placement="ver-en-tu-espacio"
       size="l"
-      message={`Hola, quiero saber si el ${PRODUCTO.nombre} cabe en el lugar de mi evento. Les mando una foto. Vengo de saltabum.cl`}
+      message={`Hola, quiero saber si el ${i.nombre} cabe en el lugar de mi evento. Les mando una foto. Vengo de saltabum.cl`}
       class="mt-1 text-center leading-[22px]"
     >
       ¿Dudas? Mándanos una foto del lugar
     </WaButton>
+
+    <nav aria-label="Ver otro juego en tu espacio" class="flex flex-col gap-2">
+      <p class="text-sm font-extrabold">Ver otro juego en tu espacio</p>
+      <div class="flex gap-2">
+        {
+          otros.map((o) => (
+            <a
+              href={verEnTuEspacio(o)}
+              class="border-noche bg-blanco text-noche inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full border-2 px-3 text-center text-[15px] font-extrabold no-underline"
+            >
+              <Icon name={o.icono} size={22} strokeWidth={2.2} class="shrink-0" />
+              {o.corto}
+            </a>
+          ))
+        }
+      </div>
+    </nav>
   </main>
 </div>
 

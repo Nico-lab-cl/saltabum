@@ -50,6 +50,8 @@ export type Inflable = {
   pdf?: string;
   /** Modelo 3D a escala real (scripts/generar-modelo-3d.mjs y generar-modelo-castillos.mjs). /modelos se guarda 7 días en caché: al cambiarlo, súbele la versión. */
   modelo: string;
+  /** Ángulo inicial del visor 3D (camera-orbit de model-viewer). */
+  camara?: string;
   fotos: Foto[];
   meta: { title: string; description: string };
   preguntas: Pregunta[];
@@ -79,6 +81,14 @@ export const espacioTexto = (i: Inflable) => {
 };
 export const edadTexto = (i: Inflable) => `${i.edad.desde} a ${i.edad.hasta} años`;
 
+/** Parte final de la ruta del inflable («castillo-pirata»), la misma en su página de realidad aumentada. */
+export const slug = (i: Inflable) => i.ruta.split("/").filter(Boolean).pop()!;
+/** Página para el celular con el modelo 3D y el botón para verlo con la cámara, a donde lleva el QR del inflable. */
+export const verEnTuEspacio = (i: Inflable) => `${RUTAS.verEnTuEspacio}${slug(i)}/`;
+export const CAMARA = "30deg 74deg 100%";
+// Los castillos se ven mejor desde el lado de la entrada, con la cara del personaje y las manos.
+const CAMARA_CASTILLO = "55deg 74deg 100%";
+
 const castilloPreguntas = (nombre: string, i: Omit<Inflable, "preguntas">): Pregunta[] => [
   {
     q: `¿Cuánto mide el ${nombre}?`,
@@ -93,7 +103,8 @@ const pirata: Omit<Inflable, "preguntas"> = {
   id: "castillo-pirata",
   ruta: RUTAS.castilloPirata,
   icono: "pirata",
-  modelo: "/modelos/castillo-pirata-v1.glb",
+  modelo: "/modelos/castillo-pirata-v2.glb",
+  camara: CAMARA_CASTILLO,
   nombre: "Castillo Pirata",
   corto: "Pirata",
   tipo: "Castillo temático",
@@ -125,7 +136,8 @@ const formula1: Omit<Inflable, "preguntas"> = {
   id: "castillo-formula-1",
   ruta: RUTAS.castilloFormula1,
   icono: "carrera",
-  modelo: "/modelos/castillo-formula-1-v1.glb",
+  modelo: "/modelos/castillo-formula-1-v2.glb",
+  camara: CAMARA_CASTILLO,
   nombre: "Castillo Fórmula 1",
   corto: "Fórmula 1",
   tipo: "Castillo temático",
