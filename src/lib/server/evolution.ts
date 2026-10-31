@@ -212,6 +212,28 @@ export async function enviarAudio(numero: string, audioBase64: string): Promise<
   return llamar<MensajeEvolution>(`/message/sendWhatsAppAudio/${encodeURIComponent(instancia())}`, { number: numero, audio: audioBase64 });
 }
 
+/** Tipo de envío de Evolution según el formato del archivo: fotos y videos se ven en el chat, el resto va como documento. */
+export function tipoDeMedia(mimetype: string): "image" | "video" | "document" {
+  if (/^image\/(jpeg|png|webp)$/.test(mimetype)) return "image";
+  if (/^video\/(mp4|3gpp)$/.test(mimetype)) return "video";
+  return "document";
+}
+
+/** Envía un archivo (PDF, foto, video, planilla…). `base64` sin el prefijo «data:». */
+export async function enviarArchivo(
+  numero: string,
+  archivo: { base64: string; nombre: string; mimetype: string; caption?: string },
+): Promise<MensajeEvolution> {
+  return llamar<MensajeEvolution>(`/message/sendMedia/${encodeURIComponent(instancia())}`, {
+    number: numero,
+    mediatype: tipoDeMedia(archivo.mimetype),
+    mimetype: archivo.mimetype,
+    media: archivo.base64,
+    fileName: archivo.nombre,
+    caption: archivo.caption || undefined,
+  });
+}
+
 /** Envía un texto. `numero` puede ser el teléfono o el identificador del chat (…@lid). */
 export async function enviarTexto(numero: string, texto: string): Promise<MensajeEvolution> {
   return llamar<MensajeEvolution>(`/message/sendText/${encodeURIComponent(instancia())}`, { number: numero, text: texto });

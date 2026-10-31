@@ -3,6 +3,7 @@
 //   GET ?chat=<jid>  → mensajes de ese chat
 //   POST → { accion: "estado", jid, estado } · { accion: "notas", jid, notas } · { accion: "leido", jid }
 //          { accion: "responder", jid, texto } · { accion: "audio", jid, audio (base64) }
+//          { accion: "archivo", jid, archivo (base64), nombre, mimetype, caption? } → PDF, foto, video, planilla…
 //          { accion: "agregar", telefono, nombre?, mensaje? } → crea el chat y le pone la etiqueta en WhatsApp
 //          { accion: "sincronizar", jids } → vuelve a traer de Evolution los últimos mensajes (de a 15 chats)
 //          { accion: "etiquetas", desde } → revisa en Evolution qué chats tienen la etiqueta (de a 30)
@@ -11,7 +12,7 @@ import type { APIRoute } from "astro";
 import { EVOLUTION_WEBHOOK_SECRET } from "astro:env/server";
 import { z } from "zod";
 import { auditar, mismoOrigen, panelConfigurado, sesion } from "@/lib/server/admin-auth";
-import { cambiarEtiqueta, enviarAudio, enviarTexto, etiquetaLeads, evolutionConfigurado, verificarNumero } from "@/lib/server/evolution";
+import { cambiarEtiqueta, enviarArchivo, enviarAudio, enviarTexto, etiquetaLeads, evolutionConfigurado, tipoDeMedia, verificarNumero } from "@/lib/server/evolution";
 import { actualizarChat, asegurarChat, buscarChat, guardarMensajes, listarChats, listarMensajes, renombrarChat } from "@/lib/server/whatsapp-db";
 import { importarChatsDeAnuncios, importarHistorial, revisarEtiquetas } from "@/lib/server/whatsapp-sync";
 
@@ -24,6 +25,7 @@ const json = (status: number, data: Record<string, unknown>) =>
   });
 
 const jid = z.string().min(5).max(120);
+const MAX_BASE64 = 20_500_000;
 const accionSchema = z.discriminatedUnion("accion", [
   z.object({ accion: z.literal("estado"), jid, estado: z.enum(["nueva", "contactada", "cerrada"]) }),
   z.object({ accion: z.literal("notas"), jid, notas: z.string().trim().max(2000) }),
@@ -31,6 +33,15 @@ const accionSchema = z.discriminatedUnion("accion", [
   z.object({ accion: z.literal("responder"), jid, texto: z.string().trim().min(1).max(4000) }),
   // Nota de voz de hasta ~3 minutos (opus pesa ~16 KB por segundo; en base64, un tercio más).
   z.object({ accion: z.literal("audio"), jid, audio: z.string().min(100).max(5_000_000).regex(/^[A-Za-z0-9+/=]+$/) }),
+  // Archivo de hasta 15 MB (en base64, un tercio más).
+  z.object({
+    accion: z.literal("archivo"),
+    jid,
+    archivo: z.string().min(4).max(MAX_BASE64).regex(/^[A-Za-z0-9+/=]+$/),
+    nombre: z.string().trim().min(1).max(200),
+    mimetype: z.string().trim().max(150).regex(/^[\w.+-]+\/[\w.+-]+$/),
+    caption: z.string().trim().max(1000).optional(),
+  }),
   z.object({
     accion: z.literal("agregar"),
     telefono: z.string().trim().min(8).max(25),
@@ -68,7 +79,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (!usuario) return json(401, { ok: false, error: "sin_sesion" });
 
   const raw = await request.text();
-  if (raw.length > 5_100_000) return json(413, { ok: false, error: "muy_grande" });
+  if (raw.length > MAX_BASE64 + 10_000) return json(413, { ok: false, error: "muy_grande" });
   let parsed;
   try {
     parsed = accionSchema.safeParse(JSON.parse(raw));
@@ -79,7 +90,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const pedido = parsed.data;
 
   // ── Acciones que hablan con Evolution ─────────────────────────────────
-  const conEvolution = ["importar", "agregar", "sincronizar", "etiquetas", "responder", "audio"].includes(pedido.accion);
+  const conEvolution = ["importar", "agregar", "sincronizar", "etiquetas", "responder", "audio", "archivo"].includes(pedido.accion);
   if (conEvolution && !evolutionConfigurado()) return json(503, { ok: false, error: "evolution" });
 
   try {
@@ -145,18 +156,23 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json(200, { ok: true });
   }
 
-  // Responder (texto o nota de voz): sale desde el mismo WhatsApp de Saltabum (también se ve en el teléfono).
+  // Responder (texto, nota de voz o archivo): sale desde el mismo WhatsApp de Saltabum (también se ve en el teléfono).
   try {
     const numero = chat.telefono ?? chat.jid;
     if (pedido.accion === "audio") {
       const enviado = await enviarAudio(numero, pedido.audio);
       await guardarEnviado(chat.jid, enviado, { audioMessage: {} }, usuario, "audioMessage");
+    } else if (pedido.accion === "archivo") {
+      const { archivo: base64, nombre, mimetype, caption } = pedido;
+      const enviado = await enviarArchivo(numero, { base64, nombre, mimetype, caption });
+      const tipo = `${tipoDeMedia(mimetype)}Message`;
+      await guardarEnviado(chat.jid, enviado, { [tipo]: { fileName: nombre, caption } }, usuario, tipo);
     } else {
       const enviado = await enviarTexto(numero, pedido.texto);
       await guardarEnviado(chat.jid, enviado, { conversation: pedido.texto }, usuario);
     }
     await actualizarChat(chat.jid, { leido: true, estado: chat.estado === "nueva" ? "contactada" : undefined });
-    await auditar(request, usuario, "whatsapp_respuesta", `${quien}${pedido.accion === "audio" ? " · nota de voz" : ""}`);
+    await auditar(request, usuario, "whatsapp_respuesta", `${quien}${pedido.accion === "audio" ? " · nota de voz" : pedido.accion === "archivo" ? ` · archivo ${pedido.nombre}` : ""}`);
     return json(200, { ok: true });
   } catch (e) {
     console.error("responder whatsapp", e);

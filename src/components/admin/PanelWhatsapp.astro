@@ -360,13 +360,51 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
       botonMicro.type = "button";
       botonMicro.title = "Grabar nota de voz";
       botonMicro.setAttribute("aria-label", "Grabar nota de voz");
+      // Archivo adjunto (PDF, foto, video, planilla…): el texto escrito va como descripción.
+      let adjunto: File | null = null;
+      const selector = document.createElement("input");
+      selector.type = "file";
+      selector.hidden = true;
+      selector.accept = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,image/jpeg,image/png,image/webp,video/mp4";
+      const filaAdjunto = el("div", "bg-crema flex flex-wrap items-center gap-2 rounded-xl px-3 py-2 text-sm");
+      filaAdjunto.hidden = true;
+      const quitarAdjunto = () => {
+        adjunto = null;
+        selector.value = "";
+        filaAdjunto.hidden = true;
+        filaAdjunto.replaceChildren();
+        area.placeholder = "Escribe la respuesta… (Enter envía, Shift+Enter salta de línea)";
+      };
+      selector.addEventListener("change", () => {
+        const f = selector.files?.[0];
+        if (!f) return;
+        if (f.size > MAX_ARCHIVO) {
+          selector.value = "";
+          return avisar(`El archivo pesa ${megas(f.size)}, el máximo es ${megas(MAX_ARCHIVO)}`);
+        }
+        adjunto = f;
+        filaAdjunto.replaceChildren(
+          el("span", "min-w-0 truncate font-extrabold", `📎 ${f.name}`),
+          el("span", "text-noche-suave shrink-0", megas(f.size)),
+          boton("Quitar", "border-noche bg-blanco ml-auto", quitarAdjunto),
+        );
+        filaAdjunto.hidden = false;
+        area.placeholder = "Descripción del archivo (opcional)";
+        area.focus();
+      });
+      const botonAdjuntar = el("button", "border-noche bg-crema size-11 shrink-0 cursor-pointer rounded-full border-2 text-xl", "📎") as HTMLButtonElement;
+      botonAdjuntar.type = "button";
+      botonAdjuntar.title = "Adjuntar archivo (PDF, foto, video…)";
+      botonAdjuntar.setAttribute("aria-label", "Adjuntar archivo");
+      botonAdjuntar.addEventListener("click", () => selector.click());
+
       const filaTexto = el("div", "flex items-end gap-2");
-      filaTexto.append(botonEmojis, botonMicro, area, mandar);
+      filaTexto.append(botonEmojis, botonAdjuntar, botonMicro, area, mandar);
       const filaAudio = el("div", "flex flex-wrap items-center gap-2");
       filaAudio.hidden = true;
       botonMicro.addEventListener("click", () => void grabarNota(c, filaTexto, filaAudio));
 
-      pie.append(panelEmojis, filaTexto, filaAudio);
+      pie.append(panelEmojis, selector, filaAdjunto, filaTexto, filaAudio);
       area.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
@@ -376,9 +414,25 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
       pie.addEventListener("submit", async (e) => {
         e.preventDefault();
         const texto = area.value.trim();
-        if (!texto) return;
+        if (!texto && !adjunto) return;
         mandar.disabled = true;
-        const ok = await enviar({ accion: "responder", jid: c.jid, texto });
+        let ok: boolean;
+        if (adjunto) {
+          mandar.textContent = "Enviando…";
+          ok = await enviar(
+            {
+              accion: "archivo",
+              jid: c.jid,
+              archivo: await aBase64(adjunto),
+              nombre: adjunto.name,
+              mimetype: adjunto.type || "application/octet-stream",
+              caption: texto || undefined,
+            },
+            "Archivo enviado",
+          );
+          mandar.textContent = "Enviar";
+          if (ok) quitarAdjunto();
+        } else ok = await enviar({ accion: "responder", jid: c.jid, texto });
         mandar.disabled = false;
         if (ok) {
           area.value = "";
@@ -390,6 +444,16 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     vista.replaceChildren(cabeza, cuerpo, pie);
     cuerpo.scrollTop = cuerpo.scrollHeight;
   }
+
+  // ── Archivos adjuntos ───────────────────────────────────────────────────
+  const MAX_ARCHIVO = 15 * 1024 * 1024;
+  const megas = (bytes: number) => `${(bytes / 1024 / 1024).toLocaleString("es-CL", { maximumFractionDigits: 1 })} MB`;
+  const aBase64 = (blob: Blob) =>
+    new Promise<string>((ok) => {
+      const lector = new FileReader();
+      lector.onload = () => ok(String(lector.result).split(",")[1] ?? "");
+      lector.readAsDataURL(blob);
+    });
 
   // ── Nota de voz ─────────────────────────────────────────────────────────
   const MAX_SEGUNDOS = 180;
@@ -451,12 +515,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
       const mandarAudio = boton("Enviar nota de voz", "border-noche bg-noche text-crema", async () => {
         mandarAudio.disabled = true;
         descartar.disabled = true;
-        const base64 = await new Promise<string>((ok) => {
-          const lector = new FileReader();
-          lector.onload = () => ok(String(lector.result).split(",")[1] ?? "");
-          lector.readAsDataURL(blob);
-        });
-        const enviado = await enviar({ accion: "audio", jid: c.jid, audio: base64 });
+        const enviado = await enviar({ accion: "audio", jid: c.jid, audio: await aBase64(blob) });
         URL.revokeObjectURL(url);
         if (enviado) {
           avisar("Nota de voz enviada");
