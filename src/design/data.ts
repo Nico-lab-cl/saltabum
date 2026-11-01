@@ -15,7 +15,7 @@ export const DESDE = "$49.990";
 export const PRECIO_NORMAL = "$100.000";
 export const DESDE_HORAS = "3 horas";
 /** Valor de cada hora adicional sobre el bloque base. */
-export const HORA_EXTRA = "$10.000";
+export const HORA_EXTRA = "$15.000";
 /** Modelo 3D a escala real (scripts/generar-modelo-3d.mjs). Al cambiarlo, súbele la versión al nombre: /modelos se guarda 7 días en caché. */
 /** Juegos que se pueden reservar en la agenda (precio del bloque base en pesos). Cada uno tiene su propia disponibilidad. */
 export const PRODUCTOS = [
@@ -46,7 +46,18 @@ export type Comuna = {
 export const COMUNAS: Comuna[] = [
   { nombre: "Concón", zonas: "Costa de Montemar e Higuerillas", precio: "+$5.000", titulo: "+$5.000 de despacho", tono: "pago", despacho: 5000 },
   { nombre: "Viña del Mar", zonas: "Reñaca, Jardín del Mar, Forestal", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis", despacho: 0 },
-  { nombre: "Valparaíso", zonas: "Nuestra base, Curauma y Placilla", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis", despacho: 0 },
+  { nombre: "Valparaíso", zonas: "Nuestra base, Playa Ancha, el plan y los cerros (Placilla y Curauma +$5.000)", precio: "Gratis", titulo: "Despacho gratis", tono: "gratis", despacho: 0 },
+  {
+    nombre: "Placilla / Curauma",
+    zonas: "Placilla, Curauma y sus alrededores (comuna de Valparaíso)",
+    precio: "+$5.000",
+    titulo: "+$5.000 de despacho",
+    tono: "pago",
+    despacho: 5000,
+    // Son sectores de Valparaíso: no tienen zona propia en el mapa.
+    mapa: [],
+    ciudades: ["Placilla", "Curauma"],
+  },
   {
     nombre: "Casablanca / Quintay",
     zonas: "Casablanca, Quintay y sus parcelas",

@@ -82,6 +82,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     inicio: "Inicio",
     fin: "Término",
     producto: "Juego",
+    adicionales: "Otros juegos",
     total: "Total",
     nombre: "Nombre",
     apellido: "Apellido",
@@ -104,6 +105,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     if ((campo === "inicio" || campo === "fin") && typeof v === "number") return aHora(v);
     if (campo === "fecha" && typeof v === "string") return conFecha(v);
     if ((campo === "total" || campo === "pagado") && typeof v === "number") return pesos(v);
+    if (campo === "adicionales" && typeof v === "string") return v.split("|").filter(Boolean).join(", ") || "—";
     return String(v);
   };
   const leer = (s: string | null) => {

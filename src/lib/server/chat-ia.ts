@@ -247,6 +247,7 @@ async function reservar(e: Record<string, unknown>, ctx: Contexto) {
   const datos = {
     fecha: r.fecha,
     producto: r.producto,
+    adicionales: null,
     inicio,
     fin,
     total: precio.total,

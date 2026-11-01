@@ -41,7 +41,8 @@ Empresas, colegios y municipios
 
 Sectores donde llegamos (además de la comuna completa)
 - Viña del Mar: Reñaca, Jardín del Mar, Forestal, Miraflores, Gómez Carreño, Recreo, Chorrillos, Achupallas.
-- Valparaíso: Curauma, Placilla, Playa Ancha, Cerro Alegre, Rodelillo.
+- Valparaíso: Playa Ancha, Cerro Alegre, Rodelillo y el plan (despacho gratis).
+- Placilla y Curauma (sector de Valparaíso): despacho $5.000.
 - Concón: Costa de Montemar, Bosques de Montemar, Higuerillas, centro.
 - Quilpué: El Belloto, Belloto Norte, Paso Hondo, Los Pinos, Valencia, centro.
 - Villa Alemana: Peñablanca, centro.
@@ -49,4 +50,4 @@ Sectores donde llegamos (además de la comuna completa)
 - Casablanca y Quintay, incluidas sus parcelas.
 
 Ejemplos de total
-- 3 horas en Viña del Mar: $69.990. 4 horas en Quilpué: $84.990. 5 horas en Valparaíso: $89.990.`;
+- 3 horas en Viña del Mar: $69.990. 4 horas en Quilpué: $89.990. 5 horas en Valparaíso: $99.990. 3 horas en Curauma: $74.990.`;

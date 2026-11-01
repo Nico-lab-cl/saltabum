@@ -96,20 +96,20 @@ export const COMUNAS_SEO: ComunaSeo[] = [
     nombre: "Valparaíso",
     titulo: "Valparaíso",
     despacho: "Gratis",
-    despachoDetalle: "Despacho gratis en Valparaíso, nuestra base, con montaje y retiro incluidos",
+    despachoDetalle: "Despacho gratis en Valparaíso, nuestra base, y $5.000 a Placilla y Curauma, con montaje y retiro incluidos",
     sectores: ["Curauma", "Placilla", "Playa Ancha", "Cerro Alegre", "Rodelillo"],
     intro:
-      "Valparaíso es nuestra base. Arrienda el Megatobogán Arcoíris con despacho gratis en Curauma, Placilla, Playa Ancha y los cerros, con montaje y retiro incluidos",
+      "Valparaíso es nuestra base. Arrienda el Megatobogán Arcoíris con despacho gratis en Playa Ancha, el plan y los cerros, y por $5.000 en Placilla y Curauma, con montaje y retiro incluidos",
     patios:
       "En los cerros los espacios planos son más escasos. Por eso te pedimos una foto del lugar y revisamos contigo el acceso y el espacio libre antes de confirmar",
     preguntas: [
-      { q: "¿Arriendan juegos inflables en Curauma y Placilla?", a: "Sí, despachamos gratis a Curauma, Placilla y todo Valparaíso." },
+      { q: "¿Arriendan juegos inflables en Curauma y Placilla?", a: "Sí, llegamos a Placilla y Curauma con un despacho de $5.000. En el resto de Valparaíso el despacho es gratis." },
       { q: "¿Se puede instalar en un patio de cemento en los cerros?", a: "Sí, nuestros inflables se pueden instalar en piso duro. Mándanos una foto del lugar para revisar el espacio y el acceso." },
-      { q: "¿Cuánto cuesta en Valparaíso?", a: `Desde ${base} con despacho gratis. Cada hora adicional cuesta ${HORA_EXTRA}.` },
+      { q: "¿Cuánto cuesta en Valparaíso?", a: `Desde ${base} con despacho gratis (Placilla y Curauma $5.000). Cada hora adicional cuesta ${HORA_EXTRA}.` },
     ],
     meta: {
       title: "Juegos inflables en Valparaíso y Curauma",
-      description: `Arriendo de juegos inflables en Valparaíso desde ${base}. Despacho gratis a Curauma, Placilla y los cerros, con montaje y retiro.`,
+      description: `Arriendo de juegos inflables en Valparaíso desde ${base}. Despacho gratis en el plan y los cerros, y $5.000 a Placilla y Curauma, con montaje y retiro.`,
     },
   },
   {
@@ -182,7 +182,7 @@ export const PREGUNTAS_FRECUENTES: { tema: string; preguntas: Pregunta[] }[] = [
     preguntas: [
       { q: "¿Qué precio tienen los juegos inflables en arriendo?", a: `En Saltabum el arriendo parte en ${DESDE} por ${DESDE_HORAS}, con montaje y retiro incluidos. Cada hora adicional cuesta ${HORA_EXTRA}.` },
       { q: "¿Cuánto es el abono para reservar?", a: "Reservas la hora con un abono de $20.000, que se descuenta del total del arriendo. El saldo se paga el día del evento." },
-      { q: "¿Cuánto cuesta el despacho?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Concón, Quilpué y Villa Alemana, $7.000 a Limache y Olmué, y $10.000 a Casablanca y Quintay." },
+      { q: "¿Cuánto cuesta el despacho?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Placilla, Curauma, Concón, Quilpué y Villa Alemana, $7.000 a Limache y Olmué, y $10.000 a Casablanca y Quintay." },
       { q: "¿Cómo reservo un juego inflable?", a: "Elige el día y el horario en el calendario de la web o escríbenos por WhatsApp. Te confirmamos y coordinamos el abono." },
       { q: "¿Puedo reservar para el mismo día?", a: "No, las reservas se hacen desde el día siguiente para coordinar bien el despacho y el montaje." },
       { q: "¿Emiten factura?", a: "Sí, emitimos factura para empresas, colegios, municipalidades, juntas de vecinos y particulares que la necesiten." },
@@ -226,7 +226,7 @@ export const PREGUNTAS_PAGINA: Record<"megatobogan" | "cumpleanos" | "precios" |
   precios: [
     { q: "¿Cuánto cuesta arrendar un juego inflable?", a: `Desde ${DESDE} por ${DESDE_HORAS} con montaje y retiro incluidos.` },
     { q: "¿Cuánto vale la hora adicional?", a: `Cada hora adicional cuesta ${HORA_EXTRA}.` },
-    { q: "¿El despacho tiene costo?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Concón, Quilpué y Villa Alemana, $7.000 a Limache y Olmué, y $10.000 a Casablanca y Quintay." },
+    { q: "¿El despacho tiene costo?", a: "Es gratis en Valparaíso y Viña del Mar, cuesta $5.000 a Placilla, Curauma, Concón, Quilpué y Villa Alemana, $7.000 a Limache y Olmué, y $10.000 a Casablanca y Quintay." },
     { q: "¿Hay costos ocultos?", a: "No, el precio incluye montaje y retiro. Solo pones el enchufe, que consume menos de $2.000 por evento." },
   ],
   eventos: [

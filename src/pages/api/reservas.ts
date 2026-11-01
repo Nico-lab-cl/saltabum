@@ -60,6 +60,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const datos = {
     fecha: r.fecha,
     producto: r.producto,
+    adicionales: null,
     inicio,
     fin,
     total: precio.total,

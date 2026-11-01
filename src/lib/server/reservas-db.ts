@@ -3,6 +3,8 @@
 // Al reservar, un solo INSERT … WHERE NOT EXISTS verifica que no choque con otra fila del mismo juego (contando
 // el margen entre eventos), así dos personas no pueden tomar el mismo horario ni horarios que se topen.
 // El panel /admin también crea, edita y elimina reservas; puede «forzar» un horario que choca (después de avisar).
+// Una reserva del panel puede llevar varios juegos: «producto» es el principal y «adicionales» los demás
+// (formato "|id|id|"). Cada uno queda ocupado en la agenda de la web.
 import { env, type D1Database } from "cloudflare:workers";
 import { MARGEN } from "@/lib/reservas";
 
@@ -14,6 +16,8 @@ export interface FilaAgenda {
   id: number;
   fecha: string;
   producto: string;
+  /** Otros juegos de la misma reserva, formato "|id|id|" (solo reservas del panel). */
+  adicionales: string | null;
   inicio: number;
   fin: number;
   estado: EstadoHorario;
@@ -48,6 +52,7 @@ export type DatosReserva = Pick<
   FilaAgenda,
   | "fecha"
   | "producto"
+  | "adicionales"
   | "inicio"
   | "fin"
   | "total"
@@ -105,14 +110,15 @@ const COLUMNAS_NUEVAS = [
   "origen TEXT",
   "actualizado TEXT",
   "atribucion TEXT",
+  "adicionales TEXT",
 ];
 
 /** Columnas que se leen para el panel (todas menos la huella de IP y los datos de medición). */
 const COLUMNAS_PANEL =
-  "id, fecha, producto, inicio, fin, estado, nombre, apellido, email, telefono, empresa, comuna, direccion, depto, ciudad, region, mensaje, notas, total, origen, creado, actualizado, pagado, pagado_en, pagado_por";
+  "id, fecha, producto, adicionales, inicio, fin, estado, nombre, apellido, email, telefono, empresa, comuna, direccion, depto, ciudad, region, mensaje, notas, total, origen, creado, actualizado, pagado, pagado_en, pagado_por";
 
 /** Columnas de datos, en el orden en que se escriben (INSERT y UPDATE). */
-const CAMPOS = ["fecha", "producto", "inicio", "fin", "total", "nombre", "apellido", "email", "telefono", "empresa", "comuna", "direccion", "depto", "ciudad", "region", "mensaje", "notas"] as const;
+const CAMPOS = ["fecha", "producto", "adicionales", "inicio", "fin", "total", "nombre", "apellido", "email", "telefono", "empresa", "comuna", "direccion", "depto", "ciudad", "region", "mensaje", "notas"] as const;
 const valores = (d: DatosReserva) => CAMPOS.map((c) => d[c]);
 
 // Traspaso único desde la tabla anterior «reservas» (bloques fijos de 3 horas: 10:00, 13:30 y 17:00).
@@ -125,16 +131,27 @@ const TRASPASO = `INSERT INTO agenda (fecha, producto, inicio, fin, estado, nomb
   FROM reservas
   WHERE NOT EXISTS (SELECT 1 FROM agenda)`;
 
-/** Otra fila del mismo juego (o un bloqueo general) que se topa con el horario, contando el margen entre eventos. */
-const CHOQUE = `SELECT 1 FROM agenda o
-  WHERE o.fecha = ? AND (o.producto = ? OR o.producto = 'todos') AND o.inicio < ? AND o.fin > ? AND o.id != ?`;
-const paramsChoque = (d: Pick<DatosReserva, "fecha" | "producto" | "inicio" | "fin">, excluir = 0) => [
-  d.fecha,
-  d.producto,
-  d.fin + MARGEN,
-  d.inicio - MARGEN,
-  excluir,
-];
+/** "|a|b|" → ["a", "b"]. */
+export const listaAdicionales = (adicionales: string | null | undefined) => (adicionales ?? "").split("|").filter(Boolean);
+/** ["a", "b"] → "|a|b|" (null si no hay). */
+export const textoAdicionales = (ids: readonly string[]) => (ids.length ? `|${ids.join("|")}|` : null);
+/** Todos los juegos de una fila: el principal y los adicionales. */
+export const juegosDe = (f: { producto: string; adicionales: string | null }) => [f.producto, ...listaAdicionales(f.adicionales)];
+
+type Horario = Pick<DatosReserva, "fecha" | "producto" | "adicionales" | "inicio" | "fin">;
+
+/**
+ * Condición SQL: otra fila que comparte algún juego con `d` (o un bloqueo general) y se topa con el horario,
+ * contando el margen entre eventos.
+ */
+function choque(d: Horario, excluir = 0): { sql: string; params: (string | number)[] } {
+  const juegos = juegosDe(d);
+  const porJuego = juegos.map(() => "o.producto = ? OR instr(coalesce(o.adicionales, ''), ?) > 0").join(" OR ");
+  return {
+    sql: `o.fecha = ? AND (o.producto = 'todos' OR ${porJuego}) AND o.inicio < ? AND o.fin > ? AND o.id != ?`,
+    params: [d.fecha, ...juegos.flatMap((j) => [j, `|${j}|`]), d.fin + MARGEN, d.inicio - MARGEN, excluir],
+  };
+}
 
 // Se guarda «ya está lista» y no la promesa: en Workers una promesa de otro pedido puede quedar colgada para
 // siempre si ese pedido se corta (ej. recargar la página), y con ella todos los pedidos que la esperan.
@@ -154,17 +171,17 @@ export async function baseReservas(): Promise<D1Database> {
   return db;
 }
 
-/** Horarios tomados entre dos fechas, sin datos personales. */
+/** Horarios tomados entre dos fechas, sin datos personales. Una reserva con varios juegos ocupa cada uno. */
 export async function horariosOcupados(
   desde: string,
   hasta: string,
 ): Promise<{ fecha: string; producto: string; inicio: number; fin: number }[]> {
   const db = await baseReservas();
   const { results } = await db
-    .prepare("SELECT fecha, producto, inicio, fin FROM agenda WHERE fecha BETWEEN ? AND ? ORDER BY fecha, inicio")
+    .prepare("SELECT fecha, producto, adicionales, inicio, fin FROM agenda WHERE fecha BETWEEN ? AND ? ORDER BY fecha, inicio")
     .bind(desde, hasta)
-    .all<{ fecha: string; producto: string; inicio: number; fin: number }>();
-  return results;
+    .all<{ fecha: string; producto: string; adicionales: string | null; inicio: number; fin: number }>();
+  return results.flatMap((r) => juegosDe(r).map((producto) => ({ fecha: r.fecha, producto, inicio: r.inicio, fin: r.fin })));
 }
 
 /**
@@ -183,11 +200,12 @@ export async function crearReserva(
   },
 ): Promise<number | null> {
   const db = await baseReservas();
+  const c = choque(datos);
   const res = await db
     .prepare(
       `INSERT INTO agenda (${CAMPOS.join(", ")}, estado, origen, ip_hash, creado, fbp, fbc, atribucion)
        SELECT ${CAMPOS.map(() => "?").join(", ")}, 'reservado', ?, ?, ?, ?, ?, ?
-       WHERE ? OR NOT EXISTS (${CHOQUE})`,
+       WHERE ? OR NOT EXISTS (SELECT 1 FROM agenda o WHERE ${c.sql})`,
     )
     .bind(
       ...valores(datos),
@@ -198,7 +216,7 @@ export async function crearReserva(
       opciones.medicion?.fbc ?? null,
       opciones.atribucion && Object.keys(opciones.atribucion).length ? JSON.stringify(opciones.atribucion) : null,
       opciones.forzar ? 1 : 0,
-      ...paramsChoque(datos),
+      ...c.params,
     )
     .run();
   return Number(res.meta.changes ?? 0) > 0 ? Number(res.meta.last_row_id) : null;
@@ -209,29 +227,27 @@ export async function actualizarReserva(id: number, datos: DatosReserva, forzar 
   const db = await baseReservas();
   const existe = await db.prepare("SELECT 1 FROM agenda WHERE id = ? AND estado = 'reservado'").bind(id).first();
   if (!existe) return "no_existe";
+  const ch = choque(datos, id);
   const res = await db
     .prepare(
       `UPDATE agenda SET ${CAMPOS.map((c) => `${c} = ?`).join(", ")}, actualizado = ?
-       WHERE id = ? AND estado = 'reservado' AND (? OR NOT EXISTS (${CHOQUE}))`,
+       WHERE id = ? AND estado = 'reservado' AND (? OR NOT EXISTS (SELECT 1 FROM agenda o WHERE ${ch.sql}))`,
     )
-    .bind(...valores(datos), new Date().toISOString(), id, forzar ? 1 : 0, ...paramsChoque(datos, id))
+    .bind(...valores(datos), new Date().toISOString(), id, forzar ? 1 : 0, ...ch.params)
     .run();
   return Number(res.meta.changes ?? 0) > 0 ? "ok" : "ocupado";
 }
 
 /** Filas que se topan con un horario (para mostrarle al equipo con qué choca). */
 export async function choques(
-  datos: Pick<DatosReserva, "fecha" | "producto" | "inicio" | "fin">,
+  datos: Horario,
   excluir = 0,
 ): Promise<Pick<FilaAgenda, "id" | "estado" | "inicio" | "fin" | "nombre" | "apellido">[]> {
   const db = await baseReservas();
+  const c = choque(datos, excluir);
   const { results } = await db
-    .prepare(
-      `SELECT id, estado, inicio, fin, nombre, apellido FROM agenda o
-       WHERE o.fecha = ? AND (o.producto = ? OR o.producto = 'todos') AND o.inicio < ? AND o.fin > ? AND o.id != ?
-       ORDER BY inicio`,
-    )
-    .bind(...paramsChoque(datos, excluir))
+    .prepare(`SELECT id, estado, inicio, fin, nombre, apellido FROM agenda o WHERE ${c.sql} ORDER BY inicio`)
+    .bind(...c.params)
     .all<Pick<FilaAgenda, "id" | "estado" | "inicio" | "fin" | "nombre" | "apellido">>();
   return results;
 }

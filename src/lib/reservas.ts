@@ -152,6 +152,8 @@ export const reservaPanelSchema = z
   .object({
     fecha: fechaISO,
     producto: z.enum(PRODUCTO_IDS),
+    /** Otros juegos de la misma reserva (combo). Cada uno queda ocupado en la web. */
+    adicionales: z.array(z.enum(PRODUCTO_IDS)).max(PRODUCTO_IDS.length).default([]),
     inicio: horaPanel,
     fin: horaPanel,
     total: z.number().int().min(0).max(5_000_000),

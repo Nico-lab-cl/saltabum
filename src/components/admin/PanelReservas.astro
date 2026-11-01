@@ -132,10 +132,19 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
           <label class={`${etiqueta} sm:col-span-2`}>Fecha<input name="fecha" type="date" required class={campo} /></label>
           <label class={etiqueta}>Inicio<input name="inicio" type="time" step="900" required class={campo} /></label>
           <label class={etiqueta}>Término<input name="fin" type="time" step="900" required class={campo} /></label>
-          <label class:list={[etiqueta, "sm:col-span-2", PRODUCTOS.length < 2 && "hidden"]}>
-            Juego
-            <select name="producto" class={campo}>{PRODUCTOS.map((p) => <option value={p.id}>{p.nombre}</option>)}</select>
-          </label>
+          <div role="group" aria-labelledby="panel-juegos" class:list={[etiqueta, "sm:col-span-4", PRODUCTOS.length < 2 && "hidden"]}>
+            <span id="panel-juegos">Juegos <span class="text-noche-suave font-semibold">(marca todos los que lleva la reserva; cada uno queda ocupado en la web)</span></span>
+            <div class="flex flex-wrap gap-2">
+              {
+                PRODUCTOS.map((p, i) => (
+                  <label class="border-noche/30 has-checked:border-noche has-checked:bg-sol flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border-2 px-3 font-bold">
+                    <input type="checkbox" name="juegos" value={p.id} checked={i === 0} class="accent-noche size-4" data-juego />
+                    {p.nombre}
+                  </label>
+                ))
+              }
+            </div>
+          </div>
           <label class={`${etiqueta} sm:col-span-2`}>
             Comuna (despacho)
             <input name="comuna" list="panel-comunas" placeholder="Elige o escribe" class={campo} />
@@ -237,6 +246,8 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     id: number;
     fecha: string;
     producto: string;
+    /** Otros juegos de la reserva, formato "|id|id|". */
+    adicionales: string | null;
     inicio: number;
     fin: number;
     estado: "reservado" | "bloqueado";
@@ -291,7 +302,10 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
   const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const cliente = (f: Fila) => [f.nombre, f.apellido].filter(Boolean).join(" ") || "Sin nombre";
   const horario = (f: Fila) => (f.inicio === 0 && f.fin === 24 * 60 ? "Todo el día" : etiquetaHorario(f.inicio, f.fin));
-  const clp = (n: number) => `${n.toLocaleString("es-CL")}`;
+  const clp = (n: number) => `$${n.toLocaleString("es-CL")}`;
+  /** Todos los juegos de una reserva (el principal y los adicionales). */
+  const juegosDe = (f: Pick<Fila, "producto" | "adicionales">) => [f.producto, ...(f.adicionales ?? "").split("|").filter(Boolean)];
+  const nombreJuego = (id: string) => PRODUCTOS.find((p) => p.id === id)?.nombre ?? id;
   /** Nombre corto de cada inflable para las etiquetas del calendario. */
   const corto = (id: string) => (PRODUCTOS.find((p) => p.id === id)?.nombre ?? id).replace("Castillo ", "").replace(" Arcoíris", "");
 
@@ -364,7 +378,7 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
   }
 
   /** Filas de un inflable ese día (sus reservas y los bloqueos de todos los juegos). */
-  const delInflable = (delDia: Fila[], id: string) => delDia.filter((f) => f.producto === id || f.producto === "todos");
+  const delInflable = (delDia: Fila[], id: string) => delDia.filter((f) => f.producto === "todos" || juegosDe(f).includes(id));
 
   function pintarInflablesDia() {
     const manana = iso(new Date(aFecha(hoy).getTime() + 86_400_000));
@@ -457,7 +471,7 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
         if (i < 3) {
           const c = document.createElement("span");
           c.className = `truncate rounded-md border px-1 text-[11px] leading-4 font-bold ${color}`;
-          c.textContent = f.estado === "bloqueado" ? `Bloq. ${f.inicio === 0 && f.fin === 1440 ? "día" : aHora(f.inicio)}` : `${aHora(f.inicio)} ${corto(f.producto)} · ${f.nombre ?? ""}`;
+          c.textContent = f.estado === "bloqueado" ? `Bloq. ${f.inicio === 0 && f.fin === 1440 ? "día" : aHora(f.inicio)}` : `${aHora(f.inicio)} ${juegosDe(f).map(corto).join(" + ")} · ${f.nombre ?? ""}`;
           chips.append(c);
         }
       });
@@ -604,6 +618,7 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
     // Lugar, total y notas
     const donde = el("div", "flex min-w-0 flex-col gap-1 text-sm");
+    donde.append(el("p", "font-extrabold", juegosDe(f).map(nombreJuego).join(" + ")));
     const lugar = [f.direccion, f.depto, f.ciudad].filter(Boolean).join(", ");
     donde.append(el("p", "font-bold", [f.comuna, lugar].filter(Boolean).join(" · ") || "Sin dirección"));
     const plata = el("p", "", "");
@@ -638,8 +653,15 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     const fin = campoF("fin").value;
     if (!ini || !fin) return 0;
     const horas = Math.max(HORAS_BASE, Math.ceil((aMinutos(fin) - aMinutos(ini)) / 60));
-    return calcularPrecio(campoF("producto").value || PRODUCTOS[0].id, horas, campoF("comuna").value || undefined).total;
+    const juegos = juegosElegidos();
+    if (!juegos.length) return 0;
+    // Cada juego con su valor y sus horas adicionales; el despacho se cobra una vez.
+    const despacho = calcularPrecio(juegos[0], horas, campoF("comuna").value || undefined).despacho;
+    return juegos.reduce((s, j) => s + calcularPrecio(j, horas).base + calcularPrecio(j, horas).extras, despacho);
   }
+
+  const casillasJuego = () => $$<HTMLInputElement>("[data-juego]");
+  const juegosElegidos = () => casillasJuego().filter((c) => c.checked).map((c) => c.value);
 
   function actualizarSugerido() {
     const s = sugerido();
@@ -660,7 +682,6 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
           fecha: f.fecha,
           inicio: aHora(f.inicio),
           fin: aHora(Math.min(f.fin, 24 * 60 - 1)),
-          producto: f.producto,
           comuna: f.comuna ?? "",
           total: String(f.total ?? 0),
           nombre: f.nombre ?? "",
@@ -683,6 +704,10 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
           fecha: prellenado.fecha || fecha || diaElegido || sumarDias(hoy, 1),
         };
     for (const [k, v] of Object.entries(valores)) campoF(k).value = v;
+    if (f) {
+      const juegos = juegosDe(f);
+      casillasJuego().forEach((c) => (c.checked = juegos.includes(c.value)));
+    }
     actualizarSugerido();
     ventanaReserva.showModal();
     campoF(f ? "nombre" : "fecha").focus();
@@ -692,9 +717,16 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     const invalido = [...formReserva.querySelectorAll<HTMLInputElement>("input, textarea")].find((i) => !i.checkValidity());
     if (invalido) return invalido.reportValidity();
     const v = (n: string) => campoF(n).value.trim();
+    const juegos = juegosElegidos();
+    if (!juegos.length) {
+      errorForm.hidden = false;
+      errorForm.textContent = "Marca al menos un juego";
+      return;
+    }
     const datos = {
       fecha: v("fecha"),
-      producto: v("producto") || PRODUCTOS[0].id,
+      producto: juegos[0],
+      adicionales: juegos.slice(1),
       inicio: v("inicio"),
       fin: v("fin"),
       total: Math.round(Number(v("total")) || 0),
@@ -789,7 +821,8 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     void guardar();
   });
   btnForzar.addEventListener("click", () => void guardar(true));
-  ["inicio", "fin", "producto", "comuna"].forEach((n) => campoF(n).addEventListener("input", actualizarSugerido));
+  ["inicio", "fin", "comuna"].forEach((n) => campoF(n).addEventListener("input", actualizarSugerido));
+  casillasJuego().forEach((c) => c.addEventListener("change", actualizarSugerido));
   campoF("total").addEventListener("input", () => (totalManual = true));
   $("[data-usar-sugerido]").addEventListener("click", () => {
     totalManual = false;

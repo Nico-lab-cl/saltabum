@@ -22,6 +22,7 @@ import {
   marcarPagada,
   obtenerFila,
   obtenerReserva,
+  textoAdicionales,
   type DatosReserva,
   type FilaAgenda,
 } from "@/lib/server/reservas-db";
@@ -38,6 +39,8 @@ const json = (status: number, data: Record<string, unknown>) =>
 const aDatos = (d: ReservaPanel): DatosReserva => ({
   fecha: d.fecha,
   producto: d.producto,
+  // Sin repetir el juego principal ni duplicados.
+  adicionales: textoAdicionales([...new Set(d.adicionales)].filter((p) => p !== d.producto)),
   inicio: aMinutos(d.inicio),
   fin: aMinutos(d.fin),
   total: d.total,
