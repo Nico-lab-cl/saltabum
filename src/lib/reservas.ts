@@ -15,7 +15,7 @@ export const PASO = 30;
 export const HORAS_BASE = 3;
 export const HORAS_EXTRA_MAX = 3;
 /** Minutos libres entre un evento y el siguiente. */
-export const MARGEN = 90;
+export const MARGEN = 60;
 
 /** Cuántos días hacia adelante se puede reservar. Nunca el mismo día (evita choques de horario). */
 export const DIAS_RESERVABLES = 90;

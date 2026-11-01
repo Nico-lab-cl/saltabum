@@ -239,7 +239,7 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 </style>
 
 <script>
-  import { ABONO, aHora, aMinutos, calcularPrecio, etiquetaHorario, HORAS_BASE, pesos } from "@/lib/reservas";
+  import { ABONO, aHora, aMinutos, calcularPrecio, etiquetaHorario, HORAS_BASE, MARGEN, pesos } from "@/lib/reservas";
   import { PRODUCTOS } from "@design/data";
 
   type Fila = {
@@ -763,7 +763,7 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     if (res.status === 409 && cuerpo.choques) {
       errorForm.textContent = `Ese horario se cruza con: ${cuerpo.choques
         .map((c) => (c.estado === "bloqueado" ? `un bloqueo (${horario(c)})` : `${cliente(c)} (${horario(c)})`))
-        .join(", ")}. Entre eventos se dejan 90 minutos para retirar y volver a montar.`;
+        .join(", ")}. Entre eventos se deja ${MARGEN} minutos para retirar y volver a montar.`;
       btnForzar.hidden = false;
     } else if (res.status === 422) {
       errorForm.textContent = cuerpo.detalle?.join(". ") ?? "Revisa los datos";
