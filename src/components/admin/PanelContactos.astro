@@ -1,0 +1,527 @@
+---
+// Pestaña «Contactos» del panel /admin (CRM): una ficha por persona que une WhatsApp, chat de la web, consultas y
+// reservas, con su etapa (Lead → Calificado → Cotizado → Reservado → Cliente → Promotor), si está perdida y por qué,
+// desde dónde llegó y su línea de tiempo. «Por atender» son las personas que esperan respuesta del equipo, la que
+// lleva más tiempo esperando primero. Se actualiza cada 30 segundos.
+const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
+---
+
+<section data-crm-panel class="flex flex-col gap-4">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h2 class="font-display text-3xl font-semibold">Contactos</h2>
+      <p class="text-noche-suave text-sm">
+        Cada persona con su etapa, desde dónde llegó y si espera respuesta
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <input
+        data-crm-buscar
+        type="search"
+        placeholder="Buscar nombre, teléfono, comuna…"
+        class={`${campo} w-full sm:w-[260px]`}
+      />
+      <button
+        data-crm-actualizar
+        type="button"
+        class="border-noche bg-blanco min-h-11 cursor-pointer rounded-full border-2 px-4 text-sm font-extrabold"
+      >
+        ↻ Actualizar
+      </button>
+    </div>
+  </div>
+
+  <div data-crm-filtros role="radiogroup" aria-label="Qué contactos ver" class="flex flex-wrap gap-2"></div>
+  <p data-crm-estado class="text-noche-suave text-sm" aria-live="polite"></p>
+
+  <div class="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+    <div data-crm-lista class="flex max-h-[75vh] flex-col gap-2 overflow-y-auto pr-1"></div>
+    <div data-crm-ficha class="border-noche bg-blanco flex min-h-[420px] flex-col rounded-2xl border-2">
+      <p class="text-noche-suave m-auto p-6 text-center text-sm">Elige un contacto para ver su ficha</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  type Etapa = "lead" | "calificado" | "cotizado" | "reservado" | "cliente" | "promotor";
+  type Motivo =
+    | "no_respondio"
+    | "sin_disponibilidad"
+    | "fuera_de_zona"
+    | "presupuesto"
+    | "otra_empresa"
+    | "cancelo"
+    | "spam";
+  type Reserva = {
+    id: number;
+    fecha: string;
+    producto: string;
+    total: number | null;
+    pagado: number | null;
+    pagado_en: string | null;
+    creado: string;
+    origen: string | null;
+  };
+  type Contacto = {
+    clave: string;
+    nombre: string | null;
+    telefono: string | null;
+    email: string | null;
+    comuna: string | null;
+    etapa: Etapa;
+    etapa_auto: Etapa;
+    perdido: { motivo: Motivo; etapa: Etapa; en: string; por: string | null } | null;
+    reactivado: boolean;
+    esperando: string | null;
+    espera_en: "whatsapp" | "chatweb" | "consulta" | null;
+    origen: string;
+    creado: string;
+    ultimo: string;
+    notas: string | null;
+    whatsapp: { jid: string; anuncio: number; titulo: string | null } | null;
+    chats: string[];
+    consultas: number[];
+    reservas: Reserva[];
+  };
+  type Evento = {
+    en: string;
+    tipo: "whatsapp" | "chatweb" | "consulta" | "reserva" | "pago" | "cotizacion" | "equipo";
+    texto: string;
+  };
+
+  const ETAPAS: { id: Etapa; nombre: string; clase: string }[] = [
+    { id: "lead", nombre: "Lead", clase: "bg-crema" },
+    { id: "calificado", nombre: "Calificado", clase: "bg-celeste" },
+    { id: "cotizado", nombre: "Cotizado", clase: "bg-sol" },
+    { id: "reservado", nombre: "Reservado", clase: "bg-verde-burbuja" },
+    { id: "cliente", nombre: "Cliente", clase: "bg-verde" },
+    { id: "promotor", nombre: "Promotor", clase: "bg-verde" },
+  ];
+  const MOTIVOS: Record<Motivo, string> = {
+    no_respondio: "No respondió",
+    sin_disponibilidad: "Sin disponibilidad para su fecha",
+    fuera_de_zona: "Fuera de la zona de despacho",
+    presupuesto: "Presupuesto",
+    otra_empresa: "Eligió otra empresa",
+    cancelo: "Canceló la reserva",
+    spam: "Spam o número equivocado",
+  };
+  const MANUALES: Etapa[] = ["calificado", "cotizado", "promotor"];
+  const ESPERA_EN = { whatsapp: "WhatsApp", chatweb: "chat web", consulta: "formulario" } as const;
+  const ICONO: Record<Evento["tipo"], string> = {
+    whatsapp: "💬",
+    chatweb: "🤖",
+    consulta: "📝",
+    reserva: "📅",
+    pago: "💰",
+    cotizacion: "🧾",
+    equipo: "👤",
+  };
+  /** Minutos de espera antes de marcar en rojo (los cuadernos de ventas hablan de 5 a 15). */
+  const LIMITE_ESPERA = 15;
+
+  const root = document.querySelector<HTMLElement>("[data-crm-panel]")!;
+  const lista = root.querySelector<HTMLElement>("[data-crm-lista]")!;
+  const ficha = root.querySelector<HTMLElement>("[data-crm-ficha]")!;
+  const estado = root.querySelector<HTMLElement>("[data-crm-estado]")!;
+  const filtros = root.querySelector<HTMLElement>("[data-crm-filtros]")!;
+  const buscar = root.querySelector<HTMLInputElement>("[data-crm-buscar]")!;
+
+  const hora = new Intl.DateTimeFormat("es-CL", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const dia = new Intl.DateTimeFormat("es-CL", { weekday: "short", day: "numeric", month: "short" });
+  const diaEvento = new Intl.DateTimeFormat("es-CL", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+  const cuando = (iso: string) => {
+    const f = new Date(iso);
+    return f.toDateString() === new Date().toDateString()
+      ? hora.format(f)
+      : `${dia.format(f)} ${hora.format(f)}`;
+  };
+  const hace = (iso: string) => {
+    const min = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000));
+    if (min < 60) return `${min} min`;
+    if (min < 48 * 60) return `${Math.round(min / 60)} h`;
+    return `${Math.round(min / 1440)} días`;
+  };
+  const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const nombreDe = (c: Contacto) => c.nombre ?? (c.telefono ? `+${c.telefono}` : (c.email ?? "Sin nombre"));
+  const etapaDe = (id: Etapa) => ETAPAS.find((e) => e.id === id)!;
+
+  let contactos: Contacto[] = [];
+  let filtro = "atender";
+  let abierto: string | null = null;
+  let activo = false;
+
+  const api = (ruta: string, init?: RequestInit) =>
+    fetch(ruta, {
+      ...init,
+      credentials: "same-origin",
+      headers: { "x-saltabum-admin": "1", "content-type": "application/json" },
+    });
+  const avisar = (texto: string) => document.dispatchEvent(new CustomEvent("panel:aviso", { detail: texto }));
+  const sinSesion = () => document.dispatchEvent(new CustomEvent("panel:sin-sesion"));
+
+  function el(tag: string, clase: string, texto?: string | null) {
+    const e = document.createElement(tag);
+    e.className = clase;
+    if (texto) e.textContent = texto;
+    return e;
+  }
+  function boton(texto: string, clase: string, accion: () => void) {
+    const b = el(
+      "button",
+      `min-h-9 cursor-pointer rounded-full border-2 px-3 text-sm font-extrabold disabled:opacity-50 ${clase}`,
+      texto,
+    ) as HTMLButtonElement;
+    b.type = "button";
+    b.addEventListener("click", accion);
+    return b;
+  }
+  const chip = (texto: string, clase: string) =>
+    el("span", `rounded-full border px-2 text-xs font-extrabold whitespace-nowrap ${clase}`, texto);
+  const chipEtapa = (c: Contacto) =>
+    c.perdido
+      ? chip(`Perdido · ${MOTIVOS[c.perdido.motivo]}`, "border-noche/40 bg-arena")
+      : chip(etapaDe(c.etapa).nombre, `border-noche ${etapaDe(c.etapa).clase}`);
+
+  // ── Filtros ───────────────────────────────────────────────────────────
+  const FILTROS: { id: string; nombre: string; cumple: (c: Contacto) => boolean }[] = [
+    { id: "atender", nombre: "Por atender", cumple: (c) => !!c.esperando },
+    ...ETAPAS.map((e) => ({
+      id: e.id,
+      nombre: e.nombre,
+      cumple: (c: Contacto) => !c.perdido && c.etapa === e.id,
+    })),
+    { id: "perdido", nombre: "Perdidos", cumple: (c) => !!c.perdido },
+    { id: "todos", nombre: "Todos", cumple: () => true },
+  ];
+
+  function pintarFiltros() {
+    filtros.replaceChildren(
+      ...FILTROS.map((f) => {
+        const n = contactos.filter(f.cumple).length;
+        const b = boton(
+          `${f.nombre} ${n}`,
+          `${f.id === filtro ? "border-noche bg-noche text-crema" : f.id === "atender" && n ? "border-rojo-texto bg-rojo-suave text-rojo-texto" : "border-noche bg-blanco"}`,
+          () => {
+            filtro = f.id;
+            pintarFiltros();
+            pintarLista();
+          },
+        );
+        b.setAttribute("role", "radio");
+        b.setAttribute("aria-checked", String(f.id === filtro));
+        return b;
+      }),
+    );
+  }
+
+  async function cargar() {
+    const res = await api("/api/admin/contactos").catch(() => null);
+    if (res?.status === 401) return sinSesion();
+    if (!res?.ok) return void (estado.textContent = "No se pudieron cargar los contactos");
+    contactos = ((await res.json()) as { contactos: Contacto[] }).contactos;
+    document.dispatchEvent(
+      new CustomEvent("panel:contador", {
+        detail: { pestana: "contactos", n: contactos.filter((c) => c.esperando).length },
+      }),
+    );
+    pintarFiltros();
+    pintarLista();
+  }
+
+  function pintarLista() {
+    const f = FILTROS.find((x) => x.id === filtro)!;
+    const q = sinTildes(buscar.value.trim());
+    const visibles = contactos
+      .filter(
+        (c) =>
+          f.cumple(c) &&
+          (!q ||
+            sinTildes(
+              [c.nombre, c.telefono, c.email, c.comuna, c.origen, c.notas].filter(Boolean).join(" "),
+            ).includes(q)),
+      )
+      // En «Por atender», la persona que lleva más tiempo esperando va primero.
+      .sort((a, b) => (filtro === "atender" ? a.esperando!.localeCompare(b.esperando!) : 0));
+    lista.replaceChildren(...visibles.slice(0, 300).map(fila));
+    estado.textContent = visibles.length
+      ? visibles.length > 300
+        ? `Se muestran 300 de ${visibles.length}, usa el buscador`
+        : ""
+      : filtro === "atender"
+        ? "Nadie espera respuesta 🎉"
+        : "No hay contactos en esta vista";
+  }
+
+  function fila(c: Contacto): HTMLElement {
+    const atrasado = c.esperando && Date.now() - Date.parse(c.esperando) > LIMITE_ESPERA * 60_000;
+    const b = el(
+      "button",
+      `flex w-full cursor-pointer flex-col gap-1 rounded-2xl border-2 p-3 text-left ${c.clave === abierto ? "bg-sol/40" : atrasado ? "bg-rojo-suave/50" : "bg-blanco"} ${atrasado ? "border-rojo-texto" : "border-noche"}`,
+    ) as HTMLButtonElement;
+    b.type = "button";
+    const arriba = el("div", "flex items-center justify-between gap-2");
+    arriba.append(
+      el("span", "truncate font-extrabold", nombreDe(c)),
+      el("span", "text-noche-suave shrink-0 text-xs font-semibold", cuando(c.ultimo)),
+    );
+    b.append(arriba);
+    const chips = el("div", "flex flex-wrap items-center gap-1");
+    chips.append(chipEtapa(c));
+    if (c.reactivado) chips.append(chip("Volvió", "border-noche bg-celeste"));
+    if (c.esperando)
+      chips.append(
+        chip(
+          `Espera hace ${hace(c.esperando)} · ${ESPERA_EN[c.espera_en!]}`,
+          atrasado ? "border-rojo-texto bg-rojo-texto text-white" : "border-noche bg-sol",
+        ),
+      );
+    b.append(chips);
+    b.append(el("p", "text-noche-suave truncate text-xs", [c.origen, c.comuna].filter(Boolean).join(" · ")));
+    b.addEventListener("click", () => void abrir(c.clave, true));
+    return b;
+  }
+
+  // ── Ficha ─────────────────────────────────────────────────────────────
+  async function abrir(clave: string, desplazar: boolean) {
+    abierto = clave;
+    pintarLista();
+    const res = await api(`/api/admin/contactos?clave=${encodeURIComponent(clave)}`).catch(() => null);
+    if (res?.status === 401) return sinSesion();
+    if (!res?.ok) return avisar("No se pudo abrir el contacto");
+    const { contacto, eventos } = (await res.json()) as { contacto: Contacto; eventos: Evento[] };
+    if (abierto !== clave) return;
+    pintarFicha(contacto, eventos);
+    if (desplazar && window.matchMedia("(max-width: 1023px)").matches)
+      ficha.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function enviar(datos: Record<string, unknown>, ok: string) {
+    const res = await api("/api/admin/contactos", { method: "POST", body: JSON.stringify(datos) }).catch(
+      () => null,
+    );
+    if (res?.status === 401) return sinSesion();
+    avisar(res?.ok ? ok : "No se pudo guardar, inténtalo de nuevo");
+    await cargar();
+    if (abierto) await abrir(abierto, false);
+  }
+
+  function pintarFicha(c: Contacto, eventos: Evento[]) {
+    const cabeza = el("div", "border-noche flex flex-col gap-3 border-b-2 p-4");
+    const fila1 = el("div", "flex flex-wrap items-start justify-between gap-2");
+    const quien = el("div", "flex min-w-0 flex-col");
+    quien.append(el("p", "font-display text-xl font-semibold", nombreDe(c)));
+    const datos = el("p", "flex flex-wrap gap-x-3 text-sm");
+    if (c.telefono) {
+      const a = el("a", "text-azul-texto font-semibold underline", `+${c.telefono}`) as HTMLAnchorElement;
+      a.href = `https://wa.me/${c.telefono}`;
+      a.target = "_blank";
+      a.rel = "noopener";
+      datos.append(a);
+    }
+    if (c.email) datos.append(el("span", "text-noche-suave break-all", c.email));
+    if (c.comuna) datos.append(el("span", "text-noche-suave", c.comuna));
+    quien.append(datos, el("p", "text-noche-suave text-xs", `Llegó por ${c.origen} · ${cuando(c.creado)}`));
+    fila1.append(quien);
+
+    // Ir a la conversación en su pestaña.
+    const ir = el("div", "flex flex-wrap gap-2");
+    if (c.whatsapp)
+      ir.append(
+        boton("Abrir WhatsApp", "border-noche bg-verde-burbuja", () =>
+          document.dispatchEvent(new CustomEvent("panel:abrir-chat-wa", { detail: c.whatsapp!.jid })),
+        ),
+      );
+    c.chats.forEach((id, i) =>
+      ir.append(
+        boton(c.chats.length > 1 ? `Chat web ${i + 1}` : "Abrir chat web", "border-noche bg-celeste", () =>
+          document.dispatchEvent(new CustomEvent("panel:abrir-chatweb", { detail: id })),
+        ),
+      ),
+    );
+    if (c.consultas.length)
+      ir.append(
+        boton("Ver consulta", "border-noche bg-sol", () =>
+          document.dispatchEvent(new CustomEvent("panel:abrir-pestana", { detail: "consultas" })),
+        ),
+      );
+    fila1.append(ir);
+    cabeza.append(fila1);
+
+    // Etapas: la actual marcada, las pasadas en color.
+    const pasos = el("ol", "flex flex-wrap gap-1");
+    ETAPAS.forEach((e, i) => {
+      const actual = e.id === c.etapa;
+      const pasada = i < ETAPAS.findIndex((x) => x.id === c.etapa);
+      const p = el(
+        "li",
+        `rounded-full border-2 px-2.5 py-0.5 text-xs font-extrabold ${actual ? `border-noche ${e.clase}` : pasada ? "border-noche/40 bg-crema" : "border-noche/15 text-noche-suave"}`,
+        e.nombre,
+      );
+      if (actual) p.setAttribute("aria-current", "step");
+      pasos.append(p);
+    });
+    cabeza.append(pasos);
+
+    if (c.perdido)
+      cabeza.append(
+        el(
+          "p",
+          "bg-arena rounded-xl px-3 py-2 text-sm font-bold",
+          `Perdido en ${etapaDe(c.perdido.etapa).nombre}: ${MOTIVOS[c.perdido.motivo]} · ${cuando(c.perdido.en)}${c.perdido.por ? ` · ${c.perdido.por}` : ""}`,
+        ),
+      );
+    else if (c.reactivado)
+      cabeza.append(
+        el(
+          "p",
+          "bg-celeste/50 rounded-xl px-3 py-2 text-sm font-bold",
+          "Estaba perdido y volvió a escribir o reservar",
+        ),
+      );
+    if (c.esperando)
+      cabeza.append(
+        el(
+          "p",
+          "bg-rojo-suave text-rojo-texto rounded-xl px-3 py-2 text-sm font-bold",
+          `Espera respuesta por ${ESPERA_EN[c.espera_en!]} hace ${hace(c.esperando)}`,
+        ),
+      );
+    const sinPagar = c.reservas.filter((r) => !r.pagado);
+    if (sinPagar.length)
+      cabeza.append(
+        el(
+          "p",
+          "bg-sol/40 rounded-xl px-3 py-2 text-sm font-bold",
+          `Falta el pago de la reserva del ${diaEvento.format(new Date(`${sinPagar[0]!.fecha}T12:00:00Z`))}`,
+        ),
+      );
+
+    // Acciones del equipo.
+    const acciones = el("div", "flex flex-wrap items-center gap-2");
+    const esCliente = c.etapa === "cliente" || c.etapa === "promotor";
+    if (c.perdido)
+      acciones.append(
+        boton(
+          "Reactivar",
+          "border-noche bg-celeste",
+          () => void enviar({ accion: "reactivar", clave: c.clave }, "Contacto reactivado"),
+        ),
+      );
+    else if (!esCliente) {
+      const motivo = el(
+        "select",
+        "border-noche bg-blanco min-h-9 rounded-full border-2 px-3 text-sm font-bold",
+      ) as HTMLSelectElement;
+      motivo.setAttribute("aria-label", "Motivo de pérdida");
+      motivo.append(
+        new Option("Marcar perdido por…", ""),
+        ...(Object.entries(MOTIVOS) as [Motivo, string][]).map(([id, nombre]) => new Option(nombre, id)),
+      );
+      motivo.addEventListener("change", () => {
+        if (!motivo.value) return;
+        void enviar({ accion: "perdido", clave: c.clave, motivo: motivo.value }, "Marcado como perdido");
+      });
+      acciones.append(motivo);
+    }
+    const etapa = el(
+      "select",
+      "border-noche bg-blanco min-h-9 rounded-full border-2 px-3 text-sm font-bold",
+    ) as HTMLSelectElement;
+    etapa.setAttribute("aria-label", "Cambiar etapa");
+    etapa.append(
+      new Option(`Etapa automática (${etapaDe(c.etapa_auto).nombre})`, ""),
+      // Reservado y Cliente salen solo de la agenda y del pago (que además avisa a Meta), no se marcan a mano.
+      ...ETAPAS.filter(
+        (e) => MANUALES.includes(e.id) && ETAPAS.indexOf(e) > ETAPAS.findIndex((x) => x.id === c.etapa_auto),
+      ).map((e) => new Option(`Subir a ${e.nombre}`, e.id)),
+    );
+    etapa.value = c.etapa !== c.etapa_auto ? c.etapa : "";
+    etapa.addEventListener(
+      "change",
+      () => void enviar({ accion: "etapa", clave: c.clave, etapa: etapa.value || null }, "Etapa actualizada"),
+    );
+    acciones.append(etapa);
+    cabeza.append(acciones);
+    if (esCliente || c.etapa === "reservado")
+      cabeza.append(
+        el(
+          "p",
+          "text-noche-suave text-xs",
+          "«Cliente» llega solo al marcar la reserva como pagada en Reservas, y «Promotor» al pagar una segunda reserva",
+        ),
+      );
+
+    // Notas internas.
+    const notas = el("div", "flex flex-col gap-1 text-sm");
+    if (c.notas) notas.append(el("p", "bg-sol/25 rounded-lg px-2 py-1 whitespace-pre-line", c.notas));
+    notas.append(
+      boton(c.notas ? "Editar nota" : "Agregar nota", "border-noche/30 bg-crema w-fit", () => {
+        const area = el(
+          "textarea",
+          "border-noche bg-crema w-full rounded-xl border-2 px-3 py-2",
+        ) as HTMLTextAreaElement;
+        area.rows = 3;
+        area.maxLength = 2000;
+        area.value = c.notas ?? "";
+        area.placeholder = "Ej.: cumpleaños de Sofía (5 años), prefiere el castillo, llamar el jueves";
+        notas.replaceChildren(
+          area,
+          boton(
+            "Guardar nota",
+            "border-noche bg-noche text-crema w-fit",
+            () => void enviar({ accion: "notas", clave: c.clave, notas: area.value }, "Nota guardada"),
+          ),
+        );
+        area.focus();
+      }),
+    );
+    cabeza.append(notas);
+
+    // Línea de tiempo.
+    const tiempo = el("ol", "flex max-h-[50vh] flex-col gap-2 overflow-y-auto p-4");
+    for (const e of eventos) {
+      const li = el("li", "flex gap-2 text-sm");
+      li.append(el("span", "shrink-0", ICONO[e.tipo]));
+      const cuerpo = el("div", "min-w-0");
+      cuerpo.append(
+        el("p", "break-words", e.texto),
+        el("p", "text-noche-suave text-xs font-semibold", cuando(e.en)),
+      );
+      li.append(cuerpo);
+      tiempo.append(li);
+    }
+    if (!eventos.length) tiempo.append(el("li", "text-noche-suave text-sm", "Sin actividad registrada"));
+
+    ficha.replaceChildren(
+      cabeza,
+      el("p", "font-display px-4 pt-3 text-lg font-semibold", "Línea de tiempo"),
+      tiempo,
+    );
+  }
+
+  buscar.addEventListener("input", pintarLista);
+  root.querySelector("[data-crm-actualizar]")!.addEventListener("click", () => void cargar());
+
+  document.addEventListener("panel:listo", () => {
+    activo = true;
+    void cargar();
+  });
+  document.addEventListener("panel:pestana", (e) => {
+    if (activo && (e as CustomEvent<string>).detail === "contactos") void cargar();
+  });
+  setInterval(() => {
+    if (activo && document.visibilityState === "visible") void cargar();
+  }, 30_000);
+  document.addEventListener("panel:cerrado", () => {
+    activo = false;
+    contactos = [];
+    abierto = null;
+    lista.replaceChildren();
+  });
+</script>

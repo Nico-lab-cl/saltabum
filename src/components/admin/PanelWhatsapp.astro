@@ -679,6 +679,15 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
   document.addEventListener("panel:pestana", (e) => {
     if (activo && (e as CustomEvent<string>).detail === "whatsapp") void cargar();
   });
+  // Desde la ficha de un contacto: abre su chat en esta pestaña (en «Todos», por si estaba cerrado).
+  document.addEventListener("panel:abrir-chat-wa", async (e) => {
+    const jid = (e as CustomEvent<string>).detail;
+    filtro = "todos";
+    root.querySelectorAll<HTMLElement>("[data-filtro-wa]").forEach((x) => x.setAttribute("aria-checked", String(x.dataset.filtroWa === "todos")));
+    document.dispatchEvent(new CustomEvent("panel:abrir-pestana", { detail: "whatsapp" }));
+    await cargar();
+    void abrir(jid, true);
+  });
   setInterval(() => {
     if (activo && document.visibilityState === "visible") void cargar();
   }, 20_000);

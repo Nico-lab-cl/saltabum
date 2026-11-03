@@ -273,6 +273,11 @@
     visible = (e as CustomEvent<string>).detail === "chatweb";
     if (activo && visible) void cargarLista();
   });
+  // Desde la ficha de un contacto: abre esa conversación en esta pestaña.
+  document.addEventListener("panel:abrir-chatweb", (e) => {
+    document.dispatchEvent(new CustomEvent("panel:abrir-pestana", { detail: "chatweb" }));
+    void abrir((e as CustomEvent<string>).detail);
+  });
   setInterval(() => {
     if (activo && visible && abierta && document.visibilityState === "visible") void abrir(abierta, false);
   }, 5_000);

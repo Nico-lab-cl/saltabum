@@ -13,6 +13,7 @@
 import "@/styles/global.css";
 import PanelChatWeb from "@/components/admin/PanelChatWeb.astro";
 import PanelConsultas from "@/components/admin/PanelConsultas.astro";
+import PanelContactos from "@/components/admin/PanelContactos.astro";
 import PanelLeads from "@/components/admin/PanelLeads.astro";
 import PanelHistorial from "@/components/admin/PanelHistorial.astro";
 import PanelQr from "@/components/admin/PanelQr.astro";
@@ -22,6 +23,7 @@ import PanelWhatsapp from "@/components/admin/PanelWhatsapp.astro";
 const campo = "border-noche min-h-12 rounded-xl border-2 px-3.5";
 const PESTANAS = [
   ["reservas", "Reservas"],
+  ["contactos", "Contactos"],
   ["consultas", "Consultas"],
   ["whatsapp", "WhatsApp"],
   ["chatweb", "Chat web"],
@@ -120,7 +122,7 @@ const PESTANAS = [
                 class="aria-selected:bg-noche aria-selected:text-crema min-h-10 cursor-pointer rounded-full px-5 font-extrabold whitespace-nowrap"
               >
                 {nombre}
-                {(id === "consultas" || id === "whatsapp" || id === "chatweb") && (
+                {(id === "contactos" || id === "consultas" || id === "whatsapp" || id === "chatweb") && (
                   <span data-contador={id} hidden class="bg-rojo-texto ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs leading-5 text-white" />
                 )}
               </button>
@@ -128,6 +130,7 @@ const PESTANAS = [
           }
         </nav>
         <div id="panel-reservas" role="tabpanel" aria-labelledby="pestana-reservas" data-pestana-panel="reservas"><PanelReservas /></div>
+        <div id="panel-contactos" role="tabpanel" aria-labelledby="pestana-contactos" data-pestana-panel="contactos" hidden><PanelContactos /></div>
         <div id="panel-consultas" role="tabpanel" aria-labelledby="pestana-consultas" data-pestana-panel="consultas" hidden><PanelConsultas /></div>
         <div id="panel-whatsapp" role="tabpanel" aria-labelledby="pestana-whatsapp" data-pestana-panel="whatsapp" hidden><PanelWhatsapp /></div>
         <div id="panel-chatweb" role="tabpanel" aria-labelledby="pestana-chatweb" data-pestana-panel="chatweb" hidden><PanelChatWeb /></div>
@@ -209,7 +212,7 @@ const PESTANAS = [
         document.dispatchEvent(new CustomEvent("panel:listo", { detail: datos }));
         // «#chatweb=<id>» (enlace de los avisos de WhatsApp) abre esa conversación en la pestaña Chat web.
         const pedida = location.hash.slice(1).split("=")[0];
-        abrirPestana(["consultas", "whatsapp", "chatweb", "leads", "historial", "qr"].includes(pedida) ? pedida : "reservas");
+        abrirPestana(["contactos", "consultas", "whatsapp", "chatweb", "leads", "historial", "qr"].includes(pedida) ? pedida : "reservas");
       }
 
       document.addEventListener("panel:sin-sesion", () => mostrarLogin("Tu sesión expiró, vuelve a ingresar"));
