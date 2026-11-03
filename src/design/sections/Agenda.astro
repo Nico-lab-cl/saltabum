@@ -695,6 +695,15 @@ const botonRedondo =
     );
     // Al escribir la dirección se actualizan los pasos (para poder saltar al siguiente).
     camposDe("comuna").forEach((c) => c.addEventListener("input", actualizar));
+    // «Reservar fecha» desde la ficha de un juego (data-reservar-juego): deja ese juego elegido en la agenda.
+    document.addEventListener("click", (e) => {
+      const juego = (e.target as Element | null)?.closest<HTMLElement>("[data-reservar-juego]")?.dataset.reservarJuego;
+      const radio = juego ? $$<HTMLInputElement>("input[type=radio][data-producto]").find((r) => r.value === juego) : undefined;
+      if (radio && !radio.checked) {
+        radio.checked = true;
+        radio.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
     $$<HTMLInputElement>("[data-producto]").forEach((r) =>
       r.addEventListener("change", () => {
         inicio = undefined;

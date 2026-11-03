@@ -1,6 +1,7 @@
 ---
-// Barra fija inferior (celular y tablet): WhatsApp, Contacto y Llamar, del mismo ancho. Se esconde mientras el formulario
-// de contacto o la reserva están en pantalla.
+// Barra fija inferior (celular y tablet): WhatsApp, Reservar y Llamar, del mismo ancho. Se esconde mientras el formulario
+// de contacto o la reserva están en pantalla. «Reservar» reemplazó a «Contacto»: según Clarity solo un tercio de las
+// visitas del celular llegaba a la agenda, y el formulario de contacto (al final de la página) casi nadie.
 import { PUBLIC_WHATSAPP_NUMBER } from "astro:env/client";
 import Icon from "../components/Icon.astro";
 import WaButton from "../components/WaButton.astro";
@@ -16,11 +17,11 @@ const telefono = (PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
 >
   <WaButton placement="sticky" size="m" icon={false} class="min-w-0 gap-1.5 !px-2 text-[15px] max-[419px]:min-h-14 max-[419px]:flex-col max-[419px]:gap-0.5 max-[419px]:text-[13px] max-[419px]:leading-4"><Icon name="whatsapp" size={20} class="shrink-0" />WhatsApp</WaButton>
   <a
-    href={RUTAS.contacto}
+    href={RUTAS.reservar}
     class="bounce border-noche bg-sol text-noche inline-flex min-h-13 min-w-0 items-center justify-center gap-1.5 rounded-full border-2 px-2 text-[15px] font-extrabold max-[419px]:min-h-14 max-[419px]:flex-col max-[419px]:gap-0.5 max-[419px]:text-[13px] max-[419px]:leading-4 no-underline shadow-[0_3px_0_var(--color-noche)]"
   >
-    <Icon name="correo" size={20} class="shrink-0" />
-    Contacto
+    <Icon name="calendario" size={20} class="shrink-0" />
+    Reservar
   </a>
   {
     telefono && (
