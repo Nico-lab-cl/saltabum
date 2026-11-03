@@ -1,4 +1,4 @@
-# Conecta Instagram y Facebook al chat con IA (ver src/lib/server/redes.ts) sin mostrar las claves en pantalla.
+﻿# Conecta Instagram y Facebook al chat con IA (ver src/lib/server/redes.ts) sin mostrar las claves en pantalla.
 # Pide la «Clave secreta» de la app de Meta «Saltabum Chats» y el token de la página Saltabum, inventa el token de
 # verificación del webhook, carga los tres como secretos del Worker en Cloudflare, los deja en .dev.vars y suscribe
 # la página a la app (para que Meta mande los mensajes a https://saltabum.cl/api/meta).
@@ -6,29 +6,38 @@
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 $env:NODE_OPTIONS = "--use-system-ca"
+# Windows PowerShell 5.1 usa TLS 1.0 por defecto y graph.facebook.com lo rechaza.
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+# Llama a la API de Meta y devuelve la respuesta (también cuando es un error, para mostrar el motivo exacto).
+Add-Type -AssemblyName System.Net.Http
+$http = New-Object System.Net.Http.HttpClient
+function Graph([string]$metodo, [string]$url) {
+  $resp = if ($metodo -eq "POST") { $http.PostAsync($url, $null).Result } else { $http.GetAsync($url).Result }
+  return ($resp.Content.ReadAsStringAsync().Result | ConvertFrom-Json)
+}
 
 function Leer([string]$texto) {
   $segura = Read-Host $texto -AsSecureString
-  return [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($segura)).Trim()
+  return [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($segura)) -replace '\s', ''
 }
 
-$secreto = Leer "Pega la Clave secreta de la app Saltabum Chats (no se ve al escribir) y presiona Enter"
-if ($secreto -notmatch '^[0-9a-f]{32}$') { Write-Host "Eso no parece la clave secreta de una app de Meta (32 letras y números). No se guardó nada." -ForegroundColor Red; exit 1 }
-$token = Leer "Pega el token de la página Saltabum (no se ve al escribir) y presiona Enter"
-if ($token -notmatch '^EA[A-Za-z0-9]{50,}$') { Write-Host "Eso no parece un token de Meta (empieza con EA). No se guardó nada." -ForegroundColor Red; exit 1 }
+$token = Leer "1/2 Pega el token de la página Saltabum (empieza con EA, no se ve al escribir) y presiona Enter"
+if (-not $token.StartsWith("EA") -or $token.Length -lt 100) {
+  $inicio = if ($token.Length -ge 4) { $token.Substring(0, 4) } else { $token }
+  Write-Host "Eso no parece un token de página: tiene $($token.Length) caracteres y empieza con '$inicio' (debe empezar con EA y tener más de 100). No se guardó nada." -ForegroundColor Red
+  Write-Host "Vuelve a pulsar Copiar en la ventana del token de Meta y corre el script otra vez." -ForegroundColor Yellow
+  exit 1
+}
+$secreto = Leer "2/2 Ahora copia la Clave secreta de la app (Configuración de la app > Información básica > Mostrar), pégala y presiona Enter"
+if ($secreto -notmatch '^[0-9a-fA-F]{32}$') { Write-Host "Eso no parece la clave secreta de una app de Meta (32 letras y números). No se guardó nada." -ForegroundColor Red; exit 1 }
 
-# El token debe ser de la página (no de una persona) para poder responder.
-try {
-  $pagina = Invoke-RestMethod "https://graph.facebook.com/v23.0/me?fields=id,name&access_token=$token"
-} catch { Write-Host "Meta rechazó el token: $($_.ErrorDetails.Message)" -ForegroundColor Red; exit 1 }
-Write-Host "Token de: $($pagina.name) ($($pagina.id))" -ForegroundColor Cyan
-if ($pagina.name -notmatch 'Saltabum') { Write-Host "Ojo: el token no es de la página Saltabum. No se guardó nada." -ForegroundColor Red; exit 1 }
-
-# Suscribe la página a la app: sin esto Meta no avisa los mensajes nuevos.
-try {
-  $r = Invoke-RestMethod -Method Post "https://graph.facebook.com/v23.0/$($pagina.id)/subscribed_apps?subscribed_fields=messages,message_echoes&access_token=$token"
-  Write-Host "Página suscrita a la app: $($r.success)" -ForegroundColor Green
-} catch { Write-Host "No se pudo suscribir la página: $($_.ErrorDetails.Message)" -ForegroundColor Yellow }
+# Suscribe la página Saltabum a la app (sin esto Meta no avisa los mensajes nuevos). También comprueba el token:
+# si no es de la página Saltabum, Meta lo rechaza aquí.
+$PAGINA = "1359897103874337"
+$r = Graph "POST" "https://graph.facebook.com/v23.0/$PAGINA/subscribed_apps?subscribed_fields=messages,message_echoes&access_token=$token"
+if ($r.error) { Write-Host "Meta rechazó el token al suscribir la página Saltabum: $($r.error.message). No se guardó nada." -ForegroundColor Red; exit 1 }
+Write-Host "Página Saltabum suscrita a la app" -ForegroundColor Green
 
 $verificacion = -join ((48..57) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
 
