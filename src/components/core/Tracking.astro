@@ -1,7 +1,8 @@
 ---
 // Carga Google (Ads + GA4) con Consent Mode v2, Meta Pixel y Microsoft Clarity.
 // Todos arrancan en "denied" hasta que el usuario acepta el banner de cookies.
-// Un tag sin ID configurado en .env simplemente no se carga.
+// Un tag sin ID configurado en .env simplemente no se carga, y fuera de saltabum.cl (localhost, wrangler dev,
+// vistas previas) no se carga ninguno, para no mezclar las pruebas con las visitas reales en Clarity, GA4 y Meta.
 import {
   PUBLIC_CLARITY_ID,
   PUBLIC_GA4_ID,
@@ -37,7 +38,10 @@ const gtagId = adsId || ga4Id;
   gtag("set", "url_passthrough", true);
   gtag("set", "ads_data_redaction", true);
 
-  if (gtagId) {
+  // Solo en el sitio real. gtag queda definido igual para que el resto del código no falle.
+  var enSitio = /(^|\.)saltabum\.cl$/.test(location.hostname);
+
+  if (enSitio && gtagId) {
     gtag("js", new Date());
     if (adsId) gtag("config", adsId, { allow_enhanced_conversions: true });
     if (ga4Id) gtag("config", ga4Id);
@@ -48,7 +52,7 @@ const gtagId = adsId || ga4Id;
   }
 
   // ---- Meta Pixel ----
-  if (metaPixelId) {
+  if (enSitio && metaPixelId) {
     !(function (f, b, e, v, n, t, s) {
       if (f.fbq) return;
       n = f.fbq = function () {
@@ -71,7 +75,7 @@ const gtagId = adsId || ga4Id;
   }
 
   // ---- Microsoft Clarity ----
-  if (clarityId) {
+  if (enSitio && clarityId) {
     (function (c, l, a, r, i, t, y) {
       c[a] =
         c[a] ||

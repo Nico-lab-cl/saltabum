@@ -16,6 +16,13 @@ type Props = SEOProps;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Una sola dirección: http://… y www.… pasan a https://saltabum.cl (las páginas son estáticas y Cloudflare las
+         entrega sin pasar por el Worker, así que se hace aquí; lo ideal es además «Always Use HTTPS» y una regla de
+         redirección en Cloudflare). -->
+    <script is:inline>
+      if (/^(www\.)?saltabum\.cl$/.test(location.hostname) && (location.protocol === "http:" || location.hostname !== "saltabum.cl"))
+        location.replace("https://saltabum.cl" + location.pathname + location.search + location.hash);
+    </script>
     <!-- Verificación del dominio en Meta Business (portafolio Saltabum) -->
     <meta name="facebook-domain-verification" content="nl7nemsi54vr1uwin20089ymy3n2hl" />
     <!-- Íconos: monograma oficial (saltabum_logo/Favicon). ICO para navegadores antiguos y para Google, SVG para el resto. -->

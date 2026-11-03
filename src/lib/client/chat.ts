@@ -4,7 +4,7 @@
 // cada pocos segundos. Las respuestas aparecen con «escribiendo…» y en partes, como en WhatsApp.
 // Lo ya mostrado se guarda en sessionStorage para seguir la conversación al cambiar de página.
 import { getAttribution } from "./attribution";
-import { trackConversion } from "./track";
+import { newEventId, trackConversion } from "./track";
 import { whatsappUrl } from "@/lib/whatsapp";
 
 type Rol = "cliente" | "ia" | "equipo" | "sistema";
@@ -55,7 +55,7 @@ function leer(): Estado {
   } catch {
     // sin almacenamiento: la conversación vive solo en esta página
   }
-  return { conversacion: crypto.randomUUID(), mensajes: [], modo: "ia" };
+  return { conversacion: newEventId(), mensajes: [], modo: "ia" };
 }
 
 function guardar(e: Estado): void {
