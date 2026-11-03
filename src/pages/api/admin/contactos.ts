@@ -5,12 +5,17 @@
 //          { accion: "etapa", clave, etapa } (null vuelve a la automática) · { accion: "notas", clave, notas }
 //   GET ?tareas=1     → { tareas } pendientes, automáticas y a mano (ver src/lib/server/tareas.ts)
 //   POST → { accion: "tarea", clave, texto, vence } · { accion: "tarea_hecha", clave, id, hasta? } (hasta = posponer)
+//          { accion: "festejado", clave, nombre, cumple } · { accion: "encuesta", clave, reserva, nota, comentario? }
+//          { accion: "resena", clave, si }
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { auditar, mismoOrigen, panelConfigurado, sesion } from "@/lib/server/admin-auth";
 import {
+  guardarEncuesta,
+  guardarFestejado,
   guardarNotas,
   listarContactos,
+  marcarResena,
   marcarEtapa,
   marcarPerdido,
   MOTIVOS_PERDIDA,
@@ -48,9 +53,23 @@ const accionSchema = z.discriminatedUnion("accion", [
   z.object({
     accion: z.literal("tarea_hecha"),
     clave,
-    id: z.string().regex(/^(auto:[a-z_]+:.{1,60}|manual:d+)$/),
+    id: z.string().regex(/^(auto:[a-z_]+:.{1,60}|manual:\d+)$/),
     hasta: z.iso.datetime().optional(),
   }),
+  z.object({
+    accion: z.literal("festejado"),
+    clave,
+    nombre: z.string().trim().max(80),
+    cumple: z.iso.date().or(z.literal("")),
+  }),
+  z.object({
+    accion: z.literal("encuesta"),
+    clave,
+    reserva: z.number().int().positive(),
+    nota: z.number().int().min(1).max(5),
+    comentario: z.string().trim().max(500).optional(),
+  }),
+  z.object({ accion: z.literal("resena"), clave, si: z.boolean() }),
 ]);
 
 export const GET: APIRoute = async ({ request, cookies, url }) => {
@@ -111,6 +130,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       pedido.hasta ? "tarea_pospuesta" : "tarea_hecha",
       `${quien} · ${pedido.id.split(":")[1]}`,
     );
+  } else if (pedido.accion === "festejado") {
+    await guardarFestejado(contacto.clave, pedido.nombre || null, pedido.cumple || null, usuario);
+    await auditar(request, usuario, "contacto_festejado", quien);
+  } else if (pedido.accion === "encuesta") {
+    // Solo reservas de esta persona.
+    if (!contacto.reservas.some((r) => r.id === pedido.reserva))
+      return json(404, { ok: false, error: "no_existe" });
+    await guardarEncuesta(contacto.clave, pedido.reserva, pedido.nota, pedido.comentario || null, usuario);
+    await auditar(request, usuario, "contacto_encuesta", `${quien} · ${pedido.nota} de 5`);
+  } else if (pedido.accion === "resena") {
+    await marcarResena(contacto.clave, pedido.si, usuario);
+    await auditar(request, usuario, "contacto_resena", quien);
   } else {
     await guardarNotas(contacto.clave, pedido.notas || null, usuario);
     await auditar(request, usuario, "contacto_notas", quien);

@@ -76,6 +76,9 @@ export default defineConfig({
       // Necesita un token con permiso ads_management; si no se carga META_AUDIENCIA_TOKEN se intenta con el de CAPI.
       META_AUDIENCIA_CLIENTES: envField.string({ context: "server", access: "public", default: "120250672349520254" }),
       META_AUDIENCIA_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
+      // Enlace para dejar reseña en el perfil de Google de Saltabum (Google Business → «Pedir reseñas»). Si falta,
+      // la tarea «Pedir reseña» del CRM pide etiquetar a @saltabum en Instagram.
+      GOOGLE_RESENA_URL: envField.string({ context: "server", access: "public", optional: true }),
       CRM_WEBHOOK_URL: envField.string({ context: "server", access: "secret", optional: true }),
       CRM_WEBHOOK_SECRET: envField.string({ context: "server", access: "secret", optional: true }),
       // Usuarios del panel de reservas (/admin): «usuario:pbkdf2$…:<totp>», uno por línea. Se generan con

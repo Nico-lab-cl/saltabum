@@ -9,11 +9,24 @@
 //
 // Los tiempos siguen lo que recomiendan los cuadernos de ventas: insistir a las 24 horas y a los 3 días (dentro de
 // la ventana de 72 horas de los anuncios a WhatsApp), y después de una semana sin respuesta, cerrar como perdido.
+// Después del evento (deleitar): encuesta al día siguiente, reseña si puso 4 o 5, llamada si puso 3 o menos, y el
+// recordatorio del próximo cumpleaños (un mes antes, o a los 11 meses del evento si no se sabe la fecha).
+import { GOOGLE_RESENA_URL } from "astro:env/server";
 import { ABONO } from "@/lib/reservas";
 import { baseReservas } from "./reservas-db";
 import { listarContactos, type Contacto } from "./contactos";
 
-export type TipoTarea = "seguimiento" | "ultimo_intento" | "cerrar" | "abono" | "logistica" | "manual";
+export type TipoTarea =
+  | "seguimiento"
+  | "ultimo_intento"
+  | "cerrar"
+  | "abono"
+  | "logistica"
+  | "encuesta"
+  | "resena"
+  | "recuperar"
+  | "cumple"
+  | "manual";
 
 export interface Tarea {
   /** «auto:<regla>:<referencia>» para las automáticas o «manual:<id>». */
@@ -29,6 +42,8 @@ export interface Tarea {
   mensaje: string | null;
   jid: string | null;
   telefono: string | null;
+  /** La reserva de la que habla (para registrar la nota de la encuesta). */
+  reserva?: number;
 }
 
 const ESQUEMA = [
@@ -154,6 +169,82 @@ function automaticas(c: Contacto): Omit<Tarea, "nombre" | "jid" | "telefono" | "
         vence: new Date(Date.parse(`${r.fecha}T12:00:00Z`) - 2 * DIA).toISOString(),
         mensaje: `${hola} Te confirmamos tu inflable para el ${diaEvento(r.fecha)} 🎉 Llegamos 30 minutos antes para armarlo. Necesitamos una superficie plana y un enchufe cerca. ¿Me confirmas la dirección?`,
       });
+  }
+
+  // ── Deleitar ──
+  const festejado = c.festejado.nombre;
+  const delCumple = festejado ? `el cumpleaños de ${festejado}` : "el cumpleaños";
+  for (const r of c.reservas.filter((x) => x.pagado)) {
+    const paso = -diasHasta(r.fecha);
+    const encuesta = c.encuestas.find((e) => e.reserva === r.id);
+    // Encuesta: del día siguiente hasta una semana después del evento.
+    if (!encuesta && paso >= 1 && paso <= 7)
+      tareas.push({
+        id: `auto:encuesta:${r.id}`,
+        tipo: "encuesta",
+        titulo: "Encuesta post evento",
+        motivo: `El evento fue el ${diaEvento(r.fecha)}. Cuando responda, anota su nota aquí`,
+        vence: new Date(Date.parse(`${r.fecha}T12:00:00Z`) + DIA).toISOString(),
+        mensaje: `${hola} Esperamos que ${delCumple} haya sido increíble 🎉 ¿Cómo lo pasaron? Del 1 al 5, ¿qué nota le pones a Saltabum? Tu opinión nos ayuda mucho`,
+        reserva: r.id,
+      });
+    if (!encuesta || Date.now() - Date.parse(encuesta.en) > 14 * DIA) continue;
+    // Contento (4 o 5): pedir reseña, una vez. Disconforme (3 o menos): llamar para arreglarlo.
+    if (encuesta.nota >= 4 && !c.resena)
+      tareas.push({
+        id: `auto:resena:${r.id}`,
+        tipo: "resena",
+        titulo: "Pedir reseña",
+        motivo: `Le puso ${encuesta.nota} de 5 al evento`,
+        vence: encuesta.en,
+        mensaje: GOOGLE_RESENA_URL
+          ? `¡Muchas gracias${n ? `, ${n}` : ""}! 💛 ¿Nos ayudas con una reseña en Google? Toma un minuto y ayuda a otras familias a elegirnos: ${GOOGLE_RESENA_URL}`
+          : `¡Muchas gracias${n ? `, ${n}` : ""}! 💛 Si tienes fotos del evento, nos encantaría que las compartas en Instagram etiquetando a @saltabum. Ayuda mucho a otras familias a elegirnos`,
+        reserva: r.id,
+      });
+    if (encuesta.nota <= 3)
+      tareas.push({
+        id: `auto:recuperar:${r.id}`,
+        tipo: "recuperar",
+        titulo: "Llamar, no quedó conforme",
+        motivo: `Le puso ${encuesta.nota} de 5 al evento${encuesta.comentario ? `: «${encuesta.comentario}»` : ""}`,
+        vence: encuesta.en,
+        mensaje: `${hola} Gracias por contarnos. Lamentamos que no haya salido como esperabas. ¿Me cuentas qué pasó? Queremos solucionarlo`,
+        reserva: r.id,
+      });
+  }
+
+  // Próximo cumpleaños: un mes antes si se sabe la fecha; si no, a los 11 meses del último evento pagado.
+  const futura = c.reservas.some((r) => diasHasta(r.fecha) >= 0);
+  if (!futura) {
+    const cumple = c.festejado.cumple;
+    if (cumple) {
+      const hoy = hoyChile();
+      let proximo = `${hoy.slice(0, 4)}${cumple.slice(4)}`;
+      if (proximo < hoy) proximo = `${Number(hoy.slice(0, 4)) + 1}${cumple.slice(4)}`;
+      const faltan = diasHasta(proximo);
+      if (faltan <= 30)
+        tareas.push({
+          id: `auto:cumple:${proximo}`,
+          tipo: "cumple",
+          titulo: "Se acerca el cumpleaños",
+          motivo: `${festejado ?? "El festejado"} cumple el ${diaEvento(proximo)}`,
+          vence: new Date(Date.parse(`${proximo}T12:00:00Z`) - 30 * DIA).toISOString(),
+          mensaje: `${hola} Se acerca ${delCumple} 🎂 ¿Lo celebramos otra vez con un inflable? Como ya nos conoces, te guardo la fecha antes de que se llene el fin de semana`,
+        });
+    } else {
+      const ultima = c.reservas.filter((r) => r.pagado).at(-1);
+      const paso = ultima ? -diasHasta(ultima.fecha) : 0;
+      if (ultima && paso >= 330 && paso <= 380)
+        tareas.push({
+          id: `auto:cumple:${ultima.id}`,
+          tipo: "cumple",
+          titulo: "Recordatorio de un año",
+          motivo: `Hace 11 meses celebró con Saltabum (${diaEvento(ultima.fecha)} de ${ultima.fecha.slice(0, 4)})`,
+          vence: new Date(Date.parse(`${ultima.fecha}T12:00:00Z`) + 330 * DIA).toISOString(),
+          mensaje: `${hola} Hace casi un año celebramos ${delCumple} con ustedes 🎈 Si se viene otro, cuéntame la fecha y te la guardo antes de que se llene el fin de semana`,
+        });
+    }
   }
   return tareas;
 }

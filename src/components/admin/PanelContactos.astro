@@ -146,10 +146,23 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     chats: string[];
     consultas: number[];
     reservas: Reserva[];
+    festejado: { nombre: string | null; cumple: string | null };
+    resena: string | null;
+    encuestas: { reserva: number; nota: number; comentario: string | null; en: string }[];
   };
   type Tarea = {
     id: string;
-    tipo: "seguimiento" | "ultimo_intento" | "cerrar" | "abono" | "logistica" | "manual";
+    tipo:
+      | "seguimiento"
+      | "ultimo_intento"
+      | "cerrar"
+      | "abono"
+      | "logistica"
+      | "encuesta"
+      | "resena"
+      | "recuperar"
+      | "cumple"
+      | "manual";
     clave: string;
     nombre: string;
     titulo: string;
@@ -158,10 +171,11 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     mensaje: string | null;
     jid: string | null;
     telefono: string | null;
+    reserva?: number;
   };
   type Evento = {
     en: string;
-    tipo: "whatsapp" | "chatweb" | "consulta" | "reserva" | "pago" | "cotizacion" | "equipo";
+    tipo: "whatsapp" | "chatweb" | "consulta" | "reserva" | "pago" | "cotizacion" | "encuesta" | "equipo";
     texto: string;
   };
 
@@ -191,6 +205,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     reserva: "📅",
     pago: "💰",
     cotizacion: "🧾",
+    encuesta: "⭐",
     equipo: "👤",
   };
   /** Minutos de espera antes de marcar en rojo (los cuadernos de ventas hablan de 5 a 15). */
@@ -541,6 +556,74 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
         ),
       );
 
+    // Festejado (para el recordatorio del próximo cumpleaños) y reseña.
+    const deleitar = el("div", "flex flex-wrap items-center gap-2 text-sm");
+    const f = c.festejado;
+    const cumpleTexto = f.cumple
+      ? new Date(`${f.cumple}T12:00:00Z`).toLocaleDateString("es-CL", {
+          day: "numeric",
+          month: "long",
+          timeZone: "UTC",
+        })
+      : null;
+    deleitar.append(
+      el(
+        "p",
+        "font-semibold",
+        f.nombre || f.cumple
+          ? `🎂 ${[f.nombre, cumpleTexto && `cumple el ${cumpleTexto}`].filter(Boolean).join(", ")}`
+          : "🎂 Sin datos del festejado",
+      ),
+    );
+    const editarFestejado = boton(
+      f.nombre || f.cumple ? "Editar" : "Anotar festejado",
+      "border-noche/30 bg-crema",
+      () => {
+        const nombre = el(
+          "input",
+          "border-noche bg-crema min-h-10 min-w-0 flex-1 rounded-xl border-2 px-3",
+        ) as HTMLInputElement;
+        nombre.maxLength = 80;
+        nombre.placeholder = "Nombre del niño o niña";
+        nombre.value = f.nombre ?? "";
+        const cumple = el(
+          "input",
+          "border-noche bg-crema min-h-10 rounded-xl border-2 px-3",
+        ) as HTMLInputElement;
+        cumple.type = "date";
+        cumple.value = f.cumple ?? "";
+        cumple.setAttribute("aria-label", "Fecha de cumpleaños");
+        deleitar.replaceChildren(
+          nombre,
+          cumple,
+          boton(
+            "Guardar",
+            "border-noche bg-noche text-crema",
+            () =>
+              void enviar(
+                { accion: "festejado", clave: c.clave, nombre: nombre.value.trim(), cumple: cumple.value },
+                "Festejado guardado",
+              ),
+          ),
+        );
+        nombre.focus();
+      },
+    );
+    deleitar.append(editarFestejado);
+    if (c.encuestas.length)
+      deleitar.append(chip(`Nota ${c.encuestas.map((e) => e.nota).join(", ")} de 5`, "border-noche bg-sol"));
+    if (c.resena) deleitar.append(chip("Dejó reseña", "border-noche bg-verde"));
+    else if (esCliente)
+      deleitar.append(
+        boton(
+          "Dejó reseña",
+          "border-noche/30 bg-crema",
+          () =>
+            void enviar({ accion: "resena", clave: c.clave, si: true }, "Reseña anotada: ahora es Promotor"),
+        ),
+      );
+    cabeza.append(deleitar);
+
     // Tareas de este contacto y «Agregar tarea».
     const suyas = tareas.filter((t) => t.clave === c.clave);
     const cajaTareas = el("div", "flex flex-col gap-2 text-sm");
@@ -884,6 +967,10 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     cerrar: "🗂️",
     abono: "💰",
     logistica: "🚚",
+    encuesta: "⭐",
+    resena: "🌟",
+    recuperar: "📞",
+    cumple: "🎂",
     manual: "📌",
   };
 
@@ -978,6 +1065,33 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
         acciones.append(a);
       }
     }
+    if (t.tipo === "encuesta" && t.reserva) {
+      // Cuando el cliente responde, se anota su nota: con 4 o 5 aparece «Pedir reseña», con 3 o menos «Llamar».
+      const notas = el("div", "flex w-full flex-wrap items-center gap-1");
+      notas.append(el("span", "text-noche-suave mr-1 text-xs font-bold", "Su nota"));
+      for (let nota = 1; nota <= 5; nota++)
+        notas.append(
+          boton(
+            "★".repeat(nota),
+            "border-noche/40 bg-sol/40 min-h-8 px-2 text-xs",
+            () =>
+              void enviar(
+                { accion: "encuesta", clave: t.clave, reserva: t.reserva, nota },
+                `Nota ${nota} de 5 guardada`,
+              ),
+          ),
+        );
+      caja.append(notas);
+    }
+    if (t.tipo === "resena")
+      acciones.append(
+        boton(
+          "Dejó reseña",
+          "border-noche bg-verde",
+          () =>
+            void enviar({ accion: "resena", clave: t.clave, si: true }, "Reseña anotada: ahora es Promotor"),
+        ),
+      );
     if (t.tipo === "cerrar")
       acciones.append(
         boton(

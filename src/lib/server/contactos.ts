@@ -3,7 +3,8 @@
 //
 // La ficha no se copia a ninguna tabla: se arma en cada consulta desde las tablas de cada canal, así nunca queda
 // desactualizada. En `crm_contactos` solo se guarda lo que decide el equipo (perdido y su motivo, una etapa marcada a
-// mano y notas) y en `crm_eventos` el historial de esas decisiones.
+// mano, notas, el festejado y si dejó reseña), en `crm_encuestas` la nota que puso cada cliente a su evento y en
+// `crm_eventos` el historial de esas decisiones.
 //
 // Etapas (metodología inbound): Lead → Calificado → Cotizado → Reservado → Cliente → Promotor. Se pueden saltar
 // (quien reserva en la web pasa directo a Reservado) y vale la más avanzada entre la automática y la marcada a mano.
@@ -65,11 +66,24 @@ export interface Contacto {
   chats: string[];
   consultas: number[];
   reservas: ReservaContacto[];
+  /** El niño o niña del cumpleaños (para el recordatorio del año siguiente). */
+  festejado: { nombre: string | null; cumple: string | null };
+  /** Cuándo dejó reseña (en Google o Instagram); lo hace Promotor. */
+  resena: string | null;
+  /** Nota del 1 al 5 que puso a cada evento. */
+  encuestas: Encuesta[];
+}
+
+export interface Encuesta {
+  reserva: number;
+  nota: number;
+  comentario: string | null;
+  en: string;
 }
 
 export interface EventoContacto {
   en: string;
-  tipo: "whatsapp" | "chatweb" | "consulta" | "reserva" | "pago" | "cotizacion" | "equipo";
+  tipo: "whatsapp" | "chatweb" | "consulta" | "reserva" | "pago" | "cotizacion" | "encuesta" | "equipo";
   texto: string;
 }
 
@@ -92,7 +106,18 @@ const ESQUEMA = [
     por TEXT
   )`,
   "CREATE INDEX IF NOT EXISTS crm_eventos_clave ON crm_eventos (clave, creado)",
+  `CREATE TABLE IF NOT EXISTS crm_encuestas (
+    reserva_id INTEGER PRIMARY KEY,
+    clave TEXT NOT NULL,
+    nota INTEGER NOT NULL,
+    comentario TEXT,
+    creado TEXT NOT NULL,
+    por TEXT
+  )`,
 ];
+
+// Columnas agregadas después (ALTER TABLE falla si ya existen, y se ignora).
+const COLUMNAS_NUEVAS = ["nino_nombre TEXT", "nino_cumple TEXT", "resena_en TEXT"];
 
 // Bandera y no promesa compartida (ver baseReservas).
 let lista = false;
@@ -100,6 +125,11 @@ async function db() {
   const d = await baseReservas();
   if (!lista) {
     await d.batch(ESQUEMA.map((s) => d.prepare(s)));
+    for (const c of COLUMNAS_NUEVAS)
+      await d
+        .prepare(`ALTER TABLE crm_contactos ADD COLUMN ${c}`)
+        .run()
+        .catch(() => undefined);
     lista = true;
   }
   return d;
@@ -187,6 +217,9 @@ type FilaCrm = {
   perdido_en: string | null;
   perdido_por: string | null;
   notas: string | null;
+  nino_nombre: string | null;
+  nino_cumple: string | null;
+  resena_en: string | null;
 };
 
 /** Lee todos los canales. Lo comparten la lista y la ficha. */
@@ -194,7 +227,7 @@ async function leerCanales() {
   // Crea las tablas y columnas del chat si esta instancia todavía no lo hizo.
   await baseChat();
   const d = await db();
-  const [wa, chats, consultas, reservas, crm] = await Promise.all([
+  const [wa, chats, consultas, reservas, crm, encuestas] = await Promise.all([
     // Primer mensaje nuestro con precio o catálogo = cotización enviada.
     consulta<FilaWa>(
       d,
@@ -221,10 +254,14 @@ async function leerCanales() {
     ),
     consulta<FilaCrm>(
       d,
-      "SELECT clave, etapa, perdido_motivo, perdido_etapa, perdido_en, perdido_por, notas FROM crm_contactos",
+      "SELECT clave, etapa, perdido_motivo, perdido_etapa, perdido_en, perdido_por, notas, nino_nombre, nino_cumple, resena_en FROM crm_contactos",
+    ),
+    consulta<{ reserva_id: number; nota: number; comentario: string | null; creado: string }>(
+      d,
+      "SELECT reserva_id, nota, comentario, creado FROM crm_encuestas",
     ),
   ]);
-  return { wa, chats, consultas, reservas, crm };
+  return { wa, chats, consultas, reservas, crm, encuestas };
 }
 
 /** Borrador de un contacto mientras se juntan sus canales. */
@@ -256,6 +293,7 @@ function claveDe(telefono: string | null | undefined, alterna: string): string {
 function juntar(canales: Awaited<ReturnType<typeof leerCanales>>): {
   borradores: Map<string, Borrador>;
   crm: Map<string, FilaCrm>;
+  encuestas: Map<number, Encuesta>;
 } {
   const borradores = new Map<string, Borrador>();
   const tomar = (clave: string, creado: string): Borrador => {
@@ -361,13 +399,23 @@ function juntar(canales: Awaited<ReturnType<typeof leerCanales>>): {
     b.ultimo = maxIso(b.ultimo, maxIso(r.creado, r.pagado_en))!;
     if (r.origen !== "panel") b.ultimoCliente = maxIso(b.ultimoCliente, r.creado);
   }
-  return { borradores, crm: new Map(canales.crm.map((c) => [c.clave, c])) };
+  return {
+    borradores,
+    crm: new Map(canales.crm.map((c) => [c.clave, c])),
+    encuestas: new Map(
+      canales.encuestas.map((e) => [
+        e.reserva_id,
+        { reserva: e.reserva_id, nota: e.nota, comentario: e.comentario, en: e.creado },
+      ]),
+    ),
+  };
 }
 
-function armar(b: Borrador, crm: FilaCrm | undefined): Contacto {
+function armar(b: Borrador, crm: FilaCrm | undefined, encuestas: Map<number, Encuesta>): Contacto {
   const pagadas = b.reservas.filter((r) => r.pagado);
+  // Promotor: volvió a arrendar o dejó reseña.
   const auto: Etapa =
-    pagadas.length >= 2
+    pagadas.length >= 2 || (pagadas.length && crm?.resena_en)
       ? "promotor"
       : pagadas.length
         ? "cliente"
@@ -426,14 +474,17 @@ function armar(b: Borrador, crm: FilaCrm | undefined): Contacto {
       creado,
       origen,
     })),
+    festejado: { nombre: crm?.nino_nombre ?? null, cumple: crm?.nino_cumple ?? null },
+    resena: crm?.resena_en ?? null,
+    encuestas: b.reservas.map((r) => encuestas.get(r.id)).filter((e): e is Encuesta => !!e),
   };
 }
 
 /** Todos los contactos, el de actividad más reciente primero. */
 export async function listarContactos(): Promise<Contacto[]> {
-  const { borradores, crm } = juntar(await leerCanales());
+  const { borradores, crm, encuestas } = juntar(await leerCanales());
   return [...borradores.values()]
-    .map((b) => armar(b, crm.get(b.clave)))
+    .map((b) => armar(b, crm.get(b.clave), encuestas))
     .sort((a, b) => b.ultimo.localeCompare(a.ultimo));
 }
 
@@ -442,10 +493,10 @@ export async function obtenerContacto(
   clave: string,
 ): Promise<{ contacto: Contacto; eventos: EventoContacto[] } | null> {
   const canales = await leerCanales();
-  const { borradores, crm } = juntar(canales);
+  const { borradores, crm, encuestas } = juntar(canales);
   const b = borradores.get(clave);
   if (!b) return null;
-  const contacto = armar(b, crm.get(clave));
+  const contacto = armar(b, crm.get(clave), encuestas);
   const fecha = new Intl.DateTimeFormat("es-CL", {
     weekday: "short",
     day: "numeric",
@@ -504,6 +555,13 @@ export async function obtenerContacto(
         en: r.pagado_en,
         tipo: "pago",
         texto: `Pagó ${pesos(r.pagado)} de la reserva del ${dia(r.fecha)}`,
+      });
+    const e = encuestas.get(r.id);
+    if (e)
+      eventos.push({
+        en: e.en,
+        tipo: "encuesta",
+        texto: `Le puso ${e.nota} de 5 al evento del ${dia(r.fecha)}${e.comentario ? `: «${e.comentario}»` : ""}`,
       });
   }
   const d = await db();
@@ -586,4 +644,47 @@ export async function marcarEtapa(clave: string, etapa: Etapa | null, por: strin
 
 export async function guardarNotas(clave: string, notas: string | null, por: string) {
   await guardar(clave, { notas }, "Nota actualizada", por);
+}
+
+/** Nombre y cumpleaños (AAAA-MM-DD) del niño o niña del evento. */
+export async function guardarFestejado(
+  clave: string,
+  nombre: string | null,
+  cumple: string | null,
+  por: string,
+) {
+  await guardar(
+    clave,
+    { nino_nombre: nombre, nino_cumple: cumple },
+    `Festejado: ${[nombre, cumple && `cumple el ${cumple.slice(8, 10)}/${cumple.slice(5, 7)}`].filter(Boolean).join(", ") || "sin datos"}`,
+    por,
+  );
+}
+
+/** Nota del 1 al 5 que el cliente le puso a su evento (la respuesta a la encuesta post evento). */
+export async function guardarEncuesta(
+  clave: string,
+  reservaId: number,
+  nota: number,
+  comentario: string | null,
+  por: string,
+) {
+  const d = await db();
+  await d
+    .prepare(
+      `INSERT INTO crm_encuestas (reserva_id, clave, nota, comentario, creado, por) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(reserva_id) DO UPDATE SET nota = excluded.nota, comentario = excluded.comentario, creado = excluded.creado, por = excluded.por`,
+    )
+    .bind(reservaId, clave, nota, comentario, new Date().toISOString(), por)
+    .run();
+}
+
+/** Dejó reseña en Google o Instagram (lo convierte en Promotor). null la quita. */
+export async function marcarResena(clave: string, si: boolean, por: string) {
+  await guardar(
+    clave,
+    { resena_en: si ? new Date().toISOString() : null },
+    si ? "Dejó reseña" : "Se quitó la reseña",
+    por,
+  );
 }
