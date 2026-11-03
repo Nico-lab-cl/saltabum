@@ -1,5 +1,6 @@
 // Panel de reservas (/admin): requiere sesión iniciada (ver src/lib/server/admin-auth.ts).
 //   GET  ?desde=AAAA-MM-DD → usuario de la sesión y reservas y bloqueos desde esa fecha (por defecto, hace 90 días)
+//        y todos los pagos registrados
 //   POST → { accion: "crear", datos, forzar? } · { accion: "editar", id, datos, forzar? } · { accion: "eliminar", id }
 //          { accion: "bloquear", fecha, desde?, hasta? } · { accion: "liberar", id } · { accion: "pagada", id, monto }
 // Si un horario choca con otra reserva o bloqueo responde 409 con la lista de choques; el panel puede reenviar con
@@ -19,6 +20,7 @@ import {
   crearReserva,
   liberar,
   listarDesde,
+  listarPagos,
   marcarPagada,
   obtenerFila,
   obtenerReserva,
@@ -76,7 +78,9 @@ export const GET: APIRoute = async ({ request, cookies, url }) => {
   const hoy = hoyChile();
   const pedido = url.searchParams.get("desde") ?? "";
   const desde = /^\d{4}-\d{2}-\d{2}$/.test(pedido) ? pedido : sumarDias(hoy, -90);
-  return json(200, { ok: true, usuario, hoy, desde, filas: await listarDesde(desde) });
+  // «pagos» va aparte: lo recaudado se cuenta por fecha de pago, aunque el evento sea anterior a «desde».
+  const [filas, pagos] = await Promise.all([listarDesde(desde), listarPagos()]);
+  return json(200, { ok: true, usuario, hoy, desde, filas, pagos });
 };
 
 export const POST: APIRoute = async ({ request, cookies }) => {

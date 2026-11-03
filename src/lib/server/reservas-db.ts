@@ -273,6 +273,17 @@ export async function listarDesde(desde: string): Promise<FilaAgenda[]> {
   return results;
 }
 
+export type PagoPanel = Pick<FilaAgenda, "id" | "fecha" | "producto" | "nombre" | "apellido" | "total" | "pagado" | "pagado_en">;
+
+/** Todos los pagos registrados, sin importar la fecha del evento (para lo recaudado del panel). */
+export async function listarPagos(): Promise<PagoPanel[]> {
+  const db = await baseReservas();
+  const { results } = await db
+    .prepare("SELECT id, fecha, producto, nombre, apellido, total, pagado, pagado_en FROM agenda WHERE estado = 'reservado' AND pagado IS NOT NULL ORDER BY pagado_en DESC")
+    .all<PagoPanel>();
+  return results;
+}
+
 /** Una fila cualquiera (reserva o bloqueo), para guardar cómo estaba antes de un cambio. */
 export async function obtenerFila(id: number): Promise<FilaAgenda | null> {
   const db = await baseReservas();
