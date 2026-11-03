@@ -37,17 +37,35 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
         { id: "proximas", nombre: "Próximas reservas", color: "bg-sol" },
         { id: "semana", nombre: "Próximos 7 días", color: "bg-celeste" },
         { id: "cobrar", nombre: "Por cobrar", color: "bg-rosa" },
-        { id: "cobrado", nombre: "Cobrado este mes", color: "bg-verde" },
+        { id: "cobrado", nombre: "Recaudado", color: "bg-verde" },
       ].map((r) => (
         <div class={`${tarjeta} flex items-center gap-3 p-4`}>
           <span class:list={["border-noche size-3 shrink-0 rounded-full border-2", r.color]} />
           <div class="min-w-0">
             <p class="text-noche-suave text-xs font-extrabold tracking-[0.6px] uppercase">{r.nombre}</p>
             <p data-resumen={r.id} class="font-display text-2xl leading-8 font-bold">—</p>
+            {r.id === "cobrado" && <p data-recaudado-nota class="text-noche-suave text-xs font-bold" />}
           </div>
         </div>
       ))
     }
+  </div>
+
+  <!-- Recaudado: rango por fecha de pago (vacío = todo hasta hoy) y detalle de los pagos -->
+  <div class={`${tarjeta} flex flex-col gap-3 p-4`}>
+    <div class="flex flex-wrap items-end gap-3">
+      <label class={etiqueta}>Pagos desde<input type="date" data-recaudado-desde class={campo} /></label>
+      <label class={etiqueta}>Hasta<input type="date" data-recaudado-hasta class={campo} /></label>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" data-recaudado-rango="todo" class={botonSecundario}>Todo</button>
+        <button type="button" data-recaudado-rango="mes" class={botonSecundario}>Este mes</button>
+        <button type="button" data-recaudado-rango="anterior" class={botonSecundario}>Mes pasado</button>
+      </div>
+    </div>
+    <details class="text-sm">
+      <summary data-recaudado-resumen class="cursor-pointer font-bold"></summary>
+      <ul data-recaudado-lista class="mt-2 flex flex-col gap-1"></ul>
+    </details>
   </div>
 
   <!-- Calendario -->
@@ -230,7 +248,7 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 </style>
 
 <script>
-  import { ABONO, aHora, aMinutos, calcularPrecio, etiquetaHorario, HORAS_BASE, pesos } from "@/lib/reservas";
+  import { ABONO, aHora, aMinutos, calcularPrecio, etiquetaHorario, HORAS_BASE, hoyChile, pesos } from "@/lib/reservas";
   import { PRODUCTOS } from "@design/data";
 
   type Fila = {
@@ -259,8 +277,11 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     pagado: number | null;
     pagado_en: string | null;
     pagado_por: string | null;
+    /** Su chat de WhatsApp en el panel, cruzado por teléfono. */
+    chat: { jid: string; anuncio: number } | null;
   };
-  type Datos = { filas: Fila[]; hoy: string; desde: string; usuario: string };
+  type Pago = Pick<Fila, "id" | "fecha" | "producto" | "nombre" | "apellido" | "total" | "pagado" | "pagado_en">;
+  type Datos = { filas: Fila[]; pagos?: Pago[]; hoy: string; desde: string; usuario: string };
 
   const root = document.querySelector<HTMLElement>("[data-reservas-panel]")!;
   const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s)!;
@@ -289,13 +310,14 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     return iso(d);
   };
   const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-  const cliente = (f: Fila) => [f.nombre, f.apellido].filter(Boolean).join(" ") || "Sin nombre";
+  const cliente = (f: Pick<Fila, "nombre" | "apellido">) => [f.nombre, f.apellido].filter(Boolean).join(" ") || "Sin nombre";
   const horario = (f: Fila) => (f.inicio === 0 && f.fin === 24 * 60 ? "Todo el día" : etiquetaHorario(f.inicio, f.fin));
   const clp = (n: number) => `${n.toLocaleString("es-CL")}`;
   /** Nombre corto de cada inflable para las etiquetas del calendario. */
   const corto = (id: string) => (PRODUCTOS.find((p) => p.id === id)?.nombre ?? id).replace("Castillo ", "").replace(" Arcoíris", "");
 
   let filas: Fila[] = [];
+  let pagos: Pago[] = [];
   let hoy = iso(new Date());
   let desde = "";
   let filtro: "proximas" | "pasadas" | "todas" = "proximas";
@@ -339,6 +361,7 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     }
     vistos = new Set(d.filas.map((f) => f.id));
     filas = d.filas;
+    pagos = d.pagos ?? [];
     hoy = d.hoy;
     desde = d.desde;
     mes ||= hoy.slice(0, 7);
@@ -403,12 +426,39 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     const proximas = reservas.filter((f) => f.fecha >= hoy);
     const semana = proximas.filter((f) => f.fecha <= sumarDias(hoy, 6));
     const porCobrar = proximas.reduce((s, f) => s + Math.max(0, (f.total ?? 0) - (f.pagado ?? 0)), 0);
-    const mesActual = hoy.slice(0, 7);
-    const cobrado = reservas.filter((f) => f.pagado && f.pagado_en?.slice(0, 7) === mesActual).reduce((s, f) => s + (f.pagado ?? 0), 0);
     $("[data-resumen=proximas]").textContent = String(proximas.length);
     $("[data-resumen=semana]").textContent = String(semana.length);
     $("[data-resumen=cobrar]").textContent = clp(porCobrar);
-    $("[data-resumen=cobrado]").textContent = clp(cobrado);
+    pintarRecaudado();
+  }
+
+  /** Lo recaudado según la fecha en que se registró cada pago; sin rango es todo hasta hoy. */
+  function pintarRecaudado() {
+    const desdeR = $<HTMLInputElement>("[data-recaudado-desde]").value;
+    const hastaR = $<HTMLInputElement>("[data-recaudado-hasta]").value;
+    // pagado_en se guarda en UTC: el día se mira en hora de Chile (un pago del 31 a las 22:00 es de ese día).
+    const delRango = pagos
+      .map((p) => ({ ...p, dia: p.pagado_en ? hoyChile(new Date(p.pagado_en)) : p.fecha }))
+      .filter((p) => (!desdeR || p.dia >= desdeR) && (!hastaR || p.dia <= hastaR));
+    const suma = delRango.reduce((s, p) => s + (p.pagado ?? 0), 0);
+    const cuantos = `${delRango.length} ${delRango.length === 1 ? "pago" : "pagos"}`;
+    const rango =
+      !desdeR && !hastaR
+        ? "Total hasta hoy"
+        : `${desdeR ? `Del ${fechaCorta.format(aFecha(desdeR))}` : "Desde el inicio"} ${hastaR ? `al ${fechaCorta.format(aFecha(hastaR))}` : "hasta hoy"}`;
+    $("[data-resumen=cobrado]").textContent = clp(suma);
+    $("[data-recaudado-nota]").textContent = `${rango} · ${cuantos}`;
+    $("[data-recaudado-resumen]").textContent = `Ver ${cuantos} · ${rango.toLowerCase()}`;
+    $("[data-recaudado-lista]").replaceChildren(
+      ...delRango.map((p) => {
+        const li = el("li", "bg-crema flex flex-wrap justify-between gap-x-3 rounded-lg px-2 py-1");
+        li.append(
+          el("span", "", `Pagado el ${fechaCorta.format(aFecha(p.dia))} · ${cliente(p)} · evento ${fechaCorta.format(aFecha(p.fecha))}, ${corto(p.producto)}`),
+          el("span", "font-extrabold", `${clp(p.pagado ?? 0)}${p.total ? ` de ${clp(p.total)}` : ""}`),
+        );
+        return li;
+      }),
+    );
   }
 
   function pintarCalendario() {
@@ -542,6 +592,9 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     return a;
   }
 
+  /** Cómo le fue al sumar al cliente al público «Clientes Saltabum» de Meta (sin aviso si no está configurado). */
+  const textoPublico = (p?: string) => (p === "enviada" ? " · cliente sumado al público" : p === "error" ? " · no se pudo sumar al público de clientes" : "");
+
   function botonAccion(texto: string, clase: string, accion: () => void) {
     const b = el("button", `min-h-9 cursor-pointer rounded-full border-2 px-3 text-sm font-extrabold ${clase}`, texto) as HTMLButtonElement;
     b.type = "button";
@@ -570,6 +623,7 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     else if (f.pagado) etiqueta("Con abono", "border-noche bg-verde-burbuja");
     else etiqueta("Sin pago", "border-noche bg-sol");
     if (f.estado === "reservado") etiqueta(f.origen === "panel" ? "Panel" : f.origen === "chat" ? "Chat IA" : "Web", "border-noche/30 bg-crema");
+    if (f.chat) etiqueta(f.chat.anuncio ? "WhatsApp · Anuncio" : "WhatsApp", "border-noche bg-verde-burbuja");
     if (f.estado === "reservado" && f.origen !== "panel" && Date.now() - Date.parse(f.creado) < 24 * 3600 * 1000) etiqueta("Nueva", "border-rojo-texto bg-rojo-suave text-rojo-texto");
     cuando.append(etiquetas);
     art.append(cuando);
@@ -617,6 +671,23 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     const acciones = el("div", "flex flex-wrap gap-2 lg:max-w-[220px] lg:justify-end");
     acciones.append(botonAccion("Editar", "border-noche bg-crema", () => abrirFormulario(f)));
     if (!f.pagado) acciones.append(botonAccion("Registrar pago", "border-noche bg-verde-burbuja", () => abrirPago(f)));
+    else
+      acciones.append(
+        // Por si Meta no recibió la compra al registrar el pago. Lleva el mismo event_id: Meta no la cuenta dos veces.
+        botonAccion("Reenviar a Meta", "border-noche bg-blanco", async () => {
+          const res = await enviar({ accion: "reenviar_meta", id: f.id });
+          const data = (await res.json().catch(() => ({}))) as { meta?: string; publico?: string };
+          avisar(
+            !res.ok
+              ? "No se pudo reenviar"
+              : (data.meta === "enviada"
+                  ? "Compra enviada a Meta"
+                  : data.meta === "sin_configurar"
+                    ? "Meta no está configurado en el sitio"
+                    : "Meta no respondió, intenta de nuevo") + textoPublico(data.publico),
+          );
+        }),
+      );
     acciones.append(
       botonAccion("Eliminar", "border-rojo-texto text-rojo-texto bg-blanco", async () => {
         if (!confirm(`¿Eliminar la reserva de ${cliente(f)} del ${fechaCorta.format(aFecha(f.fecha))}, ${horario(f)}?\n\nEl horario queda libre en la web y la reserva queda guardada en el historial.`)) return;
@@ -778,6 +849,18 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
       if (filtro !== "proximas" && desde > "2000-01-01") void cargar("2000-01-01");
     }),
   );
+  $$<HTMLInputElement>("[data-recaudado-desde], [data-recaudado-hasta]").forEach((i) => i.addEventListener("input", pintarRecaudado));
+  $$<HTMLButtonElement>("[data-recaudado-rango]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const mesHoy = hoy.slice(0, 7);
+      const mesPasado = sumarDias(`${mesHoy}-01`, -1).slice(0, 7);
+      const ultimoDia = (m: string) => sumarDias(`${sumarDias(`${m}-28`, 4).slice(0, 7)}-01`, -1);
+      const [d, h] = { todo: ["", ""], mes: [`${mesHoy}-01`, ""], anterior: [`${mesPasado}-01`, ultimoDia(mesPasado)] }[b.dataset.recaudadoRango as "todo" | "mes" | "anterior"];
+      $<HTMLInputElement>("[data-recaudado-desde]").value = d;
+      $<HTMLInputElement>("[data-recaudado-hasta]").value = h;
+      pintarRecaudado();
+    }),
+  );
   $<HTMLInputElement>("[data-buscar]").addEventListener("input", (e) => {
     busqueda = (e.target as HTMLInputElement).value;
     pintarLista();
@@ -808,13 +891,12 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     const monto = Math.round(Number((formPago.elements.namedItem("monto") as HTMLInputElement).value));
     if (!(monto >= 1000)) return (formPago.elements.namedItem("monto") as HTMLInputElement).reportValidity();
     const res = await enviar({ accion: "pagada", id: pagando.id, monto });
-    const data = (await res.json().catch(() => ({}))) as { meta?: string };
+    const data = (await res.json().catch(() => ({}))) as { meta?: string; publico?: string };
     ventanaPago.close();
     avisar(
       res.ok
-        ? data.meta === "enviada"
-          ? "Pago guardado y enviado a Meta"
-          : "Pago guardado (Meta no está configurado o no respondió)"
+        ? (data.meta === "enviada" ? "Pago guardado y enviado a Meta" : "Pago guardado (Meta no está configurado o no respondió)") +
+            textoPublico(data.publico)
         : res.status === 409
           ? "Esta reserva ya tenía un pago registrado"
           : "No se pudo guardar el pago",

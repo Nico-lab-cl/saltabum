@@ -13,7 +13,16 @@ import { EVOLUTION_WEBHOOK_SECRET } from "astro:env/server";
 import { z } from "zod";
 import { auditar, mismoOrigen, panelConfigurado, sesion } from "@/lib/server/admin-auth";
 import { cambiarEtiqueta, enviarArchivo, enviarAudio, enviarTexto, etiquetaLeads, evolutionConfigurado, tipoDeMedia, verificarNumero } from "@/lib/server/evolution";
-import { actualizarChat, asegurarChat, buscarChat, guardarMensajes, listarChats, listarMensajes, renombrarChat } from "@/lib/server/whatsapp-db";
+import {
+  actualizarChat,
+  asegurarChat,
+  buscarChat,
+  guardarMensajes,
+  listarChats,
+  listarMensajes,
+  normalizarTelefono,
+  renombrarChat,
+} from "@/lib/server/whatsapp-db";
 import { importarChatsDeAnuncios, importarHistorial, revisarEtiquetas } from "@/lib/server/whatsapp-sync";
 
 export const prerender = false;
@@ -52,12 +61,6 @@ const accionSchema = z.discriminatedUnion("accion", [
   z.object({ accion: z.literal("etiquetas"), desde: z.number().int().min(0).max(100_000) }),
   z.object({ accion: z.literal("importar"), dias: z.number().int().min(1).max(730).optional() }),
 ]);
-
-/** «+56 9 6344 4133», «963444133» o «56963444133» → «56963444133» (los números chilenos de 9 dígitos llevan 56). */
-const normalizarTelefono = (t: string) => {
-  const d = t.replace(/\D/g, "");
-  return d.length === 9 ? `56${d}` : d;
-};
 
 export const GET: APIRoute = async ({ request, cookies, url }) => {
   if (!panelConfigurado()) return json(503, { ok: false, error: "sin_configurar" });

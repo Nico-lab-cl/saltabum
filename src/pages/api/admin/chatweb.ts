@@ -3,6 +3,7 @@
 //   GET ?id=<uuid> → la conversación y sus mensajes
 //   POST → { accion: "modo", id, modo: "humano" | "ia" } (tomar el control o devolvérselo a la IA)
 //          { accion: "responder", id, texto } (si la atendía la IA, el equipo toma el control al responder)
+//          { accion: "visto", id } (alguien del equipo abrió el chat: deja de contar como pedido de ayuda)
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { auditar, mismoOrigen, panelConfigurado, sesion } from "@/lib/server/admin-auth";
@@ -19,6 +20,7 @@ const json = (status: number, data: Record<string, unknown>) =>
 const accionSchema = z.discriminatedUnion("accion", [
   z.object({ accion: z.literal("modo"), id: z.uuid(), modo: z.enum(["humano", "ia"]) }),
   z.object({ accion: z.literal("responder"), id: z.uuid(), texto: z.string().trim().min(1).max(2000) }),
+  z.object({ accion: z.literal("visto"), id: z.uuid() }),
 ]);
 
 const quien = (nombre: string | null) => nombre ?? "sin nombre";
@@ -71,6 +73,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       await guardarMensaje(conv.id, "sistema", "Te vuelve a atender el asistente virtual 🤖", usuario);
       await auditar(request, usuario, "chat_ia", quien(conv.nombre));
     }
+    return json(200, { ok: true });
+  }
+
+  if (pedido.accion === "visto") {
+    if (conv.ayuda) await actualizarConversacion(conv.id, { ayuda: 0 });
     return json(200, { ok: true });
   }
 

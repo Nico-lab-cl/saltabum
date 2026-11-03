@@ -4,7 +4,7 @@ import { sha256Hex } from "./crypto";
 
 const GRAPH_VERSION = "v23.0"; // Revisar cada ~1 año: https://developers.facebook.com/docs/graph-api/changelog
 
-export type MetaEventName = "Lead" | "Contact" | "Purchase";
+export type MetaEventName = "Lead" | "Contact" | "Schedule" | "Purchase";
 
 /** Dónde ocurrió la conversión. "chat": venta cerrada por WhatsApp (pago confirmado en el panel). */
 export type MetaActionSource = "website" | "chat";
@@ -51,7 +51,7 @@ export async function sendMetaEvent(e: MetaEvent): Promise<void> {
   if (e.firstName) user_data.fn = [await sha256Hex(norm(e.firstName.split(/\s+/)[0] ?? ""))];
   if (e.lastName) user_data.ln = [await sha256Hex(norm(e.lastName))];
   if (e.city) {
-    const ciudad = norm(e.city).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]/g, "");
+    const ciudad = normCiudad(e.city);
     if (ciudad) user_data.ct = [await sha256Hex(ciudad)];
   }
 
@@ -78,6 +78,39 @@ export async function sendMetaEvent(e: MetaEvent): Promise<void> {
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`Meta CAPI ${res.status}: ${(await res.text()).slice(0, 300)}`);
+}
+
+/** Comuna sin tildes ni espacios, como la pide Meta para «ct». */
+const normCiudad = (c: string) => norm(c).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]/g, "");
+
+/** Suma una persona a un público de lista de clientes (datos con hash, igual que en los eventos). */
+export async function agregarAPublico(p: {
+  audienciaId: string;
+  accessToken: string;
+  phone?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  city?: string;
+}): Promise<void> {
+  const h = async (v: string | undefined) => (v ? sha256Hex(v) : "");
+  const fila = [
+    await h(p.phone && normPhone(p.phone)),
+    await h(p.email && norm(p.email)),
+    await h(p.firstName && norm(p.firstName.split(/\s+/)[0] ?? "")),
+    await h(p.lastName && norm(p.lastName)),
+    await h(p.city && normCiudad(p.city)),
+    await sha256Hex("cl"),
+  ];
+  const body = { payload: { schema: ["PHONE", "EMAIL", "FN", "LN", "CT", "COUNTRY"], data: [fila] } };
+  const url = `https://graph.facebook.com/${GRAPH_VERSION}/${p.audienciaId}/users?access_token=${encodeURIComponent(p.accessToken)}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!res.ok) throw new Error(`Meta público ${res.status}: ${(await res.text()).slice(0, 300)}`);
 }
 
 /** Construye _fbc a partir de fbclid si la cookie aún no existe. */

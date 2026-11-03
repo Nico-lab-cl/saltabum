@@ -113,9 +113,13 @@
     }
     conocidas = new Map(nuevas.map((c) => [c.id, c.actualizado]));
     conversaciones = nuevas;
-    document.dispatchEvent(new CustomEvent("panel:contador", { detail: { pestana: "chatweb", n: conversaciones.filter((c) => c.ayuda).length } }));
+    contar();
     pintarLista();
   }
+
+  // El número de la pestaña son las conversaciones que piden ayuda y nadie ha abierto (llevan la marca «Pide ayuda»).
+  const contar = () =>
+    document.dispatchEvent(new CustomEvent("panel:contador", { detail: { pestana: "chatweb", n: conversaciones.filter((c) => c.ayuda).length } }));
 
   function pintarLista() {
     const visibles = conversaciones.filter((c) =>
@@ -151,6 +155,15 @@
     if (res?.status === 401) return sinSesion();
     if (!res?.ok) return void avisar("No se pudo abrir la conversación");
     const { conversacion, mensajes } = (await res.json()) as { conversacion: Conversacion; mensajes: Mensaje[] };
+    // Abrirla cuenta como vista: deja de pedir ayuda y baja el número de la pestaña.
+    const enLista = conversaciones.find((c) => c.id === id);
+    if (conversacion.ayuda || enLista?.ayuda) {
+      conversacion.ayuda = 0;
+      if (enLista) enLista.ayuda = 0;
+      contar();
+      ultimoPintado = "";
+      void api("/api/admin/chatweb", { method: "POST", body: JSON.stringify({ accion: "visto", id }) });
+    }
     // Si no cambió nada, no se repinta (así no se borra lo que el equipo está escribiendo).
     const firma = `${conversacion.modo}|${conversacion.atiende}|${mensajes.at(-1)?.id ?? 0}`;
     if (firma === ultimoPintado) return;

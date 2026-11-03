@@ -72,6 +72,10 @@ export default defineConfig({
       // ---- Secretos: solo en el Worker, se leen en tiempo de ejecución (wrangler secret put) ----
       META_CAPI_ACCESS_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
       META_CAPI_TEST_EVENT_CODE: envField.string({ context: "server", access: "secret", optional: true }),
+      // Público «Clientes Saltabum (pagaron)» de la cuenta Saltabum ADS: cada pago del panel suma al cliente.
+      // Necesita un token con permiso ads_management; si no se carga META_AUDIENCIA_TOKEN se intenta con el de CAPI.
+      META_AUDIENCIA_CLIENTES: envField.string({ context: "server", access: "public", default: "120250672349520254" }),
+      META_AUDIENCIA_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
       CRM_WEBHOOK_URL: envField.string({ context: "server", access: "secret", optional: true }),
       CRM_WEBHOOK_SECRET: envField.string({ context: "server", access: "secret", optional: true }),
       // Usuarios del panel de reservas (/admin): «usuario:pbkdf2$…:<totp>», uno por línea. Se generan con

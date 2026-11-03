@@ -8,6 +8,7 @@ import { aMinutos, calcularPrecio, etiquetaHorario, pesos, rangoReservable, REGI
 import { sendToCrm } from "@/lib/server/crm";
 import { sha256Hex } from "@/lib/server/crypto";
 import { buildFbc, sendMetaEvent } from "@/lib/server/meta-capi";
+import { enviarReserva } from "@/lib/server/meta-ventas";
 import { auditar } from "@/lib/server/admin-auth";
 import { crearReserva, reservasRecientes } from "@/lib/server/reservas-db";
 
@@ -120,6 +121,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       fbc: buildFbc(cookies.get("_fbc")?.value, r.attribution?.fbclid),
       customData: { form: "reserva", value: precio.total, currency: "CLP" },
     }).catch((err) => console.error("[reservas] Meta CAPI:", String(err), r.event_id));
+    // Además del Lead, la reserva como «agendó» (paso del embudo antes del pago; ver src/lib/server/meta-ventas.ts).
+    await enviarReserva(
+      { ...datos, id, fbp: cookies.get("_fbp")?.value, fbc: buildFbc(cookies.get("_fbc")?.value, r.attribution?.fbclid) },
+      "website",
+      { ip, userAgent: request.headers.get("user-agent") ?? undefined, url: r.page_url },
+    );
   }
 
   // El CRM es un aviso extra: si falla, la reserva igual queda guardada.

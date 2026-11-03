@@ -67,7 +67,8 @@ ya traen su valor por defecto en `astro.config.mjs`, así que no hace falta carg
 **Secretos** (solo en el Worker, en tiempo de ejecución):
 
 ```bash
-npx wrangler secret put META_CAPI_ACCESS_TOKEN
+npx wrangler secret put META_CAPI_ACCESS_TOKEN   # Events Manager → dataset → Configuración → «Generar identificador de acceso»
+npx wrangler secret put META_AUDIENCIA_TOKEN     # opcional: token con ads_management para el público «Clientes Saltabum»
 npx wrangler secret put CRM_WEBHOOK_URL
 npx wrangler secret put CRM_WEBHOOK_SECRET
 npx wrangler secret put ADMIN_USUARIOS   # usuarios del panel /admin (ver «Panel de reservas»)

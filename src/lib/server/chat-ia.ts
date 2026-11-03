@@ -82,7 +82,7 @@ Horario: el arriendo puede empezar desde las ${aHora(APERTURA)} y debe terminar 
 Despacho por comuna (montaje y retiro incluidos):
 ${COMUNAS.map((c) => `- ${c.nombre} (${c.zonas}): ${c.despacho ? `+${pesos(c.despacho)}` : "gratis"}`).join("\n")}
 Fuera de esas comunas no tienes precio: usa pedir_ayuda.
-Abono para reservar: ${pesos(ABONO)}, se descuenta del total y el resto se paga el día del evento.
+Abono para reservar: ${pesos(ABONO)} por evento (por el día), sin importar cuántos juegos arriende. Si alguien arrienda 2 o 3 juegos para el mismo evento, el abono sigue siendo uno solo de ${pesos(ABONO)}; nunca lo multipliques por juego. Se descuenta del total y el resto se paga el día del evento.
 Preguntas frecuentes:
 ${FAQS.filter((f) => !f.a.includes("[")).map((f) => `- ${f.q} ${f.a}`).join("\n")}
 
@@ -97,7 +97,7 @@ Herramientas
 - Los mensajes que empiezan con «(Equipo Saltabum)» los escribió una persona del equipo: respeta lo que dijo y no lo contradigas.
 
 Después de reservar
-La reserva queda pendiente hasta que se pague el abono de ${pesos(ABONO)}. Dile a la persona que el equipo le escribirá por WhatsApp al teléfono que dio para confirmar y coordinar el abono. No prometas descuentos, regalos ni cambios de precio. No pidas datos de tarjetas ni de cuentas bancarias.
+La reserva queda pendiente hasta que se pague el abono de ${pesos(ABONO)} (uno solo por evento, aunque haya más de un juego). Dile a la persona que el equipo le escribirá por WhatsApp al teléfono que dio para confirmar y coordinar el abono. No prometas descuentos, regalos ni cambios de precio. No pidas datos de tarjetas ni de cuentas bancarias.
 
 Límites
 Solo hablas de Saltabum, sus juegos y eventos. Si te piden otra cosa, responde amablemente que solo puedes ayudar con arriendos de Saltabum. Si no sabes algo, dilo y ofrece WhatsApp.`;
@@ -219,7 +219,7 @@ function cotizar(e: { producto: string; horas: number; comuna: string }) {
     horas_extra: pesos(p.extras),
     despacho: pesos(p.despacho),
     total: pesos(p.total),
-    abono_para_reservar: pesos(ABONO),
+    abono_para_reservar: `${pesos(ABONO)} por evento, aunque arriende más de un juego`,
   };
 }
 
@@ -305,7 +305,7 @@ async function reservar(e: Record<string, unknown>, ctx: Contexto) {
       .filter(Boolean)
       .join("\n"),
   );
-  return { ok: true, reserva: id, horario: etiquetaHorario(inicio, fin), total: pesos(precio.total), abono: pesos(ABONO), estado: "pendiente del abono" };
+  return { ok: true, reserva: id, horario: etiquetaHorario(inicio, fin), total: pesos(precio.total), abono: `${pesos(ABONO)} por evento (si este evento ya tiene otro juego reservado, no se suma otro abono)`, estado: "pendiente del abono" };
 }
 
 /** Responde el último mensaje del cliente con lo más reciente de la conversación guardada. */
