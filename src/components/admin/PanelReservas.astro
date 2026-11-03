@@ -457,7 +457,7 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     const rango =
       !desdeR && !hastaR
         ? "Total hasta hoy"
-        : `${desdeR ? fechaCorta.format(aFecha(desdeR)) : "el inicio"} al ${hastaR ? fechaCorta.format(aFecha(hastaR)) : "hoy"}`;
+        : `${desdeR ? `Del ${fechaCorta.format(aFecha(desdeR))}` : "Desde el inicio"} ${hastaR ? `al ${fechaCorta.format(aFecha(hastaR))}` : "hasta hoy"}`;
     $("[data-resumen=cobrado]").textContent = clp(suma);
     $("[data-recaudado-nota]").textContent = `${rango} · ${cuantos}`;
     $("[data-recaudado-resumen]").textContent = `Ver ${cuantos} · ${rango.toLowerCase()}`;
