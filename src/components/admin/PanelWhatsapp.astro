@@ -95,6 +95,8 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     ultimo_texto: string | null;
     ultimo_de_mi: number | null;
     sin_leer: number;
+    /** Su reserva más reciente, cruzada por teléfono. */
+    reserva: { id: number; fecha: string; pagado: number | null } | null;
   };
   type Mensaje = { id: string; de_mi: number; texto: string; enviado: string; por: string | null };
   type Anuncio = { titulo?: string; texto?: string; id?: string; url?: string; app?: string; ctwaClid?: string };
@@ -186,12 +188,15 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     conocidos = new Map(datos.chats.map((c) => [c.jid, c.ultimo]));
     const cambioAbierto = abierto && chats.find((c) => c.jid === abierto)?.ultimo !== datos.chats.find((c) => c.jid === abierto)?.ultimo;
     chats = datos.chats;
-    document.dispatchEvent(
-      new CustomEvent("panel:contador", { detail: { pestana: "whatsapp", n: chats.filter((c) => c.estado !== "cerrada" && (c.sin_leer > 0 || c.estado === "nueva")).length } }),
-    );
+    contar();
     pintarLista();
     if (abierto && cambioAbierto) void abrir(abierto, false);
   }
+
+  // El número de la pestaña son los chats con mensajes sin leer (los que llevan la burbuja roja en la lista);
+  // baja apenas se abre el chat.
+  const sinLeer = (c: Chat) => c.estado !== "cerrada" && c.sin_leer > 0;
+  const contar = () => document.dispatchEvent(new CustomEvent("panel:contador", { detail: { pestana: "whatsapp", n: chats.filter(sinLeer).length } }));
 
   async function enviar(datos: Record<string, unknown>, mensajeOk?: string) {
     const res = await api("/api/admin/whatsapp", { method: "POST", body: JSON.stringify(datos) }).catch(() => null);
@@ -217,7 +222,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
   function fila(c: Chat): HTMLElement {
     const b = el(
       "button",
-      `border-noche flex w-full cursor-pointer flex-col gap-1 rounded-2xl border-2 p-3 text-left ${c.jid === abierto ? "bg-sol/40" : "bg-blanco"}`,
+      `flex w-full cursor-pointer flex-col gap-1 rounded-2xl border-2 p-3 text-left ${c.jid === abierto ? "bg-sol/40" : sinLeer(c) ? "bg-rojo-suave/50" : "bg-blanco"} ${sinLeer(c) ? "border-rojo-texto" : "border-noche"}`,
     ) as HTMLButtonElement;
     b.type = "button";
     const arriba = el("div", "flex items-center justify-between gap-2");
@@ -228,9 +233,10 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     const chips = el("div", "flex flex-wrap items-center gap-1");
     const e = ESTADOS[c.estado];
     chips.append(el("span", `rounded-full border px-2 text-xs font-extrabold ${e.clase}`, e.nombre));
+    if (c.reserva) chips.append(el("span", `border-noche rounded-full border px-2 text-xs font-extrabold ${c.reserva.pagado ? "bg-verde" : "bg-sol"}`, c.reserva.pagado ? "Pagó" : "Reservó"));
     if (c.anuncio) chips.append(el("span", "border-noche bg-verde-burbuja rounded-full border px-2 text-xs font-extrabold", `Anuncio${leerAnuncio(c).app ? ` · ${APPS[leerAnuncio(c).app!] ?? leerAnuncio(c).app}` : ""}`));
     if (c.etiqueta) chips.append(el("span", "border-noche bg-crema rounded-full border px-2 text-xs font-extrabold", "Etiqueta"));
-    if (c.sin_leer > 0) chips.append(el("span", "bg-rojo-texto ml-auto rounded-full px-2 text-xs leading-5 font-extrabold text-white", String(c.sin_leer)));
+    if (c.sin_leer > 0) chips.append(el("span", "bg-rojo-texto ml-auto rounded-full px-2 text-xs leading-5 font-extrabold text-white", `${c.sin_leer} sin leer`));
     b.append(chips);
     b.addEventListener("click", () => void abrir(c.jid, true));
     return b;
@@ -248,6 +254,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     if (desplazar && window.matchMedia("(max-width: 1023px)").matches) vista.scrollIntoView({ behavior: "smooth", block: "start" });
     if (c.sin_leer > 0) {
       c.sin_leer = 0;
+      contar();
       pintarLista();
       void api("/api/admin/whatsapp", { method: "POST", body: JSON.stringify({ accion: "leido", jid }) });
     }
@@ -297,6 +304,16 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
       if (anuncio.texto) caja.append(el("p", "text-noche-suave line-clamp-2", anuncio.texto));
       if (anuncio.url) caja.append(enlace(anuncio.url, "Ver el anuncio", "text-azul-texto w-fit text-xs underline"));
       cabeza.append(caja);
+    }
+    if (c.reserva) {
+      const fecha = dia.format(new Date(`${c.reserva.fecha}T12:00:00`));
+      cabeza.append(
+        el(
+          "p",
+          `rounded-xl px-3 py-2 text-sm font-extrabold ${c.reserva.pagado ? "bg-verde/40" : "bg-sol/40"}`,
+          c.reserva.pagado ? `Pagó su reserva del ${fecha} ($${c.reserva.pagado.toLocaleString("es-CL")})` : `Reservó para el ${fecha}, falta el pago`,
+        ),
+      );
     }
 
     // Notas internas.

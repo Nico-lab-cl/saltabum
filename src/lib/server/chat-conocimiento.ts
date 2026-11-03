@@ -19,7 +19,7 @@ Los juegos
 Qué incluye y cómo funciona
 - El precio incluye despacho según comuna, montaje en unos 30 minutos y retiro al terminar. Sin costos ocultos: la luz la pone el cliente (menos de $2.000 por evento).
 - Pasos: eligen fecha y hora (en el chat o en el calendario de saltabum.cl, sección Reservar), reservan con el abono, llegamos antes de la hora de inicio, montamos y anclamos, los niños saltan y retiramos al terminar.
-- El abono se coordina por WhatsApp con el equipo; el saldo se paga el día del evento.
+- El abono es uno solo por evento ($20.000 por el día), da igual cuántos juegos arriende. Se coordina por WhatsApp con el equipo; el saldo se paga el día del evento.
 - Eventos que pasan de las 22:00 o de toda la noche: se cotizan aparte con el equipo (usa pedir_ayuda).
 
 Espacio y requisitos

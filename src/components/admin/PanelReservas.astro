@@ -288,6 +288,8 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     pagado: number | null;
     pagado_en: string | null;
     pagado_por: string | null;
+    /** Su chat de WhatsApp en el panel, cruzado por teléfono. */
+    chat: { jid: string; anuncio: number } | null;
   };
   type Pago = Pick<Fila, "id" | "fecha" | "producto" | "nombre" | "apellido" | "total" | "pagado" | "pagado_en">;
   type Datos = { filas: Fila[]; pagos?: Pago[]; hoy: string; desde: string; usuario: string };
@@ -604,6 +606,9 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     return a;
   }
 
+  /** Cómo le fue al sumar al cliente al público «Clientes Saltabum» de Meta (sin aviso si no está configurado). */
+  const textoPublico = (p?: string) => (p === "enviada" ? " · cliente sumado al público" : p === "error" ? " · no se pudo sumar al público de clientes" : "");
+
   function botonAccion(texto: string, clase: string, accion: () => void) {
     const b = el("button", `min-h-9 cursor-pointer rounded-full border-2 px-3 text-sm font-extrabold ${clase}`, texto) as HTMLButtonElement;
     b.type = "button";
@@ -632,6 +637,7 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     else if (f.pagado) etiqueta("Con abono", "border-noche bg-verde-burbuja");
     else etiqueta("Sin pago", "border-noche bg-sol");
     if (f.estado === "reservado") etiqueta(f.origen === "panel" ? "Panel" : f.origen === "chat" ? "Chat IA" : "Web", "border-noche/30 bg-crema");
+    if (f.chat) etiqueta(f.chat.anuncio ? "WhatsApp · Anuncio" : "WhatsApp", "border-noche bg-verde-burbuja");
     if (f.estado === "reservado" && f.origen !== "panel" && Date.now() - Date.parse(f.creado) < 24 * 3600 * 1000) etiqueta("Nueva", "border-rojo-texto bg-rojo-suave text-rojo-texto");
     cuando.append(etiquetas);
     art.append(cuando);
@@ -680,6 +686,23 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     const acciones = el("div", "flex flex-wrap gap-2 lg:max-w-[220px] lg:justify-end");
     acciones.append(botonAccion("Editar", "border-noche bg-crema", () => abrirFormulario(f)));
     if (!f.pagado) acciones.append(botonAccion("Registrar pago", "border-noche bg-verde-burbuja", () => abrirPago(f)));
+    else
+      acciones.append(
+        // Por si Meta no recibió la compra al registrar el pago. Lleva el mismo event_id: Meta no la cuenta dos veces.
+        botonAccion("Reenviar a Meta", "border-noche bg-blanco", async () => {
+          const res = await enviar({ accion: "reenviar_meta", id: f.id });
+          const data = (await res.json().catch(() => ({}))) as { meta?: string; publico?: string };
+          avisar(
+            !res.ok
+              ? "No se pudo reenviar"
+              : (data.meta === "enviada"
+                  ? "Compra enviada a Meta"
+                  : data.meta === "sin_configurar"
+                    ? "Meta no está configurado en el sitio"
+                    : "Meta no respondió, intenta de nuevo") + textoPublico(data.publico),
+          );
+        }),
+      );
     acciones.append(
       botonAccion("Eliminar", "border-rojo-texto text-rojo-texto bg-blanco", async () => {
         if (!confirm(`¿Eliminar la reserva de ${cliente(f)} del ${fechaCorta.format(aFecha(f.fecha))}, ${horario(f)}?\n\nEl horario queda libre en la web y la reserva queda guardada en el historial.`)) return;
@@ -901,13 +924,12 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     const monto = Math.round(Number((formPago.elements.namedItem("monto") as HTMLInputElement).value));
     if (!(monto >= 1000)) return (formPago.elements.namedItem("monto") as HTMLInputElement).reportValidity();
     const res = await enviar({ accion: "pagada", id: pagando.id, monto });
-    const data = (await res.json().catch(() => ({}))) as { meta?: string };
+    const data = (await res.json().catch(() => ({}))) as { meta?: string; publico?: string };
     ventanaPago.close();
     avisar(
       res.ok
-        ? data.meta === "enviada"
-          ? "Pago guardado y enviado a Meta"
-          : "Pago guardado (Meta no está configurado o no respondió)"
+        ? (data.meta === "enviada" ? "Pago guardado y enviado a Meta" : "Pago guardado (Meta no está configurado o no respondió)") +
+            textoPublico(data.publico)
         : res.status === 409
           ? "Esta reserva ya tenía un pago registrado"
           : "No se pudo guardar el pago",

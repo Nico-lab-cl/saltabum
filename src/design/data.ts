@@ -138,7 +138,7 @@ export const FAQS = [
     q: "¿Qué pasa si llueve?",
     a: "Reprogramamos a otra fecha disponible sin perder el abono. Avísanos apenas veas el pronóstico.",
   },
-  { q: "¿Cuánto es el abono?", a: "$20.000 para reservar la hora, y se descuentan del total del arriendo. El resto se paga el día del evento." },
+  { q: "¿Cuánto es el abono?", a: "$20.000 por evento para reservar tu fecha, da igual cuántos juegos arriendes, y se descuentan del total del arriendo. El resto se paga el día del evento." },
   { q: "¿Cuánta luz consume?", a: "Menos de $2.000 por evento. Necesitamos un enchufe a menos de 15 m." },
   {
     q: "¿Cuánto espacio necesito?",

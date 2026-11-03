@@ -190,4 +190,5 @@ export const bloqueoSchema = z.discriminatedUnion("accion", [
   z.object({ accion: z.literal("liberar"), id: z.number().int().positive() }),
   /** Pago confirmado (abono o total), en pesos. Se informa a Meta como compra. */
   z.object({ accion: z.literal("pagada"), id: z.number().int().positive(), monto: z.number().int().min(1000).max(5_000_000) }),
+  z.object({ accion: z.literal("reenviar_meta"), id: z.number().int().positive() }),
 ]);

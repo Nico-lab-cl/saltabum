@@ -217,14 +217,46 @@ export async function guardarMensajes(jid: string, mensajes: MensajeEvolution[],
   return nuevos;
 }
 
+/** «+56 9 6344 4133», «963444133» o «56963444133» → «56963444133» (los números chilenos de 9 dígitos llevan 56). */
+export const normalizarTelefono = (t: string) => {
+  const d = t.replace(/\D/g, "");
+  return d.length === 9 ? `56${d}` : d;
+};
+
+/** La reserva más reciente de la persona del chat (se cruzan por teléfono). */
+export interface ReservaDelChat {
+  id: number;
+  fecha: string;
+  pagado: number | null;
+}
+
 /** Chats para el panel: los que vinieron de un anuncio o tienen la etiqueta, el de actividad más reciente primero. */
-export async function listarChats(limite: number): Promise<ChatWhatsapp[]> {
+export async function listarChats(limite: number): Promise<(ChatWhatsapp & { reserva: ReservaDelChat | null })[]> {
+  const d = await db();
+  const [{ results }, reservas] = await Promise.all([
+    d
+      .prepare(`SELECT ${COLUMNAS} FROM wa_chats WHERE anuncio = 1 OR etiqueta = 1 ORDER BY COALESCE(ultimo, creado) DESC LIMIT ?`)
+      .bind(limite)
+      .all<ChatWhatsapp>(),
+    d
+      .prepare("SELECT id, fecha, telefono, pagado FROM agenda WHERE estado = 'reservado' AND telefono IS NOT NULL ORDER BY fecha DESC")
+      .all<ReservaDelChat & { telefono: string }>(),
+  ]);
+  const porTelefono = new Map<string, ReservaDelChat>();
+  for (const { telefono, ...r } of reservas.results) {
+    const tel = normalizarTelefono(telefono);
+    if (tel && !porTelefono.has(tel)) porTelefono.set(tel, r);
+  }
+  return results.map((c) => ({ ...c, reserva: (c.telefono && porTelefono.get(c.telefono)) || null }));
+}
+
+/** El chat de cada teléfono, para mostrar en las reservas de dónde vino la persona. */
+export async function chatsPorTelefono(): Promise<Map<string, { jid: string; anuncio: number }>> {
   const d = await db();
   const { results } = await d
-    .prepare(`SELECT ${COLUMNAS} FROM wa_chats WHERE anuncio = 1 OR etiqueta = 1 ORDER BY COALESCE(ultimo, creado) DESC LIMIT ?`)
-    .bind(limite)
-    .all<ChatWhatsapp>();
-  return results;
+    .prepare("SELECT jid, telefono, anuncio FROM wa_chats WHERE telefono IS NOT NULL")
+    .all<{ jid: string; telefono: string; anuncio: number }>();
+  return new Map(results.map((c) => [c.telefono, { jid: c.jid, anuncio: c.anuncio }]));
 }
 
 /** Los últimos mensajes de un chat, del más antiguo al más nuevo. */
