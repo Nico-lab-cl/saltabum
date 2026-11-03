@@ -77,8 +77,18 @@ npx wrangler secret put EVOLUTION_API_URL         # https://evolution-api-evolut
 npx wrangler secret put EVOLUTION_API_KEY         # AUTHENTICATION_API_KEY de Evolution
 npx wrangler secret put EVOLUTION_WEBHOOK_SECRET  # clave larga al azar
 npx wrangler secret put ANTHROPIC_API_KEY         # chat con IA de la web (console.anthropic.com)
+npx wrangler secret put META_APP_SECRET           # mensajes de Instagram y Facebook: clave secreta de la app de Meta
+npx wrangler secret put META_WEBHOOK_TOKEN        # texto al azar (token de verificación del webhook /api/meta)
+npx wrangler secret put META_PAGE_TOKEN           # token de la página Saltabum (con Instagram conectado)
 # Opcionales: EVOLUTION_INSTANCIA (por defecto «Saltabum») y WHATSAPP_ETIQUETA_ID (por defecto «12» = SALTABUM | LEADS)
+# REDES_MODO: «auto» (por defecto, la IA responde sola) o «sugerencia» (la IA propone y el equipo aprueba en /admin → Chats)
 ```
+
+**Instagram y Facebook en el panel.** Meta manda cada mensaje directo a `/api/meta` (firmado con `META_APP_SECRET`) y
+la misma IA del chat de la web responde sola (ver `src/lib/server/redes.ts`): cotiza, revisa la agenda y deja la reserva
+(pide nombre, teléfono y dirección). Si alguien responde desde la app, la IA se calla en esa conversación hasta que se
+pulse «Devolver a la IA» en /admin → Chats. Meta solo deja responder dentro de
+las 24 horas desde el último mensaje de la persona.
 
 **WhatsApp en el panel.** Evolution API manda cada mensaje a `/api/whatsapp`, y el sitio guarda en D1 solo los chats
 que llegaron por un anuncio de Meta (Click-to-WhatsApp) o que tienen la etiqueta «SALTABUM | LEADS». El webhook de la

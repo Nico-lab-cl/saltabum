@@ -71,7 +71,8 @@ export const GET: APIRoute = async ({ url }) => {
   const desde = Math.max(0, Number(url.searchParams.get("desde")) || 0);
   try {
     const conv = await obtenerConversacion(id.data);
-    if (!conv) return json(200, { ok: true, modo: "ia", mensajes: [] });
+    // Las conversaciones de Instagram y Facebook no se leen desde la burbuja de la web.
+    if (!conv || (conv.canal && conv.canal !== "web")) return json(200, { ok: true, modo: "ia", mensajes: [] });
     const mensajes = (await mensajesDesde(conv.id, desde)).map(({ id, rol, texto, creado }) => ({ id, rol, texto, creado }));
     return json(200, { ok: true, modo: conv.modo, mensajes });
   } catch (err) {
@@ -120,7 +121,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     conv = await obtenerConversacion(conversacion);
     // Sin los datos del formulario previo no se puede chatear.
-    if (!conv?.telefono) return json(409, { ok: false, error: "sin_contacto" });
+    if (!conv?.telefono || (conv.canal && conv.canal !== "web")) return json(409, { ok: false, error: "sin_contacto" });
     const cupo = await contarMensaje(dia, visitante, MAX_POR_VISITANTE, MAX_POR_DIA);
     if (cupo !== "ok") return json(429, { ok: false, error: "limite" });
     idCliente = await guardarMensaje(conv.id, "cliente", texto);

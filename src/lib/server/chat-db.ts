@@ -2,10 +2,13 @@
 // el conteo diario de mensajes («chat_uso») para que nadie pueda gastar los créditos de la API.
 // Cada conversación tiene un id al azar que genera el navegador; quien lo conoce puede leerla (no hay otra sesión).
 // «modo» dice quién responde: la IA o una persona del equipo que tomó el control desde /admin.
+// «canal» dice por dónde llegó: la web o un mensaje directo de Instagram o Facebook (ver redes.ts). En las redes
+// «externo» es el id de la persona en Meta y «sugerencia» la respuesta que propone la IA para que el equipo la apruebe.
 import { baseReservas } from "@/lib/server/reservas-db";
 
 export type ModoChat = "ia" | "humano";
 export type RolMensaje = "cliente" | "ia" | "equipo" | "sistema";
+export type CanalChat = "web" | "instagram" | "messenger";
 
 export interface Conversacion {
   id: string;
@@ -25,6 +28,10 @@ export interface Conversacion {
   mensajes: number;
   ultimo: string | null;
   aviso: string | null;
+  /** null en las conversaciones antiguas, que son todas de la web. */
+  canal: CanalChat | null;
+  externo: string | null;
+  sugerencia: string | null;
 }
 
 export interface MensajeGuardado {
@@ -70,7 +77,12 @@ const ESQUEMAS = [
 ];
 
 // Columnas agregadas después (ALTER TABLE falla si ya existen, y se ignora).
-const COLUMNAS_NUEVAS = ["email TEXT", "origen TEXT"];
+const COLUMNAS_NUEVAS = ["email TEXT", "origen TEXT", "canal TEXT", "externo TEXT", "sugerencia TEXT"];
+const COLUMNAS_MENSAJES = ["externo_id TEXT"];
+const INDICES = [
+  "CREATE INDEX IF NOT EXISTS chat_conversaciones_externo ON chat_conversaciones (canal, externo)",
+  "CREATE INDEX IF NOT EXISTS chat_mensajes_externo ON chat_mensajes (externo_id)",
+];
 
 // Se guarda «ya está lista» y no la promesa (ver reservas-db.ts).
 let tablasListas = false;
@@ -85,6 +97,8 @@ async function db() {
   if (!tablasListas) {
     for (const sql of ESQUEMAS) await d.prepare(sql).run();
     for (const c of COLUMNAS_NUEVAS) await d.prepare(`ALTER TABLE chat_conversaciones ADD COLUMN ${c}`).run().catch(() => undefined);
+    for (const c of COLUMNAS_MENSAJES) await d.prepare(`ALTER TABLE chat_mensajes ADD COLUMN ${c}`).run().catch(() => undefined);
+    for (const sql of INDICES) await d.prepare(sql).run();
     tablasListas = true;
   }
   return d;
@@ -131,13 +145,19 @@ export async function obtenerConversacion(id: string): Promise<Conversacion | nu
   return d.prepare("SELECT * FROM chat_conversaciones WHERE id = ?").bind(id).first<Conversacion>();
 }
 
-/** Guarda un mensaje y devuelve su id. */
-export async function guardarMensaje(conversacion: string, rol: RolMensaje, texto: string, autor: string | null = null): Promise<number> {
+/** Guarda un mensaje y devuelve su id. `externoId` es el id del mensaje en Meta (para no guardarlo dos veces). */
+export async function guardarMensaje(
+  conversacion: string,
+  rol: RolMensaje,
+  texto: string,
+  autor: string | null = null,
+  externoId: string | null = null,
+): Promise<number> {
   const d = await db();
   const ahora = new Date().toISOString();
   const fila = await d
-    .prepare("INSERT INTO chat_mensajes (conversacion, rol, texto, autor, creado) VALUES (?, ?, ?, ?, ?) RETURNING id")
-    .bind(conversacion, rol, texto, autor, ahora)
+    .prepare("INSERT INTO chat_mensajes (conversacion, rol, texto, autor, creado, externo_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id")
+    .bind(conversacion, rol, texto, autor, ahora, externoId)
     .first<{ id: number }>();
   await d
     .prepare("UPDATE chat_conversaciones SET actualizado = ?, mensajes = mensajes + 1, ultimo = ? WHERE id = ?")
@@ -168,7 +188,7 @@ export async function ultimosMensajes(conversacion: string, n: number): Promise<
 
 export async function actualizarConversacion(
   id: string,
-  cambios: Partial<Pick<Conversacion, "modo" | "atiende" | "ayuda" | "reserva_id" | "aviso">>,
+  cambios: Partial<Pick<Conversacion, "modo" | "atiende" | "ayuda" | "reserva_id" | "aviso" | "sugerencia" | "nombre" | "telefono" | "email">>,
 ): Promise<void> {
   const campos = Object.keys(cambios) as (keyof typeof cambios)[];
   if (!campos.length) return;
@@ -187,4 +207,30 @@ export async function listarConversaciones(limite = 200): Promise<Conversacion[]
     .bind(limite)
     .all<Conversacion>();
   return results;
+}
+
+/** Conversación de Instagram o Facebook de una persona (por su id en Meta), creándola si es la primera vez. */
+export async function conversacionDeRed(canal: Exclude<CanalChat, "web">, externo: string, nombre: string | null): Promise<Conversacion> {
+  const d = await db();
+  const existente = await d.prepare("SELECT * FROM chat_conversaciones WHERE canal = ? AND externo = ?").bind(canal, externo).first<Conversacion>();
+  if (existente) return existente;
+  const ahora = new Date().toISOString();
+  const id = crypto.randomUUID();
+  await d
+    .prepare("INSERT INTO chat_conversaciones (id, creado, actualizado, canal, externo, nombre, pagina) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .bind(id, ahora, ahora, canal, externo, nombre, canal === "instagram" ? "Instagram" : "Facebook Messenger")
+    .run();
+  return (await obtenerConversacion(id))!;
+}
+
+/** ¿Ya se guardó este mensaje de Meta? (Meta reintenta los avisos y manda copia de lo que enviamos). */
+export async function mensajeExterno(externoId: string): Promise<boolean> {
+  const d = await db();
+  return !!(await d.prepare("SELECT 1 AS si FROM chat_mensajes WHERE externo_id = ? LIMIT 1").bind(externoId).first());
+}
+
+/** Anota el id de Meta de un mensaje ya guardado (Meta lo devuelve al enviarlo). */
+export async function marcarExterno(id: number, externoId: string): Promise<void> {
+  const d = await db();
+  await d.prepare("UPDATE chat_mensajes SET externo_id = ? WHERE id = ?").bind(externoId, id).run();
 }

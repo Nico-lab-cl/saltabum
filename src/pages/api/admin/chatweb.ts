@@ -1,13 +1,19 @@
-// Conversaciones del chat de la web, para la pestaña «Chat web» del panel /admin. Requiere sesión.
+// Conversaciones del chat de la web y de los mensajes directos de Instagram y Facebook, para la pestaña «Chats» del
+// panel /admin. Requiere sesión.
 //   GET            → conversaciones, la más reciente primero
 //   GET ?id=<uuid> → la conversación y sus mensajes
 //   POST → { accion: "modo", id, modo: "humano" | "ia" } (tomar el control o devolvérselo a la IA)
 //          { accion: "responder", id, texto } (si la atendía la IA, el equipo toma el control al responder)
 //          { accion: "visto", id } (alguien del equipo abrió el chat: deja de contar como pedido de ayuda)
+//          { accion: "sugerir", id } (solo redes: la IA propone de nuevo la respuesta, sin enviarla)
+//          { accion: "descartar", id } (solo redes: borra la respuesta propuesta)
+// En las redes «responder» envía el mensaje por Meta. Con REDES_MODO=sugerencia responder no le quita el turno a la IA
+// (sigue proponiendo); con REDES_MODO=auto, igual que en la web, el equipo toma el control.
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { auditar, mismoOrigen, panelConfigurado, sesion } from "@/lib/server/admin-auth";
 import { actualizarConversacion, guardarMensaje, listarConversaciones, mensajesDesde, obtenerConversacion } from "@/lib/server/chat-db";
+import { ErrorMeta, esRed, modoRedes, redesConfiguradas, responderDesdePanel, sugerir } from "@/lib/server/redes";
 
 export const prerender = false;
 
@@ -21,6 +27,8 @@ const accionSchema = z.discriminatedUnion("accion", [
   z.object({ accion: z.literal("modo"), id: z.uuid(), modo: z.enum(["humano", "ia"]) }),
   z.object({ accion: z.literal("responder"), id: z.uuid(), texto: z.string().trim().min(1).max(2000) }),
   z.object({ accion: z.literal("visto"), id: z.uuid() }),
+  z.object({ accion: z.literal("sugerir"), id: z.uuid() }),
+  z.object({ accion: z.literal("descartar"), id: z.uuid() }),
 ]);
 
 const quien = (nombre: string | null) => nombre ?? "sin nombre";
@@ -40,9 +48,9 @@ export const GET: APIRoute = async ({ request, cookies, url }) => {
   if (id) {
     const conv = await obtenerConversacion(id);
     if (!conv) return json(404, { ok: false, error: "no_existe" });
-    return json(200, { ok: true, conversacion: conv, mensajes: await mensajesDesde(id, 0, 500) });
+    return json(200, { ok: true, conversacion: conv, mensajes: await mensajesDesde(id, 0, 500), modoRedes: modoRedes() });
   }
-  return json(200, { ok: true, conversaciones: await listarConversaciones(300) });
+  return json(200, { ok: true, conversaciones: await listarConversaciones(300), modoRedes: modoRedes(), redes: redesConfiguradas() });
 };
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -80,6 +88,34 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (conv.ayuda) await actualizarConversacion(conv.id, { ayuda: 0 });
     return json(200, { ok: true });
   }
+
+  if (esRed(conv)) {
+    if (pedido.accion === "descartar") {
+      await actualizarConversacion(conv.id, { sugerencia: null });
+      return json(200, { ok: true });
+    }
+    if (pedido.accion === "sugerir") {
+      try {
+        const texto = await sugerir(conv);
+        await actualizarConversacion(conv.id, { sugerencia: texto });
+        return json(200, { ok: true, texto });
+      } catch (err) {
+        console.error("[chats] sugerir:", String(err));
+        return json(502, { ok: false, error: "ia" });
+      }
+    }
+    if (!redesConfiguradas()) return json(503, { ok: false, error: "redes_sin_configurar" });
+    try {
+      await responderDesdePanel(conv, pedido.texto, usuario);
+    } catch (err) {
+      console.error("[chats] enviar a Meta:", String(err));
+      return json(err instanceof ErrorMeta && err.fueraDeVentana ? 409 : 502, { ok: false, error: err instanceof ErrorMeta && err.fueraDeVentana ? "ventana_24h" : "meta" });
+    }
+    if (conv.modo === "ia" && modoRedes() === "auto") await tomarControl(request, conv.id, usuario, conv.nombre);
+    await auditar(request, usuario, "chat_red_respuesta", quien(conv.nombre));
+    return json(200, { ok: true });
+  }
+  if (pedido.accion !== "responder") return json(422, { ok: false, error: "solo_redes" });
 
   if (conv.modo === "ia") await tomarControl(request, conv.id, usuario, conv.nombre);
   await guardarMensaje(conv.id, "equipo", pedido.texto, usuario);

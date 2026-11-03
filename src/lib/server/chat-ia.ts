@@ -28,7 +28,8 @@ import {
 } from "@/lib/reservas";
 import { auditar } from "@/lib/server/admin-auth";
 import { avisarGrupo, enlacePanel } from "@/lib/server/chat-avisos";
-import { actualizarConversacion, type MensajeGuardado } from "@/lib/server/chat-db";
+import { PUBLIC_WHATSAPP_NUMBER } from "astro:env/client";
+import { actualizarConversacion, type CanalChat, type MensajeGuardado } from "@/lib/server/chat-db";
 import { CONOCIMIENTO } from "@/lib/server/chat-conocimiento";
 import { sendToCrm } from "@/lib/server/crm";
 import { crearReserva, horariosOcupados, reservasRecientes } from "@/lib/server/reservas-db";
@@ -188,10 +189,21 @@ interface Contexto {
   origen: Record<string, string>;
   ipHash: string | null;
   pageUrl?: string;
+  /** Por dónde escribe: la web (por defecto) o un mensaje directo de Instagram o Facebook. */
+  canal?: CanalChat;
 }
+
+const enRedes = (ctx: Contexto) => !!ctx.canal && ctx.canal !== "web";
 
 const datosDelCliente = (c: Cliente) =>
   `Datos de la persona (los dejó en el formulario del chat, no los vuelvas a pedir): nombre ${c.nombre ?? "sin dato"}, correo ${c.email ?? "sin dato"}, teléfono ${c.telefono ?? "sin dato"}.`;
+
+/** En Instagram y Facebook no hay formulario previo: la IA pide los datos antes de reservar. */
+const datosDeRedes = (canal: CanalChat, c: Cliente) => `Ojo: esta conversación no es el chat de la web. Estás respondiendo un mensaje directo de ${canal === "instagram" ? "Instagram" : "Facebook Messenger"} de Saltabum. Lo que sigue manda sobre las instrucciones anteriores:
+- No hay formulario: de la persona solo sabes su nombre de perfil (${c.nombre ?? "sin dato"}), que puede no ser su nombre real.${c.telefono ? ` Su teléfono es ${c.telefono}.` : " No tienes su teléfono ni su correo."}
+- Puedes crear la reserva igual que en la web. Cuando la persona ya eligió juego, fecha, horario y comuna, pídele en un solo mensaje lo que falte: nombre y apellido, teléfono (para coordinar el abono por WhatsApp) y dirección. Después resume todo, pide que confirme con un sí y usa crear_reserva pasando nombre, apellido y telefono.
+- Si prefiere WhatsApp, o pedir_ayuda dice que derives, comparte este enlace tal cual: https://wa.me/${PUBLIC_WHATSAPP_NUMBER}
+- La web es saltabum.cl (ahí también se puede reservar directo). No hay botones: si algo necesita un enlace, escríbelo completo.`;
 
 async function verDisponibilidad(e: { fecha?: string; producto?: string; horas?: number }) {
   const { desde, hasta } = rangoReservable();
@@ -292,10 +304,14 @@ async function reservar(e: Record<string, unknown>, ctx: Contexto) {
       context: { page_url: ctx.pageUrl, consent: false },
     }).catch((err) => console.error("[chat] CRM:", String(err)));
   }
-  await actualizarConversacion(ctx.conversacion, { reserva_id: id });
+  // En las redes no hay formulario: los datos de la reserva quedan en la conversación (así aparece en Leads y Contactos).
+  await actualizarConversacion(ctx.conversacion, {
+    reserva_id: id,
+    ...(enRedes(ctx) ? { telefono: r.telefono, email: r.email ?? null, nombre: [r.nombre, r.apellido].filter(Boolean).join(" ") } : {}),
+  });
   await avisarGrupo(
     [
-      "🎉 *Nueva reserva desde el chat de la web*",
+      `🎉 *Nueva reserva desde ${ctx.canal === "instagram" ? "Instagram" : ctx.canal === "messenger" ? "Facebook" : "el chat de la web"}*`,
       `${nombreJuego(r.producto)} · ${r.fecha} · ${etiquetaHorario(inicio, fin)}`,
       `${r.comuna}${r.direccion ? `, ${r.direccion}` : ""}${r.depto ? ` (${r.depto})` : ""}`,
       `${[r.nombre, r.apellido].filter(Boolean).join(" ")} · ${r.telefono}`,
@@ -330,7 +346,7 @@ export async function responderChat(historial: MensajeGuardado[], ctx: Contexto)
       tools: HERRAMIENTAS,
       system: [
         { type: "text", text: INSTRUCCIONES, cache_control: { type: "ephemeral" } },
-        { type: "text", text: `${contextoDelDia()}\n${datosDelCliente(ctx.cliente)}` },
+        { type: "text", text: `${contextoDelDia()}\n${enRedes(ctx) ? datosDeRedes(ctx.canal!, ctx.cliente) : datosDelCliente(ctx.cliente)}` },
       ],
       messages,
     });
@@ -367,8 +383,11 @@ export async function responderChat(historial: MensajeGuardado[], ctx: Contexto)
           const resumen = String(e.resumen ?? "").slice(0, 500);
           salida.whatsapp = `Hola, vengo del chat de saltabum.cl. ${resumen}`.trim();
           await actualizarConversacion(ctx.conversacion, { ayuda: 1 });
-          await avisarGrupo(`🙋 *El chat de la web necesita una persona*\n${resumen}\nTomar el control: ${enlacePanel(ctx.conversacion)}`);
-          resultado = { ok: true, nota: "El equipo ya fue avisado y la persona ve un botón de WhatsApp. Dile que alguien del equipo le escribirá aquí o puede seguir por WhatsApp." };
+          const donde = ctx.canal === "instagram" ? "Instagram" : ctx.canal === "messenger" ? "Facebook" : "El chat de la web";
+          await avisarGrupo(`🙋 *${donde} necesita una persona*\n${resumen}\nTomar el control: ${enlacePanel(ctx.conversacion)}`);
+          resultado = enRedes(ctx)
+            ? { ok: true, nota: `El equipo ya fue avisado. Dile que alguien del equipo le escribirá pronto por aquí o por WhatsApp; si quiere adelantarse, puede escribir a https://wa.me/${PUBLIC_WHATSAPP_NUMBER}` }
+            : { ok: true, nota: "El equipo ya fue avisado y la persona ve un botón de WhatsApp. Dile que alguien del equipo le escribirá aquí o puede seguir por WhatsApp." };
         } else resultado = { error: "Herramienta desconocida" };
       } catch (err) {
         console.error(`[chat] ${b.name}:`, String(err));

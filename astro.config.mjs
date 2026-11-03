@@ -97,6 +97,15 @@ export default defineConfig({
       ANTHROPIC_API_KEY: envField.string({ context: "server", access: "secret", optional: true }),
       // Grupo de WhatsApp que recibe los avisos del chat (reservas, pedidos de ayuda). Por defecto el grupo del equipo.
       WHATSAPP_GRUPO_AVISOS: envField.string({ context: "server", access: "secret", optional: true }),
+      // Mensajes directos de Instagram y Facebook con la misma IA del chat. Ver src/lib/server/redes.ts.
+      //   META_APP_SECRET: «Clave secreta» de la app de Meta (firma de cada aviso del webhook)
+      //   META_WEBHOOK_TOKEN: texto al azar que se pega en «Token de verificación» al suscribir el webhook
+      //   META_PAGE_TOKEN: token de la página de Facebook Saltabum (con Instagram conectado) para enviar respuestas
+      META_APP_SECRET: envField.string({ context: "server", access: "secret", optional: true }),
+      META_WEBHOOK_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
+      META_PAGE_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
+      // «auto» (por defecto): la IA responde sola, igual que en la web. «sugerencia»: la IA propone y el equipo aprueba.
+      REDES_MODO: envField.enum({ context: "server", access: "public", values: ["sugerencia", "auto"], default: "auto" }),
     },
   },
 });

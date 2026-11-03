@@ -1,21 +1,27 @@
 ---
-// Pestaña «Chat web» del panel /admin: las conversaciones del chat de saltabum.cl. A la izquierda la lista y a la
+// Pestaña «Chats» del panel /admin: las conversaciones del chat de saltabum.cl y los mensajes directos de Instagram y
+// Facebook (atendidos por la misma IA, ver src/lib/server/redes.ts). A la izquierda la lista y a la
 // derecha la conversación. «Tomar el control» hace que la IA deje de responder y el equipo conteste desde aquí
 // (el cliente lo ve en la misma burbuja); «Devolver a la IA» la vuelve a activar. Se actualiza cada 5 segundos con
-// una conversación abierta y cada 20 la lista.
+// una conversación abierta y cada 20 la lista. En las redes, con REDES_MODO=sugerencia, la IA deja una respuesta
+// propuesta que el equipo envía tal cual, corrige o descarta.
 ---
 
 <section data-chatweb-panel class="flex flex-col gap-4">
   <div class="flex flex-wrap items-end justify-between gap-3">
     <div>
-      <h2 class="font-display text-3xl font-semibold">Chat web</h2>
-      <p class="text-noche-suave text-sm">Conversaciones del chat de saltabum.cl con la IA o con el equipo</p>
+      <h2 class="font-display text-3xl font-semibold">Chats</h2>
+      <p class="text-noche-suave text-sm">Chat de saltabum.cl y mensajes de Instagram y Facebook, con la IA o con el equipo</p>
     </div>
-    <div role="radiogroup" aria-label="Qué conversaciones ver" class="border-noche bg-blanco flex rounded-full border-2 p-1">
+    <div role="radiogroup" aria-label="Qué conversaciones ver" class="border-noche bg-blanco flex max-w-full overflow-x-auto rounded-full border-2 p-1">
       {
         [
           ["todas", "Todas"],
+          ["sugerencia", "Por aprobar"],
           ["ayuda", "Piden ayuda"],
+          ["web", "Web"],
+          ["instagram", "Instagram"],
+          ["messenger", "Facebook"],
           ["humano", "Con el equipo"],
           ["reserva", "Con reserva"],
         ].map(([id, nombre], i) => (
@@ -57,7 +63,12 @@
     pagina: string | null;
     mensajes: number;
     ultimo: string | null;
+    canal: "web" | "instagram" | "messenger" | null;
+    sugerencia: string | null;
   };
+  const CANAL = { web: "Web", instagram: "Instagram", messenger: "Facebook" } as const;
+  const canalDe = (c: Conversacion) => c.canal ?? "web";
+  const esRed = (c: Conversacion) => canalDe(c) !== "web";
   type Mensaje = { id: number; rol: "cliente" | "ia" | "equipo" | "sistema"; texto: string; autor: string | null; creado: string };
 
   const root = document.querySelector<HTMLElement>("[data-chatweb-panel]")!;
@@ -81,6 +92,7 @@
   let activo = false;
   let visible = false;
   let conocidas: Map<string, string> | undefined;
+  let modoRedes: "sugerencia" | "auto" = "sugerencia";
 
   const api = (ruta: string, init?: RequestInit) =>
     fetch(ruta, { ...init, credentials: "same-origin", headers: { "x-saltabum-admin": "1", "content-type": "application/json" } });
@@ -105,11 +117,15 @@
     const res = await api("/api/admin/chatweb").catch(() => null);
     if (res?.status === 401) return sinSesion();
     if (!res?.ok) return void (estado.textContent = "No se pudieron cargar las conversaciones");
-    const nuevas = ((await res.json()) as { conversaciones: Conversacion[] }).conversaciones;
+    const datos = (await res.json()) as { conversaciones: Conversacion[]; modoRedes?: "sugerencia" | "auto" };
+    const nuevas = datos.conversaciones;
+    if (datos.modoRedes) modoRedes = datos.modoRedes;
     // Aviso cuando la IA pide ayuda en una conversación nueva para el panel.
     if (conocidas) {
       const piden = nuevas.filter((c) => c.ayuda && conocidas!.get(c.id) !== c.actualizado && c.id !== abierta);
-      if (piden.length) avisar(`Chat web: ${piden[0].nombre ?? "un cliente"} necesita una persona`);
+      if (piden.length) avisar(`${CANAL[canalDe(piden[0])]}: ${piden[0].nombre ?? "un cliente"} necesita una persona`);
+      const aprobar = nuevas.filter((c) => c.sugerencia && conocidas!.get(c.id) !== c.actualizado && c.id !== abierta);
+      if (aprobar.length) avisar(`${CANAL[canalDe(aprobar[0])]}: respuesta de la IA lista para ${aprobar[0].nombre ?? "un cliente"}`);
     }
     conocidas = new Map(nuevas.map((c) => [c.id, c.actualizado]));
     conversaciones = nuevas;
@@ -117,13 +133,25 @@
     pintarLista();
   }
 
-  // El número de la pestaña son las conversaciones que piden ayuda y nadie ha abierto (llevan la marca «Pide ayuda»).
+  // El número de la pestaña son las conversaciones que piden ayuda o tienen una respuesta de la IA por aprobar.
   const contar = () =>
-    document.dispatchEvent(new CustomEvent("panel:contador", { detail: { pestana: "chatweb", n: conversaciones.filter((c) => c.ayuda).length } }));
+    document.dispatchEvent(
+      new CustomEvent("panel:contador", { detail: { pestana: "chatweb", n: conversaciones.filter((c) => c.ayuda || c.sugerencia).length } }),
+    );
 
   function pintarLista() {
     const visibles = conversaciones.filter((c) =>
-      filtro === "ayuda" ? c.ayuda : filtro === "humano" ? c.modo === "humano" : filtro === "reserva" ? c.reserva_id : true,
+      filtro === "ayuda"
+        ? c.ayuda
+        : filtro === "sugerencia"
+          ? c.sugerencia
+          : filtro === "humano"
+            ? c.modo === "humano"
+            : filtro === "reserva"
+              ? c.reserva_id
+              : filtro === "web" || filtro === "instagram" || filtro === "messenger"
+                ? canalDe(c) === filtro
+                : true,
     );
     lista.replaceChildren(
       ...visibles.map((c) => {
@@ -135,6 +163,8 @@
         const fila = el("div", "flex items-center justify-between gap-2");
         fila.append(el("p", "truncate font-extrabold", c.nombre ?? "Visitante"), el("span", "text-noche-suave shrink-0 text-xs", cuando(c.actualizado)));
         const marcas = el("div", "flex flex-wrap gap-1");
+        marcas.append(etiqueta(CANAL[canalDe(c)], esRed(c) ? "border-noche bg-celeste" : "border-noche/30 bg-blanco"));
+        if (c.sugerencia) marcas.append(etiqueta("✨ Por aprobar", "border-noche bg-sol"));
         if (c.ayuda) marcas.append(etiqueta("Pide ayuda", "border-rojo-texto bg-rojo-suave text-rojo-texto"));
         marcas.append(c.modo === "humano" ? etiqueta(`Equipo${c.atiende ? ` · ${c.atiende}` : ""}`, "border-noche bg-celeste") : etiqueta("IA", "border-noche/30 bg-crema"));
         if (c.reserva_id) marcas.append(etiqueta("Reservó", "border-noche bg-verde"));
@@ -154,7 +184,9 @@
     const res = await api(`/api/admin/chatweb?id=${encodeURIComponent(id)}`).catch(() => null);
     if (res?.status === 401) return sinSesion();
     if (!res?.ok) return void avisar("No se pudo abrir la conversación");
-    const { conversacion, mensajes } = (await res.json()) as { conversacion: Conversacion; mensajes: Mensaje[] };
+    const respuesta = (await res.json()) as { conversacion: Conversacion; mensajes: Mensaje[]; modoRedes?: "sugerencia" | "auto" };
+    const { conversacion, mensajes } = respuesta;
+    if (respuesta.modoRedes) modoRedes = respuesta.modoRedes;
     // Abrirla cuenta como vista: deja de pedir ayuda y baja el número de la pestaña.
     const enLista = conversaciones.find((c) => c.id === id);
     if (conversacion.ayuda || enLista?.ayuda) {
@@ -165,19 +197,30 @@
       void api("/api/admin/chatweb", { method: "POST", body: JSON.stringify({ accion: "visto", id }) });
     }
     // Si no cambió nada, no se repinta (así no se borra lo que el equipo está escribiendo).
-    const firma = `${conversacion.modo}|${conversacion.atiende}|${mensajes.at(-1)?.id ?? 0}`;
+    const firma = `${conversacion.modo}|${conversacion.atiende}|${mensajes.at(-1)?.id ?? 0}|${conversacion.sugerencia ?? ""}`;
     if (firma === ultimoPintado) return;
     ultimoPintado = firma;
     pintarConversacion(conversacion, mensajes);
     pintarLista();
   }
 
-  async function enviar(datos: Record<string, unknown>, ok: string) {
+  const ERRORES: Record<string, string> = {
+    ventana_24h: "Meta no deja responder: pasaron más de 24 horas desde su último mensaje. Escríbele por WhatsApp o desde la app",
+    meta: "Meta no aceptó el mensaje, inténtalo de nuevo o responde desde la app",
+    redes_sin_configurar: "Falta conectar Instagram y Facebook (token de la página)",
+    ia: "La IA no pudo proponer una respuesta, inténtalo de nuevo",
+  };
+  async function enviar(datos: Record<string, unknown>, ok: string): Promise<boolean> {
     const res = await api("/api/admin/chatweb", { method: "POST", body: JSON.stringify(datos) }).catch(() => null);
-    if (res?.status === 401) return sinSesion();
-    avisar(res?.ok ? ok : "No se pudo guardar, inténtalo de nuevo");
+    if (res?.status === 401) {
+      sinSesion();
+      return false;
+    }
+    const error = res && !res.ok ? ((await res.json().catch(() => ({}))) as { error?: string }).error : undefined;
+    avisar(res?.ok ? ok : (error && ERRORES[error]) || "No se pudo guardar, inténtalo de nuevo");
     if (abierta) await abrir(abierta);
     void cargarLista();
+    return !!res?.ok;
   }
 
   function pintarConversacion(c: Conversacion, mensajes: Mensaje[]) {
@@ -188,8 +231,8 @@
     pintada = c.id;
     const cabeza = el("div", "border-noche flex flex-wrap items-center justify-between gap-2 border-b-2 p-3");
     const datos = el("div", "flex min-w-0 flex-col");
-    datos.append(el("p", "font-extrabold", c.nombre ?? "Visitante de la web"));
-    const detalle = [c.telefono, c.email, c.reserva_id ? `reserva N° ${c.reserva_id}` : "", `desde ${cuando(c.creado)}`].filter(Boolean).join(" · ");
+    datos.append(el("p", "font-extrabold", c.nombre ?? (esRed(c) ? `Persona de ${CANAL[canalDe(c)]}` : "Visitante de la web")));
+    const detalle = [esRed(c) ? `por ${CANAL[canalDe(c)]}` : "", c.telefono, c.email, c.reserva_id ? `reserva N° ${c.reserva_id}` : "", `desde ${cuando(c.creado)}`].filter(Boolean).join(" · ");
     datos.append(el("p", "text-noche-suave text-xs", detalle));
     const acciones = el("div", "flex flex-wrap gap-2");
     if (c.telefono) {
@@ -225,9 +268,44 @@
 
     const form = el("form", "border-noche flex items-end gap-2 border-t-2 p-3") as HTMLFormElement;
     const area = el("textarea", "border-noche bg-crema max-h-40 min-h-11 flex-1 resize-y rounded-xl border-2 px-3 py-2") as HTMLTextAreaElement;
+
+    // Redes: respuesta propuesta por la IA (enviar tal cual, corregirla o descartarla) o botón para pedir una.
+    let propuesta: HTMLElement | null = null;
+    if (esRed(c) && c.sugerencia) {
+      const sug = c.sugerencia;
+      propuesta = el("div", "border-noche bg-sol/30 flex flex-col gap-2 border-t-2 p-3");
+      propuesta.append(el("p", "text-xs font-extrabold", "✨ Respuesta propuesta por la IA (aún no se envía)"));
+      propuesta.append(el("p", "text-sm whitespace-pre-line", sug));
+      const botones = el("div", "flex flex-wrap gap-2");
+      const enviarla = boton("Enviar tal cual", "border-noche bg-verde", async () => {
+        enviarla.disabled = true;
+        await enviar({ accion: "responder", id: c.id, texto: sug }, `Enviada por ${CANAL[canalDe(c)]}`);
+      });
+      botones.append(
+        enviarla,
+        boton("Corregir", "border-noche bg-blanco", () => {
+          area.value = sug;
+          area.focus();
+        }),
+        boton("Descartar", "border-noche/40 bg-crema", () => void enviar({ accion: "descartar", id: c.id }, "Sugerencia descartada")),
+      );
+      propuesta.append(botones);
+    } else if (esRed(c) && mensajes.filter((m) => m.rol !== "sistema").at(-1)?.rol === "cliente") {
+      propuesta = el("div", "border-noche flex justify-end border-t-2 p-3");
+      const pedir = boton("✨ Pedir respuesta a la IA", "border-noche bg-sol", async () => {
+        pedir.disabled = true;
+        pedir.textContent = "Pensando…";
+        await enviar({ accion: "sugerir", id: c.id }, "La IA propuso una respuesta");
+      });
+      propuesta.append(pedir);
+    }
     area.rows = 2;
     area.maxLength = 2000;
-    area.placeholder = c.modo === "ia" ? "Escribe para responder tú (la IA deja de responder)" : "Escribe tu respuesta…";
+    area.placeholder = esRed(c)
+      ? `Escribe tu respuesta (se envía por ${CANAL[canalDe(c)]}${c.modo === "ia" && modoRedes === "auto" ? ", la IA deja de responder" : ""})`
+      : c.modo === "ia"
+        ? "Escribe para responder tú (la IA deja de responder)"
+        : "Escribe tu respuesta…";
     const mandar = el("button", "bg-noche text-crema min-h-11 cursor-pointer rounded-full px-5 font-extrabold disabled:opacity-50", "Enviar") as HTMLButtonElement;
     area.value = borrador;
     form.append(area, mandar);
@@ -237,7 +315,12 @@
       if (!texto) return;
       mandar.disabled = true;
       area.value = "";
-      await enviar({ accion: "responder", id: c.id, texto }, "Respuesta enviada al chat");
+      const ok = await enviar({ accion: "responder", id: c.id, texto }, esRed(c) ? `Enviada por ${CANAL[canalDe(c)]}` : "Respuesta enviada al chat");
+      // Si Meta lo rechazó, se devuelve el texto para no perderlo.
+      if (!ok) {
+        const nueva = vista.querySelector<HTMLTextAreaElement>("textarea");
+        if (nueva && !nueva.value) nueva.value = texto;
+      }
     });
     area.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
@@ -246,7 +329,7 @@
       }
     });
 
-    vista.replaceChildren(cabeza, caja, form);
+    vista.replaceChildren(...[cabeza, caja, propuesta, form].filter((x): x is HTMLElement => !!x));
     caja.scrollTop = caja.scrollHeight;
     if (enfocado) area.focus();
   }
