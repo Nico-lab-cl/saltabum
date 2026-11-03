@@ -15,6 +15,22 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
       </p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+      <div role="radiogroup" aria-label="Vista" class="border-noche bg-blanco flex rounded-full border-2 p-1">
+        {[
+          ["lista", "Lista"],
+          ["tablero", "Tablero"],
+        ].map(([id, nombre], i) => (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={i === 0 ? "true" : "false"}
+            data-crm-vista={id}
+            class="aria-checked:bg-noche aria-checked:text-crema min-h-9 cursor-pointer rounded-full px-4 text-sm font-extrabold"
+          >
+            {nombre}
+          </button>
+        ))}
+      </div>
       <input
         data-crm-buscar
         type="search"
@@ -31,15 +47,53 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     </div>
   </div>
 
-  <div data-crm-filtros role="radiogroup" aria-label="Qué contactos ver" class="flex flex-wrap gap-2"></div>
-  <p data-crm-estado class="text-noche-suave text-sm" aria-live="polite"></p>
+  <div data-crm-en-lista class="flex flex-col gap-4">
+    <div data-crm-filtros role="radiogroup" aria-label="Qué contactos ver" class="flex flex-wrap gap-2"></div>
+    <p data-crm-estado class="text-noche-suave text-sm" aria-live="polite"></p>
 
-  <div class="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-    <div data-crm-lista class="flex max-h-[75vh] flex-col gap-2 overflow-y-auto pr-1"></div>
-    <div data-crm-ficha class="border-noche bg-blanco flex min-h-[420px] flex-col rounded-2xl border-2">
-      <p class="text-noche-suave m-auto p-6 text-center text-sm">Elige un contacto para ver su ficha</p>
+    <div class="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+      <div data-crm-lista class="flex max-h-[75vh] flex-col gap-2 overflow-y-auto pr-1"></div>
+      <div data-crm-ficha class="border-noche bg-blanco flex min-h-[420px] flex-col rounded-2xl border-2">
+        <p class="text-noche-suave m-auto p-6 text-center text-sm">Elige un contacto para ver su ficha</p>
+      </div>
     </div>
   </div>
+
+  <!-- Pipeline de negocios: una tarjeta por oportunidad abierta, se arrastra entre columnas (o «Mover a…») -->
+  <div data-crm-en-tablero hidden class="flex flex-col gap-2">
+    <p class="text-noche-suave text-sm">
+      Arrastra una tarjeta a otra columna o usa «Mover a…». Ganado y Perdido muestran los últimos 30 días
+    </p>
+    <div data-crm-tablero class="flex gap-3 overflow-x-auto pb-2"></div>
+  </div>
+
+  <dialog
+    data-crm-motivo
+    class="border-noche bg-blanco m-auto w-[min(420px,calc(100%-32px))] rounded-2xl border-2 p-5 backdrop:bg-black/40"
+  >
+    <form method="dialog" class="flex flex-col gap-3">
+      <p class="font-display text-xl font-semibold">¿Por qué se perdió?</p>
+      <p data-crm-motivo-quien class="text-noche-suave text-sm"></p>
+      <select name="motivo" required class={campo}></select>
+      <p data-crm-motivo-aviso hidden class="bg-sol/40 rounded-xl px-3 py-2 text-sm font-bold">
+        Tiene una reserva sin pagar. Después de marcarlo, libera esa fecha en Reservas
+      </p>
+      <div class="flex justify-end gap-2">
+        <button
+          value=""
+          class="border-noche min-h-11 cursor-pointer rounded-full border-2 px-4 font-extrabold"
+        >
+          Cancelar
+        </button>
+        <button
+          value="ok"
+          class="bg-noche text-crema min-h-11 cursor-pointer rounded-full px-5 font-extrabold"
+        >
+          Marcar perdido
+        </button>
+      </div>
+    </form>
+  </dialog>
 </section>
 
 <script>
@@ -232,6 +286,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     );
     pintarFiltros();
     pintarLista();
+    if (vista === "tablero") pintarTablero();
   }
 
   function pintarLista() {
@@ -505,7 +560,276 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     );
   }
 
-  buscar.addEventListener("input", pintarLista);
+  // ── Tablero (pipeline de negocios) ────────────────────────────────────
+  // Cada tarjeta es una oportunidad abierta: un contacto que todavía no reserva (Nuevo o Cotizado), una reserva sin
+  // pago (Falta pago), una reserva pagada hace poco o con el evento por venir (Ganado) o un perdido reciente.
+  type Columna = "nuevo" | "cotizado" | "falta_pago" | "ganado" | "perdido";
+  type Tarjeta = { c: Contacto; reserva?: Reserva };
+  const COLUMNAS: { id: Columna; nombre: string; clase: string }[] = [
+    { id: "nuevo", nombre: "Nuevo", clase: "bg-crema" },
+    { id: "cotizado", nombre: "Cotizado", clase: "bg-sol/50" },
+    { id: "falta_pago", nombre: "Falta pago", clase: "bg-verde-burbuja/50" },
+    { id: "ganado", nombre: "Ganado", clase: "bg-verde/50" },
+    { id: "perdido", nombre: "Perdido", clase: "bg-arena" },
+  ];
+  const RECIENTE = 30 * 86_400_000;
+  /** Días sin movimiento antes de avisar que un cotizado se está enfriando (los cuadernos insisten a las 24 h y a los 3 días). */
+  const DIAS_FRIO = 3;
+  const tablero = root.querySelector<HTMLElement>("[data-crm-tablero]")!;
+  const hoyChile = () =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
+  const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
+  let vista: "lista" | "tablero" = "lista";
+  let arrastrando: { tarjeta: Tarjeta; desde: Columna } | null = null;
+
+  function repartir(): Record<Columna, Tarjeta[]> {
+    const cols: Record<Columna, Tarjeta[]> = {
+      nuevo: [],
+      cotizado: [],
+      falta_pago: [],
+      ganado: [],
+      perdido: [],
+    };
+    const hoy = hoyChile();
+    const q = sinTildes(buscar.value.trim());
+    for (const c of contactos) {
+      if (
+        q &&
+        !sinTildes([c.nombre, c.telefono, c.email, c.comuna, c.origen].filter(Boolean).join(" ")).includes(q)
+      )
+        continue;
+      if (c.perdido) {
+        if (Date.now() - Date.parse(c.perdido.en) < RECIENTE) cols.perdido.push({ c });
+        continue;
+      }
+      const sinPagar = c.reservas.filter((r) => !r.pagado);
+      for (const r of sinPagar) cols.falta_pago.push({ c, reserva: r });
+      for (const r of c.reservas.filter(
+        (r) =>
+          r.pagado && (r.fecha >= hoy || (r.pagado_en && Date.now() - Date.parse(r.pagado_en) < RECIENTE)),
+      ))
+        cols.ganado.push({ c, reserva: r });
+      // Sin reservas: está antes de la venta.
+      if (!c.reservas.length) {
+        if (c.etapa === "cotizado") cols.cotizado.push({ c });
+        else if (c.etapa === "lead" || c.etapa === "calificado") cols.nuevo.push({ c });
+      }
+    }
+    cols.falta_pago.sort((a, b) => a.reserva!.fecha.localeCompare(b.reserva!.fecha));
+    cols.ganado.sort((a, b) => b.reserva!.fecha.localeCompare(a.reserva!.fecha));
+    return cols;
+  }
+
+  /** A qué columnas se puede llevar una tarjeta desde la suya. */
+  function destinos(t: Tarjeta, desde: Columna): Columna[] {
+    if (desde === "nuevo") return ["cotizado", "falta_pago", "perdido"];
+    if (desde === "cotizado")
+      return t.c.etapa_auto === "cotizado" ? ["falta_pago", "perdido"] : ["nuevo", "falta_pago", "perdido"];
+    if (desde === "falta_pago") return ["ganado", "perdido"];
+    if (desde === "perdido") return ["nuevo"];
+    return [];
+  }
+
+  async function mover(t: Tarjeta, desde: Columna, a: Columna) {
+    if (!destinos(t, desde).includes(a)) return;
+    const c = t.c;
+    if (a === "perdido") return pedirMotivo(c);
+    if (desde === "perdido")
+      return void enviar({ accion: "reactivar", clave: c.clave }, "Contacto reactivado");
+    if (a === "cotizado")
+      return void enviar({ accion: "etapa", clave: c.clave, etapa: "cotizado" }, "Movido a Cotizado");
+    if (a === "nuevo") return void enviar({ accion: "etapa", clave: c.clave, etapa: null }, "Movido a Nuevo");
+    if (a === "falta_pago") {
+      // Pasar a «Falta pago» es crear la reserva: se abre el formulario con sus datos.
+      const [nombre, ...resto] = (c.nombre ?? "").split(/\s+/);
+      document.dispatchEvent(new CustomEvent("panel:abrir-pestana", { detail: "reservas" }));
+      document.dispatchEvent(
+        new CustomEvent("panel:nueva-reserva", {
+          detail: {
+            nombre: nombre ?? "",
+            apellido: resto.join(" "),
+            telefono: c.telefono ? `+${c.telefono}` : "",
+            email: c.email ?? "",
+            comuna: c.comuna ?? "",
+            notas: c.notas ?? "",
+          },
+        }),
+      );
+      return;
+    }
+    if (a === "ganado" && t.reserva) {
+      // Ganado = registrar el pago en Reservas (así también se avisa la venta a Meta).
+      document.dispatchEvent(new CustomEvent("panel:abrir-pestana", { detail: "reservas" }));
+      document.dispatchEvent(new CustomEvent("panel:registrar-pago", { detail: t.reserva.id }));
+    }
+  }
+
+  const dialogo = root.querySelector<HTMLDialogElement>("[data-crm-motivo]")!;
+  const selectMotivo = dialogo.querySelector<HTMLSelectElement>("select")!;
+  selectMotivo.append(
+    new Option("Elige el motivo", ""),
+    ...(Object.entries(MOTIVOS) as [Motivo, string][]).map(([id, nombre]) => new Option(nombre, id)),
+  );
+  let perdiendo: Contacto | null = null;
+  function pedirMotivo(c: Contacto) {
+    perdiendo = c;
+    selectMotivo.value = c.reservas.some((r) => !r.pagado) ? "cancelo" : "";
+    dialogo.querySelector("[data-crm-motivo-quien]")!.textContent =
+      `${nombreDe(c)} · ${etapaDe(c.etapa).nombre}`;
+    dialogo.querySelector<HTMLElement>("[data-crm-motivo-aviso]")!.hidden = !c.reservas.some(
+      (r) => !r.pagado,
+    );
+    dialogo.showModal();
+  }
+  dialogo.addEventListener("close", () => {
+    if (dialogo.returnValue === "ok" && perdiendo && selectMotivo.value)
+      void enviar(
+        { accion: "perdido", clave: perdiendo.clave, motivo: selectMotivo.value },
+        "Marcado como perdido",
+      );
+    perdiendo = null;
+  });
+
+  function pintarTablero() {
+    const cols = repartir();
+    tablero.replaceChildren(
+      ...COLUMNAS.map((col) => {
+        const tarjetas = cols[col.id];
+        const caja = el("section", `flex min-w-[232px] flex-1 flex-col gap-2 rounded-2xl p-2 ${col.clase}`);
+        caja.dataset.columna = col.id;
+        const suma = tarjetas.reduce((s, t) => s + (t.reserva?.total ?? 0), 0);
+        const cabeza = el("div", "flex items-baseline justify-between gap-2 px-1");
+        cabeza.append(
+          el("h3", "font-extrabold", `${col.nombre} · ${tarjetas.length}`),
+          el("span", "text-noche-suave text-xs font-bold", suma ? pesos(suma) : ""),
+        );
+        caja.append(cabeza);
+        const cuerpo = el("div", "flex max-h-[65vh] min-h-24 flex-col gap-2 overflow-y-auto");
+        cuerpo.append(...tarjetas.slice(0, 150).map((t) => tarjeta(t, col.id)));
+        if (!tarjetas.length) cuerpo.append(el("p", "text-noche-suave px-1 text-xs", "Sin tarjetas"));
+        caja.append(cuerpo);
+        // Soltar una tarjeta arrastrada.
+        caja.addEventListener("dragover", (e) => {
+          if (arrastrando && destinos(arrastrando.tarjeta, arrastrando.desde).includes(col.id)) {
+            e.preventDefault();
+            caja.classList.add("outline-noche", "outline-2", "outline-dashed");
+          }
+        });
+        caja.addEventListener("dragleave", () =>
+          caja.classList.remove("outline-noche", "outline-2", "outline-dashed"),
+        );
+        caja.addEventListener("drop", (e) => {
+          e.preventDefault();
+          caja.classList.remove("outline-noche", "outline-2", "outline-dashed");
+          if (arrastrando) void mover(arrastrando.tarjeta, arrastrando.desde, col.id);
+          arrastrando = null;
+        });
+        return caja;
+      }),
+    );
+  }
+
+  function tarjeta(t: Tarjeta, col: Columna): HTMLElement {
+    const { c, reserva: r } = t;
+    const hoy = hoyChile();
+    const frio =
+      (col === "cotizado" || col === "nuevo") && Date.now() - Date.parse(c.ultimo) > DIAS_FRIO * 86_400_000;
+    const vencida = col === "falta_pago" && r && r.fecha < hoy;
+    const caja = el(
+      "article",
+      `bg-blanco flex cursor-grab flex-col gap-1 rounded-xl border-2 p-2.5 text-sm ${vencida || (c.esperando && col !== "perdido") ? "border-rojo-texto" : frio ? "border-sol" : "border-noche"}`,
+    );
+    caja.draggable = destinos(t, col).length > 0;
+    caja.addEventListener("dragstart", () => (arrastrando = { tarjeta: t, desde: col }));
+    caja.addEventListener("dragend", () => (arrastrando = null));
+
+    const nombre = el(
+      "button",
+      "text-left font-extrabold underline-offset-2 hover:underline",
+      nombreDe(c),
+    ) as HTMLButtonElement;
+    nombre.type = "button";
+    nombre.addEventListener("click", () => {
+      cambiarVista("lista");
+      filtro = "todos";
+      pintarFiltros();
+      void abrir(c.clave, true);
+    });
+    caja.append(nombre);
+    if (r)
+      caja.append(
+        el(
+          "p",
+          "font-semibold",
+          `${diaEvento.format(new Date(`${r.fecha}T12:00:00Z`))}${r.total ? ` · ${pesos(r.total)}` : ""}${r.pagado && r.total && r.pagado < r.total ? ` · abonó ${pesos(r.pagado)}` : ""}`,
+        ),
+      );
+    const chips = el("div", "flex flex-wrap gap-1");
+    if (col === "perdido" && c.perdido)
+      chips.append(chip(MOTIVOS[c.perdido.motivo], "border-noche/40 bg-crema"));
+    if (col === "nuevo" && c.etapa === "calificado")
+      chips.append(chip("Calificado", "border-noche bg-celeste"));
+    if (c.esperando && col !== "perdido")
+      chips.append(chip(`Espera hace ${hace(c.esperando)}`, "border-rojo-texto bg-rojo-texto text-white"));
+    if (vencida)
+      chips.append(chip("Fecha pasada sin pago", "border-rojo-texto bg-rojo-suave text-rojo-texto"));
+    if (frio && !c.esperando)
+      chips.append(chip(`Sin movimiento hace ${hace(c.ultimo)}`, "border-noche bg-sol"));
+    if (c.perdido && c.reservas.some((x) => !x.pagado))
+      chips.append(chip("Liberar fecha en Reservas", "border-noche bg-sol"));
+    if (chips.childElementCount) caja.append(chips);
+    caja.append(el("p", "text-noche-suave truncate text-xs", c.origen));
+
+    // «Mover a…» para el celular (donde no se puede arrastrar) y para quien prefiera el teclado.
+    const opciones = destinos(t, col);
+    if (opciones.length) {
+      const sel = el(
+        "select",
+        "border-noche/40 bg-crema mt-1 min-h-8 rounded-full border px-2 text-xs font-bold",
+      ) as HTMLSelectElement;
+      sel.setAttribute("aria-label", `Mover a ${nombreDe(c)}`);
+      sel.append(
+        new Option("Mover a…", ""),
+        // Sacar de Perdido es reactivarlo: vuelve a la columna de su etapa.
+        ...opciones.map(
+          (o) => new Option(col === "perdido" ? "Reactivar" : COLUMNAS.find((x) => x.id === o)!.nombre, o),
+        ),
+      );
+      sel.addEventListener("change", () => {
+        if (sel.value) void mover(t, col, sel.value as Columna);
+        sel.value = "";
+      });
+      caja.append(sel);
+    }
+    return caja;
+  }
+
+  function cambiarVista(v: "lista" | "tablero") {
+    vista = v;
+    root
+      .querySelectorAll<HTMLElement>("[data-crm-vista]")
+      .forEach((b) => b.setAttribute("aria-checked", String(b.dataset.crmVista === v)));
+    root.querySelector<HTMLElement>("[data-crm-en-lista]")!.hidden = v !== "lista";
+    root.querySelector<HTMLElement>("[data-crm-en-tablero]")!.hidden = v !== "tablero";
+    if (v === "tablero") pintarTablero();
+    try {
+      localStorage.setItem("saltabum-crm-vista", v);
+    } catch {
+      // Sin almacenamiento: la vista vuelve a «Lista» al recargar.
+    }
+  }
+  root
+    .querySelectorAll<HTMLElement>("[data-crm-vista]")
+    .forEach((b) =>
+      b.addEventListener("click", () => cambiarVista(b.dataset.crmVista as "lista" | "tablero")),
+    );
+  try {
+    if (localStorage.getItem("saltabum-crm-vista") === "tablero") cambiarVista("tablero");
+  } catch {
+    // Sin almacenamiento: se queda en «Lista».
+  }
+
+  buscar.addEventListener("input", () => (vista === "tablero" ? pintarTablero() : pintarLista()));
   root.querySelector("[data-crm-actualizar]")!.addEventListener("click", () => void cargar());
 
   document.addEventListener("panel:listo", () => {

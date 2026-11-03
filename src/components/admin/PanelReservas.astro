@@ -966,6 +966,15 @@ const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
   document.addEventListener("panel:nueva-reserva", (e) => {
     if (activo) abrirFormulario(undefined, undefined, (e as CustomEvent<Record<string, string>>).detail);
   });
+  // «Ganado» en el tablero de Contactos: abre el registro de pago de esa reserva.
+  document.addEventListener("panel:registrar-pago", async (e) => {
+    if (!activo) return;
+    const id = (e as CustomEvent<number>).detail;
+    if (!filas.some((f) => f.id === id)) await cargar();
+    const f = filas.find((x) => x.id === id);
+    if (f) abrirPago(f);
+    else avisar("No se encontró la reserva, revisa en el calendario");
+  });
 
   document.addEventListener("panel:listo", (e) => {
     activo = true;
