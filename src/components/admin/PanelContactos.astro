@@ -20,6 +20,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
           ["lista", "Lista"],
           ["tablero", "Tablero"],
           ["tareas", "Tareas"],
+          ["reportes", "Reportes"],
         ].map(([id, nombre], i) => (
           <button
             type="button"
@@ -75,6 +76,23 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
       desaparecen solas si la persona responde
     </p>
     <div data-crm-tareas class="flex flex-col gap-4"></div>
+  </div>
+
+  <!-- Reportes: embudo por canal, ventas, rapidez de respuesta, pérdidas y satisfacción del período -->
+  <div data-crm-en-reportes hidden class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <select data-crm-periodo aria-label="Período" class={campo}>
+        <option value="mes">Este mes</option>
+        <option value="mes_pasado">Mes pasado</option>
+        <option value="30">Últimos 30 días</option>
+        <option value="90">Últimos 90 días</option>
+        <option value="todo">Todo</option>
+      </select>
+      <p class="text-noche-suave text-sm">
+        Embudo y canales según cuándo llegó cada contacto. Ventas según la fecha del pago
+      </p>
+    </div>
+    <div data-crm-reportes class="flex flex-col gap-4"></div>
   </div>
 
   <dialog
@@ -139,6 +157,8 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     esperando: string | null;
     espera_en: "whatsapp" | "chatweb" | "consulta" | null;
     origen: string;
+    canal: "anuncio" | "whatsapp" | "chatweb" | "formulario" | "web" | "panel";
+    respuesta_min: number | null;
     creado: string;
     ultimo: string;
     notas: string | null;
@@ -331,6 +351,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     pintarLista();
     if (vista === "tablero") pintarTablero();
     if (vista === "tareas") pintarTareas();
+    if (vista === "reportes") void pintarReportes();
   }
 
   function pintarLista() {
@@ -730,7 +751,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
   const hoyChile = () =>
     new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
   const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
-  let vista: "lista" | "tablero" | "tareas" = "lista";
+  let vista: "lista" | "tablero" | "tareas" | "reportes" = "lista";
   let arrastrando: { tarjeta: Tarjeta; desde: Columna } | null = null;
 
   function repartir(): Record<Columna, Tarjeta[]> {
@@ -1142,7 +1163,316 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
       listaTareas.append(el("p", "text-noche-suave text-sm", "No hay tareas pendientes 🎉"));
   }
 
-  function cambiarVista(v: "lista" | "tablero" | "tareas") {
+  // ── Reportes ──────────────────────────────────────────────────────────
+  type Vista = "lista" | "tablero" | "tareas" | "reportes";
+  const cajaReportes = root.querySelector<HTMLElement>("[data-crm-reportes]")!;
+  const periodo = root.querySelector<HTMLSelectElement>("[data-crm-periodo]")!;
+  const CANALES: Record<Contacto["canal"], string> = {
+    anuncio: "Anuncios de Meta",
+    whatsapp: "WhatsApp (etiqueta)",
+    chatweb: "Chat de la web",
+    formulario: "Formularios",
+    web: "Reserva en la web",
+    panel: "Anotado en el panel",
+  };
+  const NIVEL: Record<Etapa, number> = {
+    lead: 0,
+    calificado: 1,
+    cotizado: 2,
+    reservado: 3,
+    cliente: 4,
+    promotor: 5,
+  };
+  let inversion: { mes: string; monto: number }[] = [];
+  const porcentaje = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)} %` : "—");
+
+  /** Rango del período elegido, en ISO (desde incluido, hasta excluido) y los meses que toca. */
+  function rango(): { desde: string; hasta: string; meses: string[]; nombre: string } {
+    const hoy = hoyChile();
+    const mes = hoy.slice(0, 7);
+    const sumarMes = (m: string, n: number) => {
+      const [a, b] = m.split("-").map(Number);
+      const f = new Date(Date.UTC(a!, b! - 1 + n, 1));
+      return f.toISOString().slice(0, 7);
+    };
+    const inicio = (m: string) => `${m}-01T03:00:00.000Z`; // medianoche en Chile
+    const lista = (d: string, h: string) => {
+      const out: string[] = [];
+      for (let m = d.slice(0, 7); m <= h.slice(0, 7); m = sumarMes(m, 1)) out.push(m);
+      return out;
+    };
+    const ahora = new Date().toISOString();
+    if (periodo.value === "mes")
+      return { desde: inicio(mes), hasta: ahora, meses: [mes], nombre: "este mes" };
+    if (periodo.value === "mes_pasado") {
+      const m = sumarMes(mes, -1);
+      return { desde: inicio(m), hasta: inicio(mes), meses: [m], nombre: "el mes pasado" };
+    }
+    if (periodo.value === "todo") {
+      const primero = contactos.reduce((a, c) => (c.creado < a ? c.creado : a), ahora);
+      return { desde: "0000", hasta: ahora, meses: lista(primero, ahora), nombre: "desde el inicio" };
+    }
+    const dias = Number(periodo.value);
+    const desde = new Date(Date.now() - dias * 86_400_000).toISOString();
+    return { desde, hasta: ahora, meses: lista(desde, ahora), nombre: `los últimos ${dias} días` };
+  }
+
+  function tile(titulo: string, valor: string, detalle: string, alerta = false) {
+    const t = el(
+      "div",
+      `bg-blanco flex flex-col gap-0.5 rounded-2xl border-2 p-3 ${alerta ? "border-rojo-texto" : "border-noche"}`,
+    );
+    t.append(
+      el("p", "text-noche-suave text-xs font-extrabold tracking-wide uppercase", titulo),
+      el("p", "font-display text-2xl font-semibold", valor),
+      el("p", "text-noche-suave text-xs", detalle),
+    );
+    return t;
+  }
+
+  /** Barra horizontal de una sola serie: el largo es la cantidad respecto del máximo. */
+  const GRILLA_BARRAS =
+    "grid grid-cols-[minmax(0,110px)_minmax(0,1fr)_auto] items-center gap-2 text-sm sm:grid-cols-[minmax(0,160px)_minmax(0,1fr)_auto]";
+  function barra(nombre: string, n: number, max: number, detalle: string) {
+    // Nombre, barra y cifra en las columnas de GRILLA_BARRAS (compartidas por todas las filas): la cifra nunca queda
+    // tapada y todas las barras parten del mismo largo.
+    const fila = el("div", "contents");
+    const pista = el("div", "bg-crema h-5 rounded-r-[4px]");
+    const relleno = el("div", "bg-noche h-full rounded-r-[4px]");
+    relleno.style.width = `${max ? Math.max(2, (n / max) * 100) : 0}%`;
+    pista.title = `${nombre}: ${n} (${detalle})`;
+    pista.append(relleno);
+    fila.append(
+      el("span", "truncate font-semibold", nombre),
+      pista,
+      el("span", "text-xs font-bold whitespace-nowrap", `${n} · ${detalle}`),
+    );
+    return fila;
+  }
+
+  function seccion(titulo: string, ...hijos: Node[]) {
+    const s = el("section", "border-noche bg-blanco flex flex-col gap-3 rounded-2xl border-2 p-4");
+    s.append(el("h3", "font-display text-xl font-semibold", titulo), ...hijos);
+    return s;
+  }
+
+  async function pintarReportes() {
+    const res = await api("/api/admin/contactos?inversion=1").catch(() => null);
+    if (res?.ok) inversion = ((await res.json()) as { inversion: typeof inversion }).inversion;
+    const r = rango();
+    const enRango = (iso: string | null | undefined) => !!iso && iso >= r.desde && iso < r.hasta;
+    const validos = contactos.filter((c) => c.perdido?.motivo !== "spam");
+    const cohorte = validos.filter((c) => enRango(c.creado));
+    const cotizaron = (c: Contacto) => NIVEL[c.etapa] >= NIVEL.cotizado;
+    const reservaron = (c: Contacto) => c.reservas.length > 0;
+    const pagaron = (c: Contacto) => c.reservas.some((x) => x.pagado);
+
+    // Ventas del período (por fecha de pago).
+    const pagos = validos.flatMap((c) =>
+      c.reservas.filter((x) => x.pagado && enRango(x.pagado_en)).map((x) => ({ c, x })),
+    );
+    const vendido = pagos.reduce((s, p) => s + (p.x.total ?? 0), 0);
+    const cobrado = pagos.reduce((s, p) => s + (p.x.pagado ?? 0), 0);
+
+    // Rapidez: primera respuesta por WhatsApp de los que llegaron en el período.
+    const tiempos = cohorte
+      .map((c) => c.respuesta_min)
+      .filter((m): m is number => m !== null)
+      .sort((a, b) => a - b);
+    const mediana = tiempos.length ? tiempos[Math.floor(tiempos.length / 2)]! : null;
+    const rapidas = tiempos.filter((m) => m <= LIMITE_ESPERA).length;
+    const minutos = (m: number) =>
+      m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} días`;
+
+    // Satisfacción del período (por fecha de la encuesta) y recompra (histórica).
+    const encuestas = validos.flatMap((c) => c.encuestas.filter((e) => enRango(e.en)));
+    const promedio = encuestas.length ? encuestas.reduce((s, e) => s + e.nota, 0) / encuestas.length : null;
+    const resenas = validos.filter((c) => enRango(c.resena)).length;
+    const clientes = validos.filter(pagaron);
+    const repiten = clientes.filter((c) => c.reservas.filter((x) => x.pagado).length >= 2).length;
+
+    const tiles = el("div", "grid grid-cols-2 gap-3 md:grid-cols-4");
+    tiles.append(
+      tile("Leads nuevos", String(cohorte.length), `Llegaron ${r.nombre}`),
+      tile(
+        "Pagaron",
+        porcentaje(cohorte.filter(pagaron).length, cohorte.length),
+        `${cohorte.filter(pagaron).length} de ${cohorte.length} leads`,
+      ),
+      tile("Ventas", pesos(vendido), `${pagos.length} reservas · ${pesos(cobrado)} cobrado`),
+      tile(
+        "Primera respuesta",
+        mediana === null ? "—" : minutos(mediana),
+        tiempos.length
+          ? `Mediana por WhatsApp · ${porcentaje(rapidas, tiempos.length)} en ${LIMITE_ESPERA} min o menos`
+          : "Sin chats de WhatsApp en el período",
+        mediana !== null && mediana > LIMITE_ESPERA,
+      ),
+    );
+
+    // Embudo general.
+    const pasos: [string, number][] = [
+      ["Leads", cohorte.length],
+      ["Cotizaron", cohorte.filter(cotizaron).length],
+      ["Reservaron", cohorte.filter(reservaron).length],
+      ["Pagaron", cohorte.filter(pagaron).length],
+    ];
+    const embudo = el("div", GRILLA_BARRAS);
+    embudo.append(
+      ...pasos.map(([n, v], i) => barra(n, v, cohorte.length, i ? porcentaje(v, pasos[i - 1]![1]) : "100 %")),
+    );
+
+    // Por canal (tabla, ordenada por leads).
+    const tabla = el("table", "w-full min-w-[560px] text-left text-sm");
+    const cab = el("tr", "border-noche/20 border-b");
+    for (const t of ["Canal", "Leads", "Cotizaron", "Reservaron", "Pagaron", "Conversión"])
+      cab.append(el("th", "py-1.5 pr-3 font-extrabold", t));
+    tabla.append(cab);
+    const porCanal = (Object.keys(CANALES) as Contacto["canal"][])
+      .map((k) => ({ k, cs: cohorte.filter((c) => c.canal === k) }))
+      .filter((x) => x.cs.length)
+      .sort((a, b) => b.cs.length - a.cs.length);
+    for (const { k, cs } of porCanal) {
+      const tr = el("tr", "border-noche/10 border-b");
+      for (const v of [
+        CANALES[k],
+        cs.length,
+        cs.filter(cotizaron).length,
+        cs.filter(reservaron).length,
+        cs.filter(pagaron).length,
+        porcentaje(cs.filter(pagaron).length, cs.length),
+      ])
+        tr.append(el("td", "py-1.5 pr-3", String(v)));
+      tabla.append(tr);
+    }
+    const envolver = el("div", "overflow-x-auto");
+    envolver.append(tabla);
+
+    // Inversión en anuncios: se anota por mes y da costo por lead, costo por venta y retorno.
+    const anuncios = cohorte.filter((c) => c.canal === "anuncio");
+    const ventasAnuncio = validos
+      .filter((c) => c.canal === "anuncio")
+      .flatMap((c) => c.reservas.filter((x) => x.pagado && enRango(x.pagado_en)))
+      .reduce((s, x) => s + (x.total ?? 0), 0);
+    const invertido = r.meses.reduce((s, m) => s + (inversion.find((i) => i.mes === m)?.monto ?? 0), 0);
+    const costos = el("div", "grid grid-cols-2 gap-3 md:grid-cols-4");
+    costos.append(
+      tile(
+        "Invertido",
+        invertido ? pesos(invertido) : "—",
+        invertido ? `En ${r.meses.length === 1 ? "el mes" : `${r.meses.length} meses`}` : "Anótalo abajo",
+      ),
+      tile(
+        "Costo por lead",
+        invertido && anuncios.length ? pesos(Math.round(invertido / anuncios.length)) : "—",
+        `${anuncios.length} leads de anuncios`,
+      ),
+      tile(
+        "Costo por venta",
+        invertido && anuncios.filter(pagaron).length
+          ? pesos(Math.round(invertido / anuncios.filter(pagaron).length))
+          : "—",
+        `${anuncios.filter(pagaron).length} pagaron`,
+      ),
+      tile(
+        "Retorno",
+        invertido ? `${(ventasAnuncio / invertido).toFixed(1).replace(".", ",")}x` : "—",
+        `${pesos(ventasAnuncio)} vendidos por anuncios`,
+      ),
+    );
+    const meses = el("div", "flex flex-wrap items-end gap-2");
+    const nombreMes = (m: string) =>
+      new Date(`${m}-15T12:00:00Z`).toLocaleDateString("es-CL", {
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+    for (const m of r.meses.slice(-6)) {
+      const lab = el("label", "flex flex-col gap-1 text-xs font-bold");
+      const inp = el(
+        "input",
+        "border-noche bg-crema min-h-10 w-36 rounded-xl border-2 px-3 text-sm",
+      ) as HTMLInputElement;
+      inp.type = "number";
+      inp.min = "0";
+      inp.step = "1000";
+      inp.placeholder = "$ en Meta";
+      inp.value = String(inversion.find((i) => i.mes === m)?.monto ?? "");
+      inp.addEventListener("change", async () => {
+        const res = await api("/api/admin/contactos", {
+          method: "POST",
+          body: JSON.stringify({ accion: "inversion", mes: m, monto: Math.round(Number(inp.value) || 0) }),
+        }).catch(() => null);
+        if (res?.status === 401) return sinSesion();
+        avisar(res?.ok ? `Inversión de ${nombreMes(m)} guardada` : "No se pudo guardar, inténtalo de nuevo");
+        void pintarReportes();
+      });
+      lab.append(nombreMes(m), inp);
+      meses.append(lab);
+    }
+    const ayudaMeses = el(
+      "p",
+      "text-noche-suave text-xs",
+      "Lo gastado en Meta Ads cada mes (Administrador de anuncios › Facturación). Leads y ventas cuentan solo los que llegaron por anuncios",
+    );
+
+    // Pérdidas del período (por fecha en que se marcó).
+    const perdidos = contactos.filter(
+      (c) => c.perdido && c.perdido.motivo !== "spam" && enRango(c.perdido.en),
+    );
+    const motivos = Object.entries(
+      perdidos.reduce<Record<string, number>>(
+        (a, c) => ((a[MOTIVOS[c.perdido!.motivo]] = (a[MOTIVOS[c.perdido!.motivo]] ?? 0) + 1), a),
+        {},
+      ),
+    ).sort((a, b) => b[1] - a[1]);
+    const cajaPerdidas = el("div", GRILLA_BARRAS);
+    if (motivos.length)
+      cajaPerdidas.append(
+        ...motivos.map(([m, n]) => barra(m, n, motivos[0]![1], porcentaje(n, perdidos.length))),
+      );
+    else
+      cajaPerdidas.append(
+        el("p", "text-noche-suave col-span-3 text-sm", "No hay perdidos marcados en el período"),
+      );
+
+    // Satisfacción.
+    const sat = el("div", "grid grid-cols-2 gap-3 md:grid-cols-4");
+    sat.append(
+      tile(
+        "Nota promedio",
+        promedio === null ? "—" : `${promedio.toFixed(1).replace(".", ",")} de 5`,
+        `${encuestas.length} encuestas respondidas`,
+      ),
+      tile(
+        "Contentos",
+        porcentaje(encuestas.filter((e) => e.nota >= 4).length, encuestas.length),
+        "Pusieron 4 o 5",
+      ),
+      tile("Reseñas", String(resenas), "Marcadas en el período"),
+      tile(
+        "Recompra",
+        porcentaje(repiten, clientes.length),
+        `${repiten} de ${clientes.length} clientes volvieron a arrendar`,
+      ),
+    );
+
+    cajaReportes.replaceChildren(
+      tiles,
+      seccion(
+        "Embudo",
+        embudo,
+        el("p", "text-noche-suave text-xs", "Cada porcentaje es respecto del paso anterior"),
+      ),
+      seccion("Por canal", envolver),
+      seccion("Anuncios", costos, meses, ayudaMeses),
+      seccion("Por qué se perdieron", cajaPerdidas),
+      seccion("Satisfacción", sat),
+    );
+  }
+  periodo.addEventListener("change", () => void pintarReportes());
+
+  function cambiarVista(v: Vista) {
     vista = v;
     root
       .querySelectorAll<HTMLElement>("[data-crm-vista]")
@@ -1150,8 +1480,10 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     root.querySelector<HTMLElement>("[data-crm-en-lista]")!.hidden = v !== "lista";
     root.querySelector<HTMLElement>("[data-crm-en-tablero]")!.hidden = v !== "tablero";
     root.querySelector<HTMLElement>("[data-crm-en-tareas]")!.hidden = v !== "tareas";
+    root.querySelector<HTMLElement>("[data-crm-en-reportes]")!.hidden = v !== "reportes";
     if (v === "tablero") pintarTablero();
     if (v === "tareas") pintarTareas();
+    if (v === "reportes") void pintarReportes();
     try {
       localStorage.setItem("saltabum-crm-vista", v);
     } catch {
@@ -1160,12 +1492,10 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
   }
   root
     .querySelectorAll<HTMLElement>("[data-crm-vista]")
-    .forEach((b) =>
-      b.addEventListener("click", () => cambiarVista(b.dataset.crmVista as "lista" | "tablero" | "tareas")),
-    );
+    .forEach((b) => b.addEventListener("click", () => cambiarVista(b.dataset.crmVista as Vista)));
   try {
     const guardada = localStorage.getItem("saltabum-crm-vista");
-    if (guardada === "tablero" || guardada === "tareas") cambiarVista(guardada);
+    if (guardada === "tablero" || guardada === "tareas" || guardada === "reportes") cambiarVista(guardada);
   } catch {
     // Sin almacenamiento: se queda en «Lista».
   }

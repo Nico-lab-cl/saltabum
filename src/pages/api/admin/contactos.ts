@@ -7,12 +7,15 @@
 //   POST → { accion: "tarea", clave, texto, vence } · { accion: "tarea_hecha", clave, id, hasta? } (hasta = posponer)
 //          { accion: "festejado", clave, nombre, cumple } · { accion: "encuesta", clave, reserva, nota, comentario? }
 //          { accion: "resena", clave, si }
+//   GET ?inversion=1  → { inversion } por mes · POST { accion: "inversion", mes: "AAAA-MM", monto } (para Reportes)
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { auditar, mismoOrigen, panelConfigurado, sesion } from "@/lib/server/admin-auth";
 import {
   guardarEncuesta,
   guardarFestejado,
+  guardarInversion,
+  listarInversion,
   guardarNotas,
   listarContactos,
   marcarResena,
@@ -71,11 +74,17 @@ const accionSchema = z.discriminatedUnion("accion", [
   }),
   z.object({ accion: z.literal("resena"), clave, si: z.boolean() }),
 ]);
+const inversionSchema = z.object({
+  accion: z.literal("inversion"),
+  mes: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  monto: z.number().int().min(0).max(100_000_000),
+});
 
 export const GET: APIRoute = async ({ request, cookies, url }) => {
   if (!panelConfigurado()) return json(503, { ok: false, error: "sin_configurar" });
   if (!mismoOrigen(request)) return json(403, { ok: false, error: "origen" });
   if (!(await sesion(request, cookies))) return json(401, { ok: false, error: "sin_sesion" });
+  if (url.searchParams.has("inversion")) return json(200, { ok: true, inversion: await listarInversion() });
   if (url.searchParams.has("tareas")) return json(200, { ok: true, tareas: await listarTareas() });
   const pedida = url.searchParams.get("clave");
   if (pedida) {
@@ -95,7 +104,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (raw.length > 8_000) return json(413, { ok: false, error: "muy_grande" });
   let parsed;
   try {
-    parsed = accionSchema.safeParse(JSON.parse(raw));
+    const cuerpo: unknown = JSON.parse(raw);
+    // La inversión es del mes, no de un contacto.
+    const inversion = inversionSchema.safeParse(cuerpo);
+    if (inversion.success) {
+      await guardarInversion(inversion.data.mes, inversion.data.monto, usuario);
+      await auditar(
+        request,
+        usuario,
+        "inversion",
+        `${inversion.data.mes} · $${inversion.data.monto.toLocaleString("es-CL")}`,
+      );
+      return json(200, { ok: true });
+    }
+    parsed = accionSchema.safeParse(cuerpo);
   } catch {
     return json(400, { ok: false, error: "json" });
   }

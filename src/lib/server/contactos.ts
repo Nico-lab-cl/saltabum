@@ -59,6 +59,10 @@ export interface Contacto {
   espera_en: "whatsapp" | "chatweb" | "consulta" | null;
   /** Canal y campaña por donde llegó la primera vez. */
   origen: string;
+  /** Canal por donde llegó la primera vez (para los reportes). */
+  canal: Canal;
+  /** Minutos que tardamos en responder su primer mensaje de WhatsApp (null si no aplica). */
+  respuesta_min: number | null;
   creado: string;
   ultimo: string;
   notas: string | null;
@@ -73,6 +77,8 @@ export interface Contacto {
   /** Nota del 1 al 5 que puso a cada evento. */
   encuestas: Encuesta[];
 }
+
+export type Canal = "anuncio" | "whatsapp" | "chatweb" | "formulario" | "web" | "panel";
 
 export interface Encuesta {
   reserva: number;
@@ -106,6 +112,12 @@ const ESQUEMA = [
     por TEXT
   )`,
   "CREATE INDEX IF NOT EXISTS crm_eventos_clave ON crm_eventos (clave, creado)",
+  `CREATE TABLE IF NOT EXISTS crm_inversion (
+    mes TEXT PRIMARY KEY,
+    monto INTEGER NOT NULL,
+    actualizado TEXT NOT NULL,
+    por TEXT
+  )`,
   `CREATE TABLE IF NOT EXISTS crm_encuestas (
     reserva_id INTEGER PRIMARY KEY,
     clave TEXT NOT NULL,
@@ -175,6 +187,8 @@ type FilaWa = {
   ultimo_de_mi: number | null;
   ultimo_cliente: string | null;
   cotizado: string | null;
+  primera_respuesta: string | null;
+  primer_cliente: string | null;
 };
 type FilaChat = {
   id: string;
@@ -233,7 +247,10 @@ async function leerCanales() {
       d,
       `SELECT c.jid, c.telefono, c.nombre, c.anuncio, c.anuncio_datos, c.estado, c.creado, c.ultimo, c.ultimo_de_mi,
          (SELECT MAX(enviado) FROM wa_mensajes m WHERE m.jid = c.jid AND m.de_mi = 0) AS ultimo_cliente,
-         (SELECT MIN(enviado) FROM wa_mensajes m WHERE m.jid = c.jid AND m.de_mi = 1 AND (m.texto LIKE '%$%' OR m.texto LIKE '%atálogo%')) AS cotizado
+         (SELECT MIN(enviado) FROM wa_mensajes m WHERE m.jid = c.jid AND m.de_mi = 1 AND (m.texto LIKE '%$%' OR m.texto LIKE '%atálogo%')) AS cotizado,
+         (SELECT MIN(enviado) FROM wa_mensajes m WHERE m.jid = c.jid AND m.de_mi = 0) AS primer_cliente,
+         (SELECT MIN(r.enviado) FROM wa_mensajes r WHERE r.jid = c.jid AND r.de_mi = 1
+            AND r.enviado > (SELECT MIN(m.enviado) FROM wa_mensajes m WHERE m.jid = c.jid AND m.de_mi = 0)) AS primera_respuesta
        FROM wa_chats c WHERE c.anuncio = 1 OR c.etiqueta = 1`,
     ),
     // La IA cotiza con el total y el precio («el total es $99.980»).
@@ -271,7 +288,7 @@ interface Borrador {
   telefono: string | null;
   email: string | null;
   comuna: string | null;
-  origenes: { en: string; texto: string }[];
+  origenes: { en: string; texto: string; canal: Canal }[];
   creado: string;
   ultimo: string;
   /** Último mensaje o acción del cliente (para reactivar un perdido). */
@@ -331,6 +348,7 @@ function juntar(canales: Awaited<ReturnType<typeof leerCanales>>): {
     const a = leer(w.anuncio_datos);
     b.origenes.push({
       en: w.creado,
+      canal: w.anuncio ? "anuncio" : "whatsapp",
       texto: w.anuncio
         ? `Anuncio${a.app ? ` ${APPS[a.app] ?? a.app}` : " de Meta"}${a.titulo ? ` · ${a.titulo}` : ""}`
         : "WhatsApp (etiqueta)",
@@ -350,6 +368,7 @@ function juntar(canales: Awaited<ReturnType<typeof leerCanales>>): {
     const o = leer(c.origen);
     b.origenes.push({
       en: c.creado,
+      canal: o.fbclid ? "anuncio" : "chatweb",
       texto: `Chat de la web${o.utm_source ? ` · ${o.utm_source}${o.utm_campaign ? ` / ${o.utm_campaign}` : ""}` : o.fbclid ? " · anuncio de Meta" : ""}`,
     });
     b.ultimo = maxIso(b.ultimo, c.actualizado)!;
@@ -371,6 +390,7 @@ function juntar(canales: Awaited<ReturnType<typeof leerCanales>>): {
     const o = leer(q.origen);
     b.origenes.push({
       en: q.creado,
+      canal: o.fbclid ? "anuncio" : "formulario",
       texto: `Formulario ${q.formulario}${o.utm_source ? ` · ${o.utm_source}` : o.fbclid ? " · anuncio de Meta" : ""}`,
     });
     b.ultimoCliente = maxIso(b.ultimoCliente, q.creado);
@@ -389,6 +409,7 @@ function juntar(canales: Awaited<ReturnType<typeof leerCanales>>): {
     const o = leer(r.atribucion);
     b.origenes.push({
       en: r.creado,
+      canal: o.fbclid ? "anuncio" : r.origen === "web" ? "web" : r.origen === "chat" ? "chatweb" : "panel",
       texto:
         r.origen === "web"
           ? `Reserva en la web${o.utm_source ? ` · ${o.utm_source}` : ""}`
@@ -458,6 +479,11 @@ function armar(b: Borrador, crm: FilaCrm | undefined, encuestas: Map<number, Enc
     esperando: espera?.desde ?? null,
     espera_en: espera?.en ?? null,
     origen: b.origenes.sort((x, y) => x.en.localeCompare(y.en))[0]?.texto ?? "Directo",
+    canal: b.origenes[0]?.canal ?? "panel",
+    respuesta_min:
+      wa?.primer_cliente && wa.primera_respuesta
+        ? Math.round((Date.parse(wa.primera_respuesta) - Date.parse(wa.primer_cliente)) / 60_000)
+        : null,
     creado: b.creado,
     ultimo: b.ultimo,
     notas: crm?.notas ?? null,
@@ -687,4 +713,24 @@ export async function marcarResena(clave: string, si: boolean, por: string) {
     si ? "Dejó reseña" : "Se quitó la reseña",
     por,
   );
+}
+
+/** Inversión en anuncios por mes («AAAA-MM» → pesos), anotada en Reportes. */
+export async function listarInversion(): Promise<{ mes: string; monto: number }[]> {
+  const d = await db();
+  const { results } = await d
+    .prepare("SELECT mes, monto FROM crm_inversion ORDER BY mes")
+    .all<{ mes: string; monto: number }>();
+  return results;
+}
+
+export async function guardarInversion(mes: string, monto: number, por: string) {
+  const d = await db();
+  await d
+    .prepare(
+      `INSERT INTO crm_inversion (mes, monto, actualizado, por) VALUES (?, ?, ?, ?)
+       ON CONFLICT(mes) DO UPDATE SET monto = excluded.monto, actualizado = excluded.actualizado, por = excluded.por`,
+    )
+    .bind(mes, monto, new Date().toISOString(), por)
+    .run();
 }
