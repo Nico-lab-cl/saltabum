@@ -3,11 +3,12 @@
 //   GET ?clave=<...>  → { contacto, eventos } con la línea de tiempo
 //   POST → { accion: "perdido", clave, motivo } · { accion: "reactivar", clave }
 //          { accion: "etapa", clave, etapa } (null vuelve a la automática) · { accion: "notas", clave, notas }
+//   GET ?tareas=1     → { tareas } pendientes, automáticas y a mano (ver src/lib/server/tareas.ts)
+//   POST → { accion: "tarea", clave, texto, vence } · { accion: "tarea_hecha", clave, id, hasta? } (hasta = posponer)
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { auditar, mismoOrigen, panelConfigurado, sesion } from "@/lib/server/admin-auth";
 import {
-  ETAPAS,
   guardarNotas,
   listarContactos,
   marcarEtapa,
@@ -17,6 +18,7 @@ import {
   obtenerContacto,
   reactivar,
 } from "@/lib/server/contactos";
+import { crearTarea, listarTareas, resolverTarea } from "@/lib/server/tareas";
 
 export const prerender = false;
 
@@ -37,12 +39,25 @@ const accionSchema = z.discriminatedUnion("accion", [
     etapa: z.enum(["calificado", "cotizado", "promotor"]).nullable(),
   }),
   z.object({ accion: z.literal("notas"), clave, notas: z.string().trim().max(2000) }),
+  z.object({
+    accion: z.literal("tarea"),
+    clave,
+    texto: z.string().trim().min(2).max(300),
+    vence: z.iso.datetime(),
+  }),
+  z.object({
+    accion: z.literal("tarea_hecha"),
+    clave,
+    id: z.string().regex(/^(auto:[a-z_]+:.{1,60}|manual:d+)$/),
+    hasta: z.iso.datetime().optional(),
+  }),
 ]);
 
 export const GET: APIRoute = async ({ request, cookies, url }) => {
   if (!panelConfigurado()) return json(503, { ok: false, error: "sin_configurar" });
   if (!mismoOrigen(request)) return json(403, { ok: false, error: "origen" });
   if (!(await sesion(request, cookies))) return json(401, { ok: false, error: "sin_sesion" });
+  if (url.searchParams.has("tareas")) return json(200, { ok: true, tareas: await listarTareas() });
   const pedida = url.searchParams.get("clave");
   if (pedida) {
     const ficha = await obtenerContacto(pedida);
@@ -84,6 +99,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   } else if (pedido.accion === "etapa") {
     await marcarEtapa(contacto.clave, pedido.etapa, usuario);
     await auditar(request, usuario, "contacto_etapa", `${quien} · ${pedido.etapa ?? "automática"}`);
+  } else if (pedido.accion === "tarea") {
+    await crearTarea(contacto.clave, pedido.texto, pedido.vence, usuario);
+    await auditar(request, usuario, "contacto_tarea", `${quien} · ${pedido.texto}`);
+  } else if (pedido.accion === "tarea_hecha") {
+    if (!(await resolverTarea(pedido.id, contacto.clave, usuario, pedido.hasta)))
+      return json(404, { ok: false, error: "no_existe" });
+    await auditar(
+      request,
+      usuario,
+      pedido.hasta ? "tarea_pospuesta" : "tarea_hecha",
+      `${quien} · ${pedido.id.split(":")[1]}`,
+    );
   } else {
     await guardarNotas(contacto.clave, pedido.notas || null, usuario);
     await auditar(request, usuario, "contacto_notas", quien);

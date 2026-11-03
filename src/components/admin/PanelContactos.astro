@@ -19,6 +19,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
         {[
           ["lista", "Lista"],
           ["tablero", "Tablero"],
+          ["tareas", "Tareas"],
         ].map(([id, nombre], i) => (
           <button
             type="button"
@@ -65,6 +66,15 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
       Arrastra una tarjeta a otra columna o usa «Mover a…». Ganado y Perdido muestran los últimos 30 días
     </p>
     <div data-crm-tablero class="flex gap-3 overflow-x-auto pb-2"></div>
+  </div>
+
+  <!-- Tareas de seguimiento: automáticas (según la situación de cada contacto) y anotadas por el equipo -->
+  <div data-crm-en-tareas hidden class="flex flex-col gap-3">
+    <p class="text-noche-suave text-sm">
+      Seguimientos que tocan hoy, con un mensaje sugerido que puedes editar antes de enviar. Las automáticas
+      desaparecen solas si la persona responde
+    </p>
+    <div data-crm-tareas class="flex flex-col gap-4"></div>
   </div>
 
   <dialog
@@ -137,6 +147,18 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     consultas: number[];
     reservas: Reserva[];
   };
+  type Tarea = {
+    id: string;
+    tipo: "seguimiento" | "ultimo_intento" | "cerrar" | "abono" | "logistica" | "manual";
+    clave: string;
+    nombre: string;
+    titulo: string;
+    motivo: string;
+    vence: string;
+    mensaje: string | null;
+    jid: string | null;
+    telefono: string | null;
+  };
   type Evento = {
     en: string;
     tipo: "whatsapp" | "chatweb" | "consulta" | "reserva" | "pago" | "cotizacion" | "equipo";
@@ -206,6 +228,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
   const etapaDe = (id: Etapa) => ETAPAS.find((e) => e.id === id)!;
 
   let contactos: Contacto[] = [];
+  let tareas: Tarea[] = [];
   let filtro = "atender";
   let abierto: string | null = null;
   let activo = false;
@@ -275,10 +298,15 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
   }
 
   async function cargar() {
-    const res = await api("/api/admin/contactos").catch(() => null);
+    const [res, resTareas] = await Promise.all([
+      api("/api/admin/contactos").catch(() => null),
+      api("/api/admin/contactos?tareas=1").catch(() => null),
+    ]);
     if (res?.status === 401) return sinSesion();
     if (!res?.ok) return void (estado.textContent = "No se pudieron cargar los contactos");
     contactos = ((await res.json()) as { contactos: Contacto[] }).contactos;
+    if (resTareas?.ok) tareas = ((await resTareas.json()) as { tareas: Tarea[] }).tareas;
+    pintarBotonTareas();
     document.dispatchEvent(
       new CustomEvent("panel:contador", {
         detail: { pestana: "contactos", n: contactos.filter((c) => c.esperando).length },
@@ -287,6 +315,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     pintarFiltros();
     pintarLista();
     if (vista === "tablero") pintarTablero();
+    if (vista === "tareas") pintarTareas();
   }
 
   function pintarLista() {
@@ -512,6 +541,45 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
         ),
       );
 
+    // Tareas de este contacto y «Agregar tarea».
+    const suyas = tareas.filter((t) => t.clave === c.clave);
+    const cajaTareas = el("div", "flex flex-col gap-2 text-sm");
+    if (suyas.length) cajaTareas.append(...suyas.map((t) => tarjetaTarea(t, false)));
+    const agregar = boton("Agregar tarea", "border-noche/30 bg-crema w-fit", () => {
+      const texto = el(
+        "input",
+        "border-noche bg-crema min-h-10 min-w-0 flex-1 rounded-xl border-2 px-3",
+      ) as HTMLInputElement;
+      texto.maxLength = 300;
+      texto.placeholder = "Ej.: llamar para confirmar la dirección";
+      const dia = el("input", "border-noche bg-crema min-h-10 rounded-xl border-2 px-3") as HTMLInputElement;
+      dia.type = "date";
+      dia.value = mananaChile();
+      dia.setAttribute("aria-label", "Para cuándo");
+      const fila = el("div", "flex flex-wrap items-center gap-2");
+      fila.append(
+        texto,
+        dia,
+        boton("Guardar tarea", "border-noche bg-noche text-crema", () => {
+          if (texto.value.trim().length < 2 || !dia.value) return texto.focus();
+          // 10:00 en Chile (13:00 UTC) del día elegido.
+          void enviar(
+            {
+              accion: "tarea",
+              clave: c.clave,
+              texto: texto.value.trim(),
+              vence: `${dia.value}T13:00:00.000Z`,
+            },
+            "Tarea guardada",
+          );
+        }),
+      );
+      agregar.replaceWith(fila);
+      texto.focus();
+    });
+    cajaTareas.append(agregar);
+    cabeza.append(cajaTareas);
+
     // Notas internas.
     const notas = el("div", "flex flex-col gap-1 text-sm");
     if (c.notas) notas.append(el("p", "bg-sol/25 rounded-lg px-2 py-1 whitespace-pre-line", c.notas));
@@ -579,7 +647,7 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
   const hoyChile = () =>
     new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
   const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
-  let vista: "lista" | "tablero" = "lista";
+  let vista: "lista" | "tablero" | "tareas" = "lista";
   let arrastrando: { tarjeta: Tarjeta; desde: Columna } | null = null;
 
   function repartir(): Record<Columna, Tarjeta[]> {
@@ -804,14 +872,172 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
     return caja;
   }
 
-  function cambiarVista(v: "lista" | "tablero") {
+  // ── Tareas ────────────────────────────────────────────────────────────
+  const listaTareas = root.querySelector<HTMLElement>("[data-crm-tareas]")!;
+  const mananaChile = () =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(
+      new Date(Date.now() + 86_400_000),
+    );
+  const ICONO_TAREA: Record<Tarea["tipo"], string> = {
+    seguimiento: "🔔",
+    ultimo_intento: "⏳",
+    cerrar: "🗂️",
+    abono: "💰",
+    logistica: "🚚",
+    manual: "📌",
+  };
+
+  function pintarBotonTareas() {
+    const atrasadas = tareas.filter((t) => t.vence <= new Date().toISOString()).length;
+    const b = root.querySelector<HTMLElement>("[data-crm-vista=tareas]")!;
+    b.textContent = atrasadas ? `Tareas ${atrasadas}` : "Tareas";
+  }
+
+  async function hecha(t: Tarea, hasta?: string) {
+    await enviar(
+      { accion: "tarea_hecha", clave: t.clave, id: t.id, hasta },
+      hasta ? "Tarea pospuesta para mañana" : "Tarea hecha",
+    );
+  }
+
+  function tarjetaTarea(t: Tarea, conNombre: boolean): HTMLElement {
+    const atrasada = t.vence <= new Date().toISOString();
+    const caja = el(
+      "article",
+      `bg-blanco flex flex-col gap-2 rounded-2xl border-2 p-3 text-sm ${atrasada ? "border-rojo-texto" : "border-noche"}`,
+    );
+    const arriba = el("div", "flex flex-wrap items-baseline justify-between gap-2");
+    const titulo = el("p", "font-extrabold", `${ICONO_TAREA[t.tipo]} ${t.titulo}`);
+    if (conNombre) {
+      const quien = el(
+        "button",
+        "text-azul-texto ml-1 font-extrabold underline",
+        t.nombre,
+      ) as HTMLButtonElement;
+      quien.type = "button";
+      quien.addEventListener("click", () => {
+        cambiarVista("lista");
+        filtro = "todos";
+        pintarFiltros();
+        void abrir(t.clave, true);
+      });
+      titulo.append(" · ", quien);
+    }
+    arriba.append(
+      titulo,
+      el(
+        "span",
+        `text-xs font-bold ${atrasada ? "text-rojo-texto" : "text-noche-suave"}`,
+        atrasada ? `Desde ${cuando(t.vence)}` : `Para ${cuando(t.vence)}`,
+      ),
+    );
+    caja.append(arriba, el("p", "text-noche-suave", t.motivo));
+
+    const acciones = el("div", "flex flex-wrap items-center gap-2");
+    if (t.mensaje) {
+      const area = el(
+        "textarea",
+        "border-noche/40 bg-crema w-full rounded-xl border-2 px-3 py-2",
+      ) as HTMLTextAreaElement;
+      area.rows = 3;
+      area.maxLength = 4000;
+      area.value = t.mensaje;
+      area.setAttribute("aria-label", `Mensaje para ${t.nombre}`);
+      caja.append(area);
+      if (t.jid) {
+        // Sale desde el WhatsApp de Saltabum (Evolution), igual que una respuesta de la pestaña WhatsApp.
+        const mandar = boton("Enviar por WhatsApp", "border-noche bg-verde-burbuja", async () => {
+          const texto = area.value.trim();
+          if (!texto) return area.focus();
+          mandar.disabled = true;
+          const res = await api("/api/admin/whatsapp", {
+            method: "POST",
+            body: JSON.stringify({ accion: "responder", jid: t.jid, texto }),
+          }).catch(() => null);
+          if (res?.status === 401) return sinSesion();
+          if (!res?.ok) {
+            mandar.disabled = false;
+            return avisar("WhatsApp no respondió, inténtalo de nuevo");
+          }
+          await hecha(t);
+        });
+        acciones.append(mandar);
+      } else if (t.telefono) {
+        const a = el(
+          "a",
+          "border-noche bg-verde-burbuja inline-flex min-h-9 items-center rounded-full border-2 px-3 text-sm font-extrabold no-underline",
+          "Abrir en WhatsApp",
+        ) as HTMLAnchorElement;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.href = `https://wa.me/${t.telefono}`;
+        a.addEventListener(
+          "click",
+          () => (a.href = `https://wa.me/${t.telefono}?text=${encodeURIComponent(area.value)}`),
+        );
+        acciones.append(a);
+      }
+    }
+    if (t.tipo === "cerrar")
+      acciones.append(
+        boton(
+          "Marcar perdido: no respondió",
+          "border-noche bg-arena",
+          () =>
+            void enviar(
+              { accion: "perdido", clave: t.clave, motivo: "no_respondio" },
+              "Marcado como perdido",
+            ),
+        ),
+      );
+    acciones.append(
+      boton(
+        t.mensaje && (t.jid || t.telefono) ? "Ya lo hice" : "Hecha",
+        "border-noche bg-blanco",
+        () => void hecha(t),
+      ),
+      boton("Mañana", "border-noche/30 bg-crema", () => void hecha(t, `${mananaChile()}T13:00:00.000Z`)),
+    );
+    caja.append(acciones);
+    return caja;
+  }
+
+  function pintarTareas() {
+    const ahora = new Date().toISOString();
+    const finHoy = `${mananaChile()}T03:00:00.000Z`; // medianoche en Chile
+    const q = sinTildes(buscar.value.trim());
+    const visibles = tareas.filter((t) => !q || sinTildes(`${t.nombre} ${t.titulo}`).includes(q));
+    const grupos: [string, Tarea[]][] = [
+      ["Atrasadas", visibles.filter((t) => t.vence <= ahora)],
+      ["Hoy", visibles.filter((t) => t.vence > ahora && t.vence < finHoy)],
+      ["Próximas", visibles.filter((t) => t.vence >= finHoy)],
+    ];
+    listaTareas.replaceChildren(
+      ...grupos
+        .filter(([, ts]) => ts.length)
+        .map(([nombre, ts]) => {
+          const g = el("section", "flex flex-col gap-2");
+          g.append(
+            el("h3", "font-display text-xl font-semibold", `${nombre} · ${ts.length}`),
+            ...ts.slice(0, 100).map((t) => tarjetaTarea(t, true)),
+          );
+          return g;
+        }),
+    );
+    if (!visibles.length)
+      listaTareas.append(el("p", "text-noche-suave text-sm", "No hay tareas pendientes 🎉"));
+  }
+
+  function cambiarVista(v: "lista" | "tablero" | "tareas") {
     vista = v;
     root
       .querySelectorAll<HTMLElement>("[data-crm-vista]")
       .forEach((b) => b.setAttribute("aria-checked", String(b.dataset.crmVista === v)));
     root.querySelector<HTMLElement>("[data-crm-en-lista]")!.hidden = v !== "lista";
     root.querySelector<HTMLElement>("[data-crm-en-tablero]")!.hidden = v !== "tablero";
+    root.querySelector<HTMLElement>("[data-crm-en-tareas]")!.hidden = v !== "tareas";
     if (v === "tablero") pintarTablero();
+    if (v === "tareas") pintarTareas();
     try {
       localStorage.setItem("saltabum-crm-vista", v);
     } catch {
@@ -821,15 +1047,18 @@ const campo = "border-noche bg-blanco min-h-11 rounded-xl border-2 px-3";
   root
     .querySelectorAll<HTMLElement>("[data-crm-vista]")
     .forEach((b) =>
-      b.addEventListener("click", () => cambiarVista(b.dataset.crmVista as "lista" | "tablero")),
+      b.addEventListener("click", () => cambiarVista(b.dataset.crmVista as "lista" | "tablero" | "tareas")),
     );
   try {
-    if (localStorage.getItem("saltabum-crm-vista") === "tablero") cambiarVista("tablero");
+    const guardada = localStorage.getItem("saltabum-crm-vista");
+    if (guardada === "tablero" || guardada === "tareas") cambiarVista(guardada);
   } catch {
     // Sin almacenamiento: se queda en «Lista».
   }
 
-  buscar.addEventListener("input", () => (vista === "tablero" ? pintarTablero() : pintarLista()));
+  buscar.addEventListener("input", () =>
+    vista === "tablero" ? pintarTablero() : vista === "tareas" ? pintarTareas() : pintarLista(),
+  );
   root.querySelector("[data-crm-actualizar]")!.addEventListener("click", () => void cargar());
 
   document.addEventListener("panel:listo", () => {
