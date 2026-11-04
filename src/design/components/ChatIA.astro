@@ -7,7 +7,7 @@
 //   [data-chat-pendientes] (contador de respuestas del equipo que llegaron con el chat cerrado)
 //   <form data-chat-contacto> con nombre, email y telefono (se pide antes de chatear) y [data-chat-contacto-error]
 //   El <form data-chat-form> parte oculto y se muestra cuando ya están los datos.
-//   <template data-chat-bienvenida> y <template data-chat-saludo> (con [nombre]): textos que «escribe» Eduardo.
+//   <template data-chat-bienvenida> y <template data-chat-saludo> (con [nombre]): textos que «escribe» Sali.
 import Icon from "./Icon.astro";
 ---
 
@@ -24,7 +24,7 @@ import Icon from "./Icon.astro";
         <Icon name="chat" size={22} />
       </span>
       <div class="min-w-0 flex-1">
-        <p class="font-display text-lg leading-tight font-semibold">Eduardo · Saltabum</p>
+        <p class="font-display text-lg leading-tight font-semibold">Sali · Saltabum</p>
         <p class="text-noche-suave flex items-center gap-1.5 text-xs font-bold">
           <span class="bg-verde size-2 rounded-full"></span>
           En línea
@@ -37,9 +37,9 @@ import Icon from "./Icon.astro";
 
     <div data-chat-lista aria-live="polite" class="flex flex-1 flex-col gap-2.5 overflow-y-auto px-3 py-4"></div>
 
-    <!-- Bienvenida: Eduardo la «escribe» al abrir el chat por primera vez. Cada <p> es un mensaje aparte. -->
+    <!-- Bienvenida: Sali la «escribe» al abrir el chat por primera vez. Cada <p> es un mensaje aparte. -->
     <template data-chat-bienvenida>
-      <p>¡Hola! 👋 Te saluda Eduardo de Saltabum</p>
+      <p>¡Hola! 👋 Soy Sali, del equipo de Saltabum</p>
       <p>Consulta con nuestros asesores fechas, disponibilidad y precios para tu evento 🎈 Déjanos tus datos y te respondemos de inmediato 👇</p>
     </template>
     <!-- Saludo después del formulario; [nombre] es el nombre de pila del cliente. -->
@@ -129,7 +129,7 @@ import Icon from "./Icon.astro";
       </button>
     </form>
     <p data-chat-pie hidden class="text-noche-suave bg-blanco px-3 pb-2 text-center text-[11px]">
-      Eduardo es el asistente virtual de Saltabum
+      Sali es asistente virtual de Saltabum
     </p>
   </section>
 

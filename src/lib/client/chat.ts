@@ -123,7 +123,7 @@ export function bindChat(): void {
       .filter(Boolean)
       .join("\n\n");
   let bienvenidaEnCurso = false;
-  /** Al abrir por primera vez el formulario ya está a la vista y Eduardo «escribe» la bienvenida rápido encima. */
+  /** Al abrir por primera vez el formulario ya está a la vista y Sali «escribe» la bienvenida rápido encima. */
   async function darBienvenida() {
     if (estado.mensajes.length || bienvenidaEnCurso) return;
     bienvenidaEnCurso = true;
