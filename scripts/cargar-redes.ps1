@@ -29,8 +29,37 @@ if (-not $token.StartsWith("EA") -or $token.Length -lt 100) {
   Write-Host "Vuelve a pulsar Copiar en la ventana del token de Meta y corre el script otra vez." -ForegroundColor Yellow
   exit 1
 }
-$secreto = Leer "2/2 Ahora copia la Clave secreta de la app (Configuración de la app > Información básica > Mostrar), pégala y presiona Enter"
-if ($secreto -notmatch '^[0-9a-fA-F]{32}$') { Write-Host "Eso no parece la clave secreta de una app de Meta (32 letras y números). No se guardó nada." -ForegroundColor Red; exit 1 }
+$secreto = Leer "2/2 Clave secreta de la app (Configuración de la app > Información básica > Mostrar). Si ya la cargaste antes, solo presiona Enter"
+if ($secreto -and $secreto -notmatch '^[0-9a-fA-F]{32}$') { Write-Host "Eso no parece la clave secreta de una app de Meta (32 letras y números). No se guardó nada." -ForegroundColor Red; exit 1 }
+
+# Suscribe la página Saltabum a la app (sin esto Meta no avisa los mensajes nuevos). También comprueba el token:
+# si no es de la página Saltabum, Meta lo rechaza aquí.
+$PAGINA = "1359897103874337"
+$r = Graph "POST" "https://graph.facebook.com/v23.0/$PAGINA/subscribed_apps?subscribed_fields=messages,message_echoes,feed&access_token=$token"
+if ($r.error) { Write-Host "Meta rechazó el token al suscribir la página Saltabum: $($r.error.message). No se guardó nada." -ForegroundColor Red; exit 1 }
+Write-Host "Página Saltabum suscrita a la app" -ForegroundColor Green
+
+# Primera vez: se cargan los tres secretos. Después (Enter en la clave secreta) solo se renueva el token de la página
+# y se mantienen la clave y el token de verificación que ya están en Cloudflare y en Meta.
+$valores = [ordered]@{ META_PAGE_TOKEN = $token }
+if ($secreto) {
+  $valores.META_APP_SECRET = $secreto
+  $valores.META_WEBHOOK_TOKEN = -join ((48..57) + (97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
+}
+$lineas = @()
+if (Test-Path .dev.vars) { $lineas = @(Get-Content .dev.vars | Where-Object { $k = ($_ -split '=')[0]; -not $valores.Contains($k) }) }
+foreach ($k in $valores.Keys) { $lineas += "$k=$($valores[$k])" }
+Set-Content -Path .dev.vars -Value $lineas -Encoding ascii
+Write-Host "Guardadas en .dev.vars" -ForegroundColor Green
+
+$ok = $true
+foreach ($k in $valores.Keys) {
+  $valores[$k] | npx wrangler secret put $k
+  if ($LASTEXITCODE -ne 0) { $ok = $false }
+}
+if ($ok) { Write-Host "Listo: quedó cargado en Cloudflare. Ya puedes volver al chat con Claude." -ForegroundColor Green }
+else { Write-Host "Algún secreto no se pudo cargar en Cloudflare (revisa el mensaje de arriba)." -ForegroundColor Yellow }
+) { Write-Host "Eso no parece la clave secreta de una app de Meta (32 letras y números). No se guardó nada." -ForegroundColor Red; exit 1 }
 
 # Suscribe la página Saltabum a la app (sin esto Meta no avisa los mensajes nuevos). También comprueba el token:
 # si no es de la página Saltabum, Meta lo rechaza aquí.
