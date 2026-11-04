@@ -66,15 +66,18 @@ export interface CambioMeta {
 /** Lee un comentario nuevo de primer nivel (no respuestas, ni los de la propia cuenta). */
 function leerComentario(canal: CanalRed, cuenta: string | undefined, c: CambioMeta): ComentarioRed | null {
   const v = c.value;
-  if (!v?.from?.id || v.from.id === cuenta) return null;
+  if (!v) return null;
+  // Meta a veces no manda «from» (depende de los permisos); sin él igual se puede responder por el id del comentario.
+  if (v.from?.id && v.from.id === cuenta) return null;
+  const persona = v.from?.id ?? null;
   if (canal === "instagram") {
     if (c.field !== "comments" || !v.id || v.parent_id) return null;
-    return { id: v.id, canal, persona: v.from.id, nombre: v.from.username ? `@${v.from.username}` : null, texto: v.text ?? null, publicacion: v.media?.id ?? null };
+    return { id: v.id, canal, persona, nombre: v.from?.username ? `@${v.from.username}` : null, texto: v.text ?? null, publicacion: v.media?.id ?? null };
   }
   if (c.field !== "feed" || v.item !== "comment" || v.verb !== "add" || !v.comment_id) return null;
   // En Facebook la respuesta a otro comentario trae parent_id distinto de la publicación.
   if (v.parent_id && v.parent_id !== v.post_id) return null;
-  return { id: v.comment_id, canal, persona: v.from.id, nombre: v.from.name ?? null, texto: v.message ?? null, publicacion: v.post_id ?? null };
+  return { id: v.comment_id, canal, persona, nombre: v.from?.name ?? null, texto: v.message ?? null, publicacion: v.post_id ?? null };
 }
 
 interface Decision {
@@ -126,6 +129,8 @@ async function decidir(canal: CanalRed, texto: string): Promise<Decision> {
  * Registra el comentario (para no repetirlo) y devuelve el trabajo de la IA, que corre después de responderle a Meta.
  */
 export async function procesarCambio(canal: CanalRed, cuenta: string | undefined, cambio: CambioMeta): Promise<(() => Promise<void>) | null> {
+  const v = cambio.value;
+  console.log("comentario", canal, cambio.field, v?.item ?? "", v?.verb ?? "", v?.from?.id ? (v.from.id === cuenta ? "propio" : "con autor") : "sin autor", v?.parent_id && v.parent_id !== v.post_id ? "respuesta" : "", (v?.text ?? v?.message) ? "con texto" : "sin texto");
   const c = leerComentario(canal, cuenta, cambio);
   if (!c?.texto?.trim()) return null;
   if (!(await registrarComentario(c))) return null;
@@ -183,7 +188,9 @@ async function atender(c: ComentarioRed) {
 
   // La conversación queda en /admin → Chats. En Facebook el id de Messenger de la persona es otro que el del comentario:
   // se usa el que devuelve Meta al enviar, que es el mismo con el que llegará su respuesta.
-  const conv = await conversacionDeRed(c.canal, enviado.recipient_id ?? c.persona!, c.nombre);
+  const destino = enviado.recipient_id ?? c.persona;
+  if (!destino) return;
+  const conv = await conversacionDeRed(c.canal, destino, c.nombre);
   await guardarMensaje(conv.id, "cliente", `(Comentó en una publicación de ${donde}: «${c.texto!.slice(0, 500)}»)`);
   await guardarMensaje(conv.id, "ia", privado, null, enviado.message_id ?? null);
   await actualizarComentario(c.id, { conversacion: conv.id });
