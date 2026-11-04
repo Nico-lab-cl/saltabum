@@ -132,7 +132,21 @@ export async function procesarCambio(canal: CanalRed, cuenta: string | undefined
   const v = cambio.value;
   console.log("comentario", canal, cambio.field, v?.item ?? "", v?.verb ?? "", v?.from?.id ? (v.from.id === cuenta ? "propio" : "con autor") : "sin autor", v?.parent_id && v.parent_id !== v.post_id ? "respuesta" : "", (v?.text ?? v?.message) ? "con texto" : "sin texto");
   const c = leerComentario(canal, cuenta, cambio);
-  if (!c?.texto?.trim()) return null;
+  if (!c) return null;
+  // Facebook puede avisar el comentario sin el texto ni el nombre: se piden a Meta con el token de la página.
+  if (!c.texto?.trim() || !c.nombre) {
+    try {
+      const d = await graph<{ message?: string; text?: string; username?: string; from?: { id?: string; name?: string; username?: string } }>(
+        `/${encodeURIComponent(c.id)}?fields=${canal === "instagram" ? "text,username" : "message,from"}`,
+      );
+      c.texto ||= d.message ?? d.text ?? null;
+      c.nombre ||= d.from?.name ?? (d.username ? `@${d.username}` : null);
+      c.persona ||= d.from?.id ?? null;
+    } catch (err) {
+      console.error(`[comentarios] leer ${canal}:`, String(err));
+    }
+  }
+  if (!c.texto?.trim()) return null;
   if (!(await registrarComentario(c))) return null;
   if (!chatConfigurado() || !(await comentariosActivos())) return null;
   if ((await contarMensaje(hoyChile(), `comentarios:${canal}`, MAX_COMENTARIOS_DIA, Number.MAX_SAFE_INTEGER)) !== "ok") return null;
