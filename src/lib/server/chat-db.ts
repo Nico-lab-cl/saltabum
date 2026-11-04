@@ -234,3 +234,90 @@ export async function marcarExterno(id: number, externoId: string): Promise<void
   const d = await db();
   await d.prepare("UPDATE chat_mensajes SET externo_id = ? WHERE id = ?").bind(externoId, id).run();
 }
+
+// ── Ajustes del panel y comentarios de redes ────────────────────────────────────────────────────────────────────────
+// «chat_ajustes» guarda interruptores simples del panel (por ejemplo, si Sali responde los comentarios).
+// «red_comentarios» anota cada comentario de Instagram o Facebook que llegó, qué entendió la IA y qué se hizo, para no
+// responder dos veces (Meta reintenta los avisos) y para reconocer la copia del mensaje privado que mandamos.
+
+let tablasRedes = false;
+async function dbRedes() {
+  const d = await db();
+  if (!tablasRedes) {
+    await d.prepare("CREATE TABLE IF NOT EXISTS chat_ajustes (clave TEXT PRIMARY KEY, valor TEXT NOT NULL)").run();
+    await d
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS red_comentarios (
+          id TEXT PRIMARY KEY,
+          canal TEXT NOT NULL,
+          persona TEXT,
+          nombre TEXT,
+          texto TEXT,
+          publicacion TEXT,
+          tipo TEXT,
+          respuesta_publica TEXT,
+          mensaje_privado TEXT,
+          conversacion TEXT,
+          error TEXT,
+          creado TEXT NOT NULL
+        )`,
+      )
+      .run();
+    tablasRedes = true;
+  }
+  return d;
+}
+
+export async function leerAjuste(clave: string): Promise<string | null> {
+  const d = await dbRedes();
+  return (await d.prepare("SELECT valor FROM chat_ajustes WHERE clave = ?").bind(clave).first<{ valor: string }>())?.valor ?? null;
+}
+
+export async function guardarAjuste(clave: string, valor: string): Promise<void> {
+  const d = await dbRedes();
+  await d
+    .prepare("INSERT INTO chat_ajustes (clave, valor) VALUES (?, ?) ON CONFLICT (clave) DO UPDATE SET valor = excluded.valor")
+    .bind(clave, valor)
+    .run();
+}
+
+export interface ComentarioRed {
+  id: string;
+  canal: Exclude<CanalChat, "web">;
+  persona: string | null;
+  nombre: string | null;
+  texto: string | null;
+  publicacion: string | null;
+}
+
+/** Anota un comentario nuevo. Devuelve false si ya estaba (aviso repetido de Meta). */
+export async function registrarComentario(c: ComentarioRed): Promise<boolean> {
+  const d = await dbRedes();
+  const r = await d
+    .prepare(
+      "INSERT INTO red_comentarios (id, canal, persona, nombre, texto, publicacion, creado) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(c.id, c.canal, c.persona, c.nombre, c.texto?.slice(0, 2000) ?? null, c.publicacion, new Date().toISOString())
+    .run();
+  return Number(r.meta.changes ?? 0) > 0;
+}
+
+export async function actualizarComentario(
+  id: string,
+  cambios: Partial<{ tipo: string; respuesta_publica: string; mensaje_privado: string; conversacion: string; error: string }>,
+): Promise<void> {
+  const campos = Object.keys(cambios) as (keyof typeof cambios)[];
+  if (!campos.length) return;
+  const d = await dbRedes();
+  await d
+    .prepare(`UPDATE red_comentarios SET ${campos.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`)
+    .bind(...campos.map((c) => cambios[c] ?? null), id)
+    .run();
+}
+
+/** ¿Este texto es el mensaje privado que mandamos hace poco por un comentario? (para reconocer su copia de Meta). */
+export async function esMensajePrivadoReciente(texto: string): Promise<boolean> {
+  const d = await dbRedes();
+  const desde = new Date(Date.now() - 10 * 60_000).toISOString();
+  return !!(await d.prepare("SELECT 1 AS si FROM red_comentarios WHERE mensaje_privado = ? AND creado > ? LIMIT 1").bind(texto, desde).first());
+}

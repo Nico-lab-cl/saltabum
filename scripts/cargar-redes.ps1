@@ -35,7 +35,7 @@ if ($secreto -notmatch '^[0-9a-fA-F]{32}$') { Write-Host "Eso no parece la clave
 # Suscribe la página Saltabum a la app (sin esto Meta no avisa los mensajes nuevos). También comprueba el token:
 # si no es de la página Saltabum, Meta lo rechaza aquí.
 $PAGINA = "1359897103874337"
-$r = Graph "POST" "https://graph.facebook.com/v23.0/$PAGINA/subscribed_apps?subscribed_fields=messages,message_echoes&access_token=$token"
+$r = Graph "POST" "https://graph.facebook.com/v23.0/$PAGINA/subscribed_apps?subscribed_fields=messages,message_echoes,feed&access_token=$token"
 if ($r.error) { Write-Host "Meta rechazó el token al suscribir la página Saltabum: $($r.error.message). No se guardó nada." -ForegroundColor Red; exit 1 }
 Write-Host "Página Saltabum suscrita a la app" -ForegroundColor Green
 

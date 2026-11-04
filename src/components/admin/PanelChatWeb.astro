@@ -4,7 +4,8 @@
 // derecha la conversación. «Tomar el control» hace que la IA deje de responder y el equipo conteste desde aquí
 // (el cliente lo ve en la misma burbuja); «Devolver a la IA» la vuelve a activar. Se actualiza cada 5 segundos con
 // una conversación abierta y cada 20 la lista. En las redes, con REDES_MODO=sugerencia, la IA deja una respuesta
-// propuesta que el equipo envía tal cual, corrige o descarta.
+// propuesta que el equipo envía tal cual, corrige o descarta. «Responder comentarios» prende o apaga a Sali en los
+// comentarios de publicaciones y reels (ver src/lib/server/comentarios.ts).
 ---
 
 <section data-chatweb-panel class="flex flex-col gap-4">
@@ -38,6 +39,13 @@
       }
     </div>
   </div>
+  <label class="border-noche bg-blanco flex w-fit cursor-pointer items-center gap-3 rounded-2xl border-2 px-4 py-2.5">
+    <input type="checkbox" data-chatweb-comentarios class="accent-verde size-5 cursor-pointer" />
+    <span class="text-sm">
+      <span class="font-extrabold">Responder comentarios</span>
+      <span class="text-noche-suave block text-xs">Sali contesta «¡Te escribimos por interno! 📩» a los interesados en Instagram y Facebook y les escribe por privado</span>
+    </span>
+  </label>
   <p data-chatweb-estado class="text-noche-suave text-sm" aria-live="polite"></p>
 
   <div class="grid gap-4 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
@@ -75,6 +83,19 @@
   const lista = root.querySelector<HTMLElement>("[data-chatweb-lista]")!;
   const vista = root.querySelector<HTMLElement>("[data-chatweb-chat]")!;
   const estado = root.querySelector<HTMLElement>("[data-chatweb-estado]")!;
+  const interruptor = root.querySelector<HTMLInputElement>("[data-chatweb-comentarios]")!;
+  interruptor.addEventListener("change", async () => {
+    interruptor.disabled = true;
+    const activo = interruptor.checked;
+    const res = await api("/api/admin/chatweb", { method: "POST", body: JSON.stringify({ accion: "comentarios", activo }) }).catch(() => null);
+    interruptor.disabled = false;
+    if (res?.status === 401) return sinSesion();
+    if (!res?.ok) {
+      interruptor.checked = !activo;
+      return avisar("No se pudo cambiar la respuesta a comentarios");
+    }
+    avisar(activo ? "Sali responderá los comentarios" : "Sali ya no responde comentarios");
+  });
 
   const hora = new Intl.DateTimeFormat("es-CL", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   const dia = new Intl.DateTimeFormat("es-CL", { weekday: "short", day: "numeric", month: "short" });
@@ -117,8 +138,9 @@
     const res = await api("/api/admin/chatweb").catch(() => null);
     if (res?.status === 401) return sinSesion();
     if (!res?.ok) return void (estado.textContent = "No se pudieron cargar las conversaciones");
-    const datos = (await res.json()) as { conversaciones: Conversacion[]; modoRedes?: "sugerencia" | "auto" };
+    const datos = (await res.json()) as { conversaciones: Conversacion[]; modoRedes?: "sugerencia" | "auto"; comentarios?: boolean };
     const nuevas = datos.conversaciones;
+    if (typeof datos.comentarios === "boolean" && !interruptor.disabled) interruptor.checked = datos.comentarios;
     if (datos.modoRedes) modoRedes = datos.modoRedes;
     // Aviso cuando la IA pide ayuda en una conversación nueva para el panel.
     if (conocidas) {

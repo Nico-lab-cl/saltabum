@@ -48,7 +48,13 @@ export interface RespuestaChat {
   whatsapp?: string;
   /** Se creó una reserva en este turno. */
   reserva?: boolean;
+  /** La IA envió el catálogo en este turno (el texto ya trae el enlace al PDF; en las redes se adjunta además). */
+  catalogo?: boolean;
 }
+
+/** Catálogo en PDF (public/catalogo.pdf) y sus páginas en imagen (public/catalogo/N.jpg) para Instagram. */
+export const CATALOGO_PDF = "https://saltabum.cl/catalogo.pdf";
+export const CATALOGO_PAGINAS = [1, 2, 3, 4, 5, 6].map((n) => `https://saltabum.cl/catalogo/${n}.jpg`);
 
 const PRODUCTO_IDS = PRODUCTOS.map((p) => p.id);
 const COMUNA_NOMBRES = COMUNAS.map((c) => c.nombre);
@@ -94,6 +100,7 @@ Herramientas
 - cotizar: úsala para dar el total con despacho y horas extra.
 - crear_reserva: cuando la persona ya eligió juego, fecha, hora de inicio, horas y comuna, y te dio la dirección. Nombre, correo y teléfono ya los tienes del formulario: no los vuelvas a pedir (solo el apellido si falta). Antes de llamarla, resume todo (juego, fecha, horario, comuna, dirección, total) y pide que la persona confirme con un sí. Si no confirmó, no la llames.
 - En el historial solo quedan los textos de la conversación, no las consultas a las herramientas. Lo que dijiste antes sí lo revisaste con ellas: no te disculpes ni lo pongas en duda. Si pasó tiempo o cambian los datos, vuelve a consultar sin comentarlo.
+- enviar_catalogo: comparte el catálogo (PDF con fotos, precios y medidas de los 3 juegos). Primero conversa: saluda, conoce su nombre y qué busca; envíalo cuando pida precios, fotos, el catálogo o esté eligiendo juego. Al usarla, menciónalo en una frase corta («Te dejo nuestro catálogo 👇»); el enlace se agrega solo.
 - pedir_ayuda: cuando la persona quiere hablar con alguien, el caso se sale de lo que sabes (otra comuna, colegios, municipalidades, varios juegos, factura con datos especiales, reclamos) o algo falla. Avisa al equipo, que puede entrar a este mismo chat, y le muestra a la persona un botón para seguir por WhatsApp. Resume el caso en el mensaje.
 - Los mensajes que empiezan con «(Equipo Saltabum)» los escribió una persona del equipo: respeta lo que dijo y no lo contradigas.
 
@@ -151,6 +158,12 @@ const HERRAMIENTAS: Anthropic.Tool[] = [
       required: ["producto", "fecha", "inicio", "horas", "comuna", "direccion"],
       additionalProperties: false,
     },
+  },
+  {
+    name: "enviar_catalogo",
+    description:
+      "Envía a la persona el catálogo de Saltabum (fotos, precios, medidas y cómo reservar de los 3 juegos). Úsala cuando pida el catálogo, fotos, precios o ver los juegos, o cuando le sirva para elegir. Nunca en tu primer mensaje y solo una vez por conversación.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
     name: "pedir_ayuda",
@@ -345,6 +358,7 @@ export async function responderChat(historial: MensajeGuardado[], ctx: Contexto)
       : { role: "assistant", content: m.rol === "equipo" ? `(Equipo Saltabum) ${m.texto}` : m.texto },
   );
   const salida: RespuestaChat = { texto: "" };
+  let catalogoEnviado = historial.some((m) => m.rol !== "cliente" && m.texto.includes(CATALOGO_PDF));
 
   for (let vuelta = 0; vuelta < MAX_VUELTAS; vuelta++) {
     const res = await client.messages.create({
@@ -372,6 +386,8 @@ export async function responderChat(historial: MensajeGuardado[], ctx: Contexto)
         salida.texto = "Mejor te ayudo por WhatsApp para resolverlo bien 😊";
         salida.whatsapp ??= "Hola, vengo del chat de saltabum.cl y quiero hacer una consulta.";
       }
+      // El enlace al catálogo va como mensaje aparte (así también queda en el historial y no se vuelve a enviar).
+      if (salida.catalogo && !salida.texto.includes(CATALOGO_PDF)) salida.texto += `\n\n📄 Catálogo Saltabum: ${CATALOGO_PDF}`;
       return salida;
     }
 
@@ -387,6 +403,13 @@ export async function responderChat(historial: MensajeGuardado[], ctx: Contexto)
         else if (b.name === "crear_reserva") {
           resultado = await reservar(e, ctx);
           if ((resultado as { ok?: boolean }).ok) salida.reserva = true;
+        } else if (b.name === "enviar_catalogo") {
+          if (catalogoEnviado) resultado = { ok: false, nota: "Ya le enviaste el catálogo antes en esta conversación: no lo repitas, ofrécele resolver sus dudas." };
+          else {
+            salida.catalogo = true;
+            catalogoEnviado = true;
+            resultado = { ok: true, nota: "El catálogo se envía junto a tu mensaje. Menciónalo en una frase corta y sigue con el siguiente paso." };
+          }
         } else if (b.name === "pedir_ayuda") {
           const resumen = String(e.resumen ?? "").slice(0, 500);
           salida.whatsapp = `Hola, vengo del chat de saltabum.cl. ${resumen}`.trim();

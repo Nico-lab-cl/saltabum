@@ -1,5 +1,7 @@
 // Webhook de Meta para los mensajes directos de Instagram y Facebook (ver src/lib/server/redes.ts).
-// En la app de Meta → Webhooks, para «Page» (campo messages) y para «Instagram» (campo messages):
+// También los comentarios de publicaciones y reels (ver src/lib/server/comentarios.ts).
+// En la app de Meta → Webhooks, para «Page» (campos messages, message_echoes y feed) y para «Instagram» (messages y
+// comments):
 //   URL de devolución: https://saltabum.cl/api/meta
 //   Token de verificación: el valor de META_WEBHOOK_TOKEN
 //   GET  → verificación de Meta (hub.mode, hub.verify_token, hub.challenge)
@@ -7,6 +9,7 @@
 //          después (waitUntil), porque Meta reintenta si la respuesta tarda.
 import type { APIRoute } from "astro";
 import { META_WEBHOOK_TOKEN } from "astro:env/server";
+import { procesarCambio, type CambioMeta } from "@/lib/server/comentarios";
 import { sha256Hex } from "@/lib/server/crypto";
 import {
   firmaValida,
@@ -44,7 +47,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!(await firmaValida(raw, request.headers.get("x-hub-signature-256"))))
     return respuesta(401, { ok: false });
 
-  let body: { object?: string; entry?: { messaging?: EventoMeta[] }[] };
+  let body: { object?: string; entry?: { id?: string; messaging?: EventoMeta[]; changes?: CambioMeta[] }[] };
   try {
     body = JSON.parse(raw);
   } catch {
@@ -65,6 +68,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           evento.message?.mid ? "mensaje" : "otro",
         );
         const t = await procesarEvento(canal, evento);
+        if (t) trabajos.push(t);
+      }
+      for (const cambio of entrada.changes ?? []) {
+        console.log("webhook meta", canal, "cambio", cambio.field, cambio.value?.item ?? "");
+        const t = await procesarCambio(canal, entrada.id, cambio);
         if (t) trabajos.push(t);
       }
     }

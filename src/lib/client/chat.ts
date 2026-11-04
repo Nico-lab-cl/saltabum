@@ -48,6 +48,28 @@ const PAUSA_BIENVENIDA = 200;
 const partes = (texto: string) => texto.split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean);
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Enlaces que se pueden tocar en las respuestas (el catálogo, páginas del sitio y WhatsApp); el resto queda como texto. */
+const ENLACE = /(https:\/\/(?:saltabum\.cl|wa\.me)\/[^\s]*)/g;
+
+/** Pone el texto en la burbuja convirtiendo esos enlaces en links reales (sin innerHTML). */
+function ponerTextoConEnlaces(caja: HTMLElement, texto: string): void {
+  caja.textContent = "";
+  for (const [i, trozo] of texto.split(ENLACE).entries()) {
+    if (!trozo) continue;
+    if (i % 2 === 0) {
+      caja.append(trozo);
+      continue;
+    }
+    const a = document.createElement("a");
+    a.href = trozo;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.className = "font-bold underline break-all";
+    a.textContent = trozo.includes("catalogo.pdf") ? "Ver catálogo (PDF)" : trozo.replace(/^https:\/\//, "");
+    caja.append(a);
+  }
+}
+
 function leer(): Estado {
   try {
     const raw = sessionStorage.getItem(CLAVE);
@@ -90,7 +112,8 @@ export function bindChat(): void {
     if (!plantilla) return;
     const nodo = plantilla.content.firstElementChild!.cloneNode(true) as HTMLElement;
     const caja = nodo.matches("[data-chat-texto]") ? nodo : nodo.querySelector<HTMLElement>("[data-chat-texto]")!;
-    caja.textContent = texto;
+    if (rol === "ia" || rol === "equipo") ponerTextoConEnlaces(caja, texto);
+    else caja.textContent = texto;
     lista.append(nodo);
     lista.scrollTop = lista.scrollHeight;
   };

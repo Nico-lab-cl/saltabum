@@ -14,6 +14,7 @@ import {
   baseChat,
   contarMensaje,
   conversacionDeRed,
+  esMensajePrivadoReciente,
   guardarMensaje,
   marcarExterno,
   mensajeExterno,
@@ -21,7 +22,7 @@ import {
   ultimosMensajes,
   type Conversacion,
 } from "@/lib/server/chat-db";
-import { chatConfigurado, responderChat } from "@/lib/server/chat-ia";
+import { CATALOGO_PAGINAS, CATALOGO_PDF, chatConfigurado, responderChat, type RespuestaChat } from "@/lib/server/chat-ia";
 import { hmacSha256Hex } from "@/lib/server/crypto";
 
 export type CanalRed = "instagram" | "messenger";
@@ -52,7 +53,7 @@ export async function firmaValida(cuerpo: string, firma: string | null): Promise
   return diff === 0;
 }
 
-async function graph<T>(ruta: string, init?: RequestInit): Promise<T> {
+export async function graph<T>(ruta: string, init?: RequestInit): Promise<T> {
   const sep = ruta.includes("?") ? "&" : "?";
   const res = await fetch(`${GRAPH}${ruta}${sep}access_token=${encodeURIComponent(META_PAGE_TOKEN ?? "")}`, {
     ...init,
@@ -112,6 +113,25 @@ async function enviar(externo: string, texto: string): Promise<string | null> {
     }),
   });
   return r.message_id ?? null;
+}
+
+/** Adjunta el catálogo: en Messenger el PDF y en Instagram las páginas como imágenes (allá el PDF no se ve en el chat). */
+async function enviarCatalogo(canal: CanalRed, externo: string) {
+  const adjuntos =
+    canal === "messenger"
+      ? [{ type: "file", payload: { url: CATALOGO_PDF, is_reusable: true } }]
+      : CATALOGO_PAGINAS.map((url) => ({ type: "image", payload: { url } }));
+  for (const attachment of adjuntos) {
+    try {
+      await graph("/me/messages", {
+        method: "POST",
+        body: JSON.stringify({ recipient: { id: externo }, messaging_type: "RESPONSE", message: { attachment } }),
+      });
+    } catch (err) {
+      console.error(`[redes] catálogo ${canal}:`, String(err));
+      return;
+    }
+  }
 }
 
 /** Guarda y envía. Los bloques separados por una línea en blanco salen como mensajes aparte, igual que en la web. */
@@ -176,6 +196,8 @@ export async function procesarEvento(canal: CanalRed, e: EventoMeta): Promise<((
   if (m.is_echo) {
     const persona = e.recipient?.id;
     if (!persona || !m.text) return null;
+    // Copia del mensaje privado que mandó Sali por un comentario (comentarios.ts lo guarda al terminar de enviarlo).
+    if (await esMensajePrivadoReciente(m.text)) return null;
     const conv = await conversacionDeRed(canal, persona, null);
     if (await copiaPropia(conv, m.mid, m.text)) return null;
     await guardarMensaje(conv.id, "equipo", m.text, `${nombreCanal(canal)} (app)`, m.mid);
@@ -223,7 +245,7 @@ export async function procesarEvento(canal: CanalRed, e: EventoMeta): Promise<((
 
   return async () => {
     try {
-      const r = await sugerir(conv);
+      const r = await pensar(conv);
       // Llegó otro mensaje mientras la IA pensaba: ese turno se encarga de responder (así no contesta dos veces).
       const ahora = await obtenerConversacion(conv.id);
       const ultimo = (await ultimosMensajes(conv.id, 1))[0];
@@ -234,9 +256,10 @@ export async function procesarEvento(canal: CanalRed, e: EventoMeta): Promise<((
       )
         return;
       if (REDES_MODO === "auto") {
-        await guardarYEnviar(ahora, "ia", r, null);
+        await guardarYEnviar(ahora, "ia", r.texto, null);
+        if (r.catalogo) await enviarCatalogo(canal, persona);
       } else {
-        await actualizarConversacion(conv.id, { sugerencia: r });
+        await actualizarConversacion(conv.id, { sugerencia: r.texto });
         await avisar(
           `✨ *${quien} escribió por ${nombreCanal(canal)}* · la IA dejó una respuesta para aprobar`,
         );
@@ -250,8 +273,12 @@ export async function procesarEvento(canal: CanalRed, e: EventoMeta): Promise<((
 
 /** Lo que respondería la IA ahora en esta conversación (no lo envía). */
 export async function sugerir(conv: Conversacion): Promise<string> {
+  return (await pensar(conv)).texto;
+}
+
+async function pensar(conv: Conversacion): Promise<RespuestaChat> {
   if (!esRed(conv)) throw new Error("No es una conversación de redes");
-  const r = await responderChat(await ultimosMensajes(conv.id, HISTORIAL), {
+  return responderChat(await ultimosMensajes(conv.id, HISTORIAL), {
     request: new Request("https://saltabum.cl/api/meta"),
     conversacion: conv.id,
     cliente: { nombre: conv.nombre, email: conv.email, telefono: conv.telefono },
@@ -259,7 +286,6 @@ export async function sugerir(conv: Conversacion): Promise<string> {
     ipHash: null,
     canal: conv.canal,
   });
-  return r.texto;
 }
 
 /**

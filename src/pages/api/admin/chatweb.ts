@@ -7,12 +7,14 @@
 //          { accion: "visto", id } (alguien del equipo abrió el chat: deja de contar como pedido de ayuda)
 //          { accion: "sugerir", id } (solo redes: la IA propone de nuevo la respuesta, sin enviarla)
 //          { accion: "descartar", id } (solo redes: borra la respuesta propuesta)
+//          { accion: "comentarios", activo } (prende o apaga las respuestas de Sali a comentarios, ver comentarios.ts)
 // En las redes «responder» envía el mensaje por Meta. Con REDES_MODO=sugerencia responder no le quita el turno a la IA
 // (sigue proponiendo); con REDES_MODO=auto, igual que en la web, el equipo toma el control.
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { auditar, mismoOrigen, panelConfigurado, sesion } from "@/lib/server/admin-auth";
 import { actualizarConversacion, guardarMensaje, listarConversaciones, mensajesDesde, obtenerConversacion } from "@/lib/server/chat-db";
+import { activarComentarios, comentariosActivos } from "@/lib/server/comentarios";
 import { ErrorMeta, esRed, modoRedes, redesConfiguradas, responderDesdePanel, sugerir } from "@/lib/server/redes";
 
 export const prerender = false;
@@ -29,6 +31,7 @@ const accionSchema = z.discriminatedUnion("accion", [
   z.object({ accion: z.literal("visto"), id: z.uuid() }),
   z.object({ accion: z.literal("sugerir"), id: z.uuid() }),
   z.object({ accion: z.literal("descartar"), id: z.uuid() }),
+  z.object({ accion: z.literal("comentarios"), activo: z.boolean() }),
 ]);
 
 const quien = (nombre: string | null) => nombre ?? "sin nombre";
@@ -50,7 +53,7 @@ export const GET: APIRoute = async ({ request, cookies, url }) => {
     if (!conv) return json(404, { ok: false, error: "no_existe" });
     return json(200, { ok: true, conversacion: conv, mensajes: await mensajesDesde(id, 0, 500), modoRedes: modoRedes() });
   }
-  return json(200, { ok: true, conversaciones: await listarConversaciones(300), modoRedes: modoRedes(), redes: redesConfiguradas() });
+  return json(200, { ok: true, conversaciones: await listarConversaciones(300), modoRedes: modoRedes(), redes: redesConfiguradas(), comentarios: await comentariosActivos() });
 };
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -69,6 +72,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
   if (!parsed.success) return json(422, { ok: false, error: "validacion" });
   const pedido = parsed.data;
+
+  if (pedido.accion === "comentarios") {
+    await activarComentarios(pedido.activo);
+    await auditar(request, usuario, "chat_comentarios", pedido.activo ? "activadas" : "desactivadas");
+    return json(200, { ok: true });
+  }
 
   const conv = await obtenerConversacion(pedido.id);
   if (!conv) return json(404, { ok: false, error: "no_existe" });
