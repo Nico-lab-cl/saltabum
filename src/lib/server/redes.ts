@@ -22,7 +22,7 @@ import {
   ultimosMensajes,
   type Conversacion,
 } from "@/lib/server/chat-db";
-import { CATALOGO_PAGINAS, CATALOGO_PDF, chatConfigurado, responderChat, type RespuestaChat } from "@/lib/server/chat-ia";
+import { CATALOGO_PDF, chatConfigurado, responderChat, type RespuestaChat } from "@/lib/server/chat-ia";
 import { hmacSha256Hex } from "@/lib/server/crypto";
 
 export type CanalRed = "instagram" | "messenger";
@@ -115,12 +115,10 @@ async function enviar(externo: string, texto: string): Promise<string | null> {
   return r.message_id ?? null;
 }
 
-/** Adjunta el catálogo: en Messenger el PDF y en Instagram las páginas como imágenes (allá el PDF no se ve en el chat). */
+/** Adjunta el catálogo en PDF en Messenger. En Instagram basta el enlace a saltabum.cl/catalogo.pdf que ya va en el texto. */
 async function enviarCatalogo(canal: CanalRed, externo: string) {
-  const adjuntos =
-    canal === "messenger"
-      ? [{ type: "file", payload: { url: CATALOGO_PDF, is_reusable: true } }]
-      : CATALOGO_PAGINAS.map((url) => ({ type: "image", payload: { url } }));
+  if (canal !== "messenger") return;
+  const adjuntos = [{ type: "file", payload: { url: CATALOGO_PDF, is_reusable: true } }];
   for (const attachment of adjuntos) {
     try {
       await graph("/me/messages", {

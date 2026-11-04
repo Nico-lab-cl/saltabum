@@ -52,9 +52,8 @@ export interface RespuestaChat {
   catalogo?: boolean;
 }
 
-/** Catálogo en PDF (public/catalogo.pdf) y sus páginas en imagen (public/catalogo/N.jpg) para Instagram. */
+/** Catálogo en PDF (public/catalogo.pdf). En Instagram y la web va como enlace; en Messenger también como archivo. */
 export const CATALOGO_PDF = "https://saltabum.cl/catalogo.pdf";
-export const CATALOGO_PAGINAS = [1, 2, 3, 4, 5, 6].map((n) => `https://saltabum.cl/catalogo/${n}.jpg`);
 
 const PRODUCTO_IDS = PRODUCTOS.map((p) => p.id);
 const COMUNA_NOMBRES = COMUNAS.map((c) => c.nombre);

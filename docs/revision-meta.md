@@ -101,7 +101,7 @@ Mostrar en este orden, con subtítulos o texto en inglés que digan qué se est�
    (Configuración de Messenger API → Generar identificadores), para mostrar el flujo de permisos.
 2. **Messenger**: escribir «hola, cuánto sale el tobogán?» a la página → Sali responde → pedir el catálogo → llega el
    PDF. *(pages_messaging, Business Asset User Profile Access)*
-3. **Instagram**: lo mismo por DM a @saltabum → llegan las imágenes del catálogo. *(instagram_basic,
+3. **Instagram**: lo mismo por DM a @saltabum → llega el enlace al catálogo. *(instagram_basic,
    instagram_manage_messages)*
 4. **Comentario en Facebook**: comentar «precio?» en una publicación → aparece la respuesta pública → llega el mensaje
    privado. *(pages_read_user_content, pages_read_engagement, pages_manage_engagement, pages_manage_metadata)*
